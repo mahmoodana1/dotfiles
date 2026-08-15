@@ -101,9 +101,12 @@ fi
 # ---------------------------------------------------------------------
 if [ -z "$PACKAGES" ]; then
     # Every directory that is a stow package: has a dot-file/dot-dir inside.
+    # 'claude' is excluded on purpose: Claude Code rewrites settings.json in
+    # place, which would clobber the repo copy through a symlink. It is
+    # deployed by copy in the post-link step instead.
     PACKAGES="$(cd "$DOTFILES" && for d in */; do
         d="${d%/}"
-        case "$d" in templates|docs|.git) continue ;; esac
+        case "$d" in templates|docs|packages|claude|.git) continue ;; esac
         [ -n "$(find "$d" -maxdepth 1 -name '.*' -print -quit)" ] && printf '%s ' "$d"
     done)"
 fi

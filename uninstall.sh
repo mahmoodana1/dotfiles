@@ -22,7 +22,7 @@ ok()  { printf '  %s✓%s %s\n' "$c_ok" "$c_off" "$*"; }
 
 PACKAGES="$(cd "$DOTFILES" && for d in */; do
     d="${d%/}"
-    case "$d" in templates|docs|packages|.git) continue ;; esac
+    case "$d" in templates|docs|packages|claude|.git) continue ;; esac
     [ -n "$(find "$d" -maxdepth 1 -name '.*' -print -quit)" ] && printf '%s ' "$d"
 done)"
 
