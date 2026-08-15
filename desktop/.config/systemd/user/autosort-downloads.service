@@ -1,0 +1,12 @@
+[Unit]
+Description=Auto-sort Downloads folder by file type
+After=default.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/autosort-downloads.sh
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target

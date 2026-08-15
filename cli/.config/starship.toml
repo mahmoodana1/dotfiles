@@ -1,0 +1,18 @@
+# Show date/time like: Mon 25 Aug - 15:35
+[time]
+disabled = false
+time_format = "%a %d %b - %H:%M"
+format = "[$time]($style) "
+style = "fg:black bg:#8cc7ff"   # pick your light bg
+
+# Directory segment ("~")
+[directory]
+style = "fg:black bg:#a6c8ff"   # light bg + black text
+format = "[$path]($style) "
+
+# Powerline separators to match backgrounds
+[character]
+success_symbol = "[](fg:#a6c8ff)"
+error_symbol   = "[](fg:#a6c8ff)"
+vicmd_symbol   = "[](fg:#a6c8ff)"
+

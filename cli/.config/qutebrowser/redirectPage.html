@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Start</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <style>
+    :root {
+      --bg: #11111b;
+      --fg: #cdd6f4;
+      --accent: #89b4fa;
+      --border: #313244;
+    }
+
+    * {
+      box-sizing: border-box;
+      font-family: monospace;
+    }
+
+    body {
+      margin: 0;
+      height: 100vh;
+      background: var(--bg);
+      color: var(--fg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    form {
+      width: 100%;
+      max-width: 500px;
+      padding: 20px;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 14px 16px;
+      font-size: 18px;
+      color: var(--fg);
+      background: transparent;
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      outline: none;
+    }
+
+    input[type="text"]:focus {
+      border-color: var(--accent);
+    }
+  </style>
+</head>
+
+<body>
+  <form action="https://www.google.com/search" method="get">
+    <input
+      type="text"
+      name="q"
+      placeholder="Search…"
+      autofocus
+    />
+  </form>
+</body>
+</html>

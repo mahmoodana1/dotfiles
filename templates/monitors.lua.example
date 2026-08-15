@@ -1,0 +1,20 @@
+-- Copied to ~/.config/hypr/lua/monitors.lua on a fresh install, because the
+-- real file is machine-specific and therefore gitignored.
+--
+-- Do not hand-tune this for long: run the wrapper
+--     ~/.config/hypr/scripts/nwg-displays.sh
+-- which launches nwg-displays and then converts the .conf it emits into Lua
+-- via scripts/nwg-displays-to-lua.py. nwg-displays cannot emit Lua itself.
+--
+-- List your outputs with:  hyprctl monitors
+-- Reference: https://wiki.hypr.land/Configuring/Monitors/
+
+-- Auto-detect every connected display at its preferred mode, placed
+-- left-to-right. Correct on any machine, optimal on none — replace it.
+hl.monitor({ output = "", mode = "preferred", position = "auto", scale = 1.0 })
+
+-- Example of an explicit two-head layout (this is what the authoring machine
+-- uses: a 1080p laptop panel with a 100 Hz external screen to its right):
+--
+-- hl.monitor({ output = "eDP-1",    mode = "1920x1080@60",  position = "0x0",    scale = 1.0 })
+-- hl.monitor({ output = "HDMI-A-1", mode = "1920x1080@100", position = "1920x0", scale = 1.0 })

@@ -1,0 +1,77 @@
+# =====================================================================
+#  What deliberately never reaches this repo.
+#  Three categories: secrets, machine-specific files, generated output.
+#  See README.md § "What is NOT in here" for the reasoning behind each.
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# 1. SECRETS
+# ---------------------------------------------------------------------
+# The real file lives at ~/.config/secrets.env (chmod 600) and is created
+# from templates/secrets.env.example on each new machine.
+secrets.env
+*.token
+*credentials*
+
+# ---------------------------------------------------------------------
+# 2. MACHINE-SPECIFIC — differs per device, must not be shared
+# ---------------------------------------------------------------------
+# Monitor layout and per-monitor workspace pinning. Written by
+# nwg-displays (via hypr/scripts/nwg-displays.sh) and unique to each set
+# of physical displays. Templates ship as *.example instead.
+hypr/.config/hypr/lua/monitors.lua
+hypr/.config/hypr/lua/workspaces.lua
+hypr/.config/hypr/monitors.conf
+hypr/.config/hypr/workspaces.conf
+hypr/.config/hypr/Monitor_Profiles/
+
+# NOTE: lua/laptop.lua is deliberately TRACKED. It is mostly portable
+# (brightness/volume/lid binds) and its one hardware-specific value,
+# TOUCHPAD_DEVICE, is documented inline — find yours with `hyprctl devices`.
+
+# ---------------------------------------------------------------------
+# 3. GENERATED — rewritten by tools at runtime, so tracking them means
+#    permanent, meaningless git churn
+# ---------------------------------------------------------------------
+# wallust regenerates this from the current wallpaper on every change.
+hypr/.config/hypr/lua/colors.lua
+hypr/.config/hypr/wallust/
+wallust/.config/wallust/colors*
+waybar/.config/waybar/*-colors.css
+rofi/.config/rofi/*-colors.rasi
+
+# Animations.sh copies the chosen preset over this file.
+hypr/.config/hypr/lua/animations.lua
+
+# Populated by tpm on first run; install.sh clones tpm itself.
+shell/.tmux/plugins/
+
+# The nvim config began as a kickstart.nvim clone. Its upstream .git was
+# renamed to .git.disabled so this repo does not see a nested repository.
+nvim/.config/nvim/.git.disabled/
+
+# ---------------------------------------------------------------------
+# 4. CACHES, STATE AND BACKUPS
+# ---------------------------------------------------------------------
+*-backup-*/
+*.tar.gz
+*.zip
+*.bak
+*.old
+*.swp
+*~
+.DS_Store
+cache/
+Cache/
+**/qutebrowser/qsettings/
+
+# qutebrowser browsing data, not configuration: quickmarks and bookmarks are
+# your saved URLs, and autoconfig.yml is the GUI-written per-site permission
+# store. config.py — the actual configuration — stays tracked.
+**/qutebrowser/quickmarks
+**/qutebrowser/bookmarks/
+**/qutebrowser/autoconfig.yml
+
+# Qt file-dialog state: recently-visited directories and sidebar shortcuts,
+# stored as absolute paths under your home directory. State, not config.
+theming/.config/QtProject.conf

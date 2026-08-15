@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# /* ---- 💫 https://github.com/JaKooLit 💫 ---- */  #
+# Script to open Telegram and switch to workspace 5
+
+# First switch to workspace 5
+hyprctl dispatch workspace 5
+
+# Check if Telegram window already exists
+if hyprctl clients | grep -q "class: org.telegram.desktop"; then
+    echo "Telegram window already exists."
+else
+    echo "Launching Telegram..."
+    # Launch Telegram in background (should open on current workspace 5)
+    Telegram &
+    # Give it a moment to start
+    sleep 2
+fi
+
+# Focus the Telegram window if it's there
+# Hyprland will automatically focus the window on workspace 5

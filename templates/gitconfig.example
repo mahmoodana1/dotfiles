@@ -1,0 +1,22 @@
+# Copy to ~/.gitconfig and fill in your identity:
+#
+#     cp ~/dotfiles/templates/gitconfig.example ~/.gitconfig
+#
+# Deliberately NOT stowed: it carries your name and email, which is exactly
+# the personal information this repo keeps out. install.sh prompts for these
+# two values and writes the file for you.
+#
+# ~/.config/git/ignore IS tracked (package: gitcfg) — it holds the global
+# ignore patterns, which contain nothing personal.
+
+[user]
+	name = your-name
+	email = you@example.com
+
+[credential]
+	# "store" writes plaintext to ~/.git-credentials. Fine for a personal
+	# machine, but that file is never part of this repo.
+	helper = store
+
+[init]
+	defaultBranch = main
