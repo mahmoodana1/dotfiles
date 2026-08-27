@@ -13,8 +13,14 @@ CLASS=taskvim
 hyprctl dispatch 'hl.dsp.focus({ workspace = 8 })'
 
 if ! hyprctl clients -j | grep -q "\"class\": \"$CLASS\""; then
-    # Dedicated class (not plain "kitty") so the window rules and this
-    # already-running check only ever match taskvim.
-    setsid -f kitty --class "$CLASS" -T taskvim "$HOME/.local/bin/taskvim" \
-        >/dev/null 2>&1
+  # Dedicated class (not plain "alacritty") so the window rules and this
+  # already-running check only ever match taskvim.
+  #
+  # Two things alacritty needs that kitty did not:
+  #   * the binary is lowercase `alacritty` — `Alacritty` is the WM_CLASS, not
+  #     a command, so calling it that way fails silently under setsid;
+  #   * the program must follow `-e`. kitty accepts a bare trailing command,
+  #     alacritty treats it as an unrecognised argument and refuses to start.
+  setsid -f alacritty --class "$CLASS" -T taskvim -e "$HOME/.local/bin/taskvim" \
+    >/dev/null 2>&1
 fi
