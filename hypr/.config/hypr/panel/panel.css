@@ -1,0 +1,28 @@
+/* Palette names (@background, @foreground, @color0 ...) are injected at
+   runtime by theme.build_css() from wallust's colors.lua. Never hardcode hex. */
+
+window.hudpanel {
+  background: transparent;
+}
+
+.panel-dim {
+  background: alpha(black, 0.45);
+}
+
+.panel-card {
+  background: alpha(@background, 0.92);
+  border: 1px solid alpha(@color8, 0.35);
+  border-radius: 18px;
+  padding: 28px;
+}
+
+.panel-title {
+  color: @foreground;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.panel-hint {
+  color: alpha(@color8, 0.85);
+  font-size: 13px;
+}

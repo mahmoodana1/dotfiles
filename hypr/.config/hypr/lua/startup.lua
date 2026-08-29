@@ -41,6 +41,9 @@ hl.on("hyprland.start", function()
     hl.exec_cmd("blueman-applet")
     -- hl.exec_cmd("rog-control-center")
 
+    -- Hold-to-show HUD panel daemon (SUPER+SHIFT+P)
+    hl.exec_cmd(d.home .. "/.config/hypr/panel/panel.py")
+
     -- Clipboard manager
     hl.exec_cmd("wl-paste --type text --watch cliphist store")
     hl.exec_cmd("wl-paste --type image --watch cliphist store")

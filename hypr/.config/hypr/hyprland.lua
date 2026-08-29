@@ -20,3 +20,4 @@ require("settings")     -- was UserConfigs/UserSettings.conf (+ hyprland.conf in
 require("monitors")     -- was monitors.conf
 require("workspaces")   -- was workspaces.conf
 require("dojo")         -- SUPER+L → dojo TUI on workspace 7 (~/projects/dojo)
+require("panel")        -- SUPER+SHIFT+P → hold-to-show HUD panel

@@ -75,3 +75,7 @@ Cache/
 # Qt file-dialog state: recently-visited directories and sidebar shortcuts,
 # stored as absolute paths under your home directory. State, not config.
 theming/.config/QtProject.conf
+
+# Python bytecode (hypr panel daemon + tests)
+__pycache__/
+*.pyc
