@@ -5,24 +5,162 @@ window.hudpanel {
   background: transparent;
 }
 
+/* NOTE: the leading @ on colour names is required — @background, @color8 and
+   friends are @define-color lookups injected by theme.build_css(). Written
+   bare, GTK reports "not a valid color name" and silently drops the whole
+   declaration, which leaves the card with no background at all. */
+
 .panel-dim {
-  background: alpha(black, 0.45);
+  background: alpha(black, 0.30);
 }
 
+/* Translucent so the compositor blur behind the surface is actually visible;
+   the layer rule in lua/panel.lua does the blurring. Keep enough tint that the
+   times stay legible over a bright window. */
 .panel-card {
-  background: alpha(@background, 0.92);
-  border: 1px solid alpha(@color8, 0.35);
+  background: alpha(@background, 0.62);
+  border: 1px solid alpha(@color8, 0.45);
   border-radius: 18px;
-  padding: 28px;
+  padding: 34px 44px;
 }
 
-.panel-title {
+/* ---- header ------------------------------------------------------------ */
+
+.pt-clock {
   color: @foreground;
-  font-size: 22px;
+  font-size: 40px;
+  font-weight: 300;
+  font-feature-settings: "tnum";
+}
+
+.pt-date {
+  color: alpha(@color8, 0.95);
+  font-size: 13px;
+}
+
+.pt-location {
+  color: alpha(@color8, 0.9);
+  font-size: 13px;
+}
+
+.pt-fallback {
+  color: @color3;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* ---- hero: the imminent thing ------------------------------------------ */
+
+.pt-hero {
+  background: alpha(@color13, 0.14);
+  border-left: 3px solid @color13;
+  border-radius: 8px;
+  padding: 14px 20px;
+}
+
+/* Deliberate exception to the palette-only rule. The wallust theme here is
+   entirely blues and greys, so an urgency state drawn from it is
+   indistinguishable from the normal one. "The iqama is in 3 minutes" has to be
+   unmistakable, so it gets a warm hue the palette cannot supply. */
+.pt-hero-urgent {
+  background: alpha(#e0a458, 0.16);
+  border-left-color: #e0a458;
+}
+
+.pt-hero-urgent .pt-hero-caption,
+.pt-hero-urgent .pt-hero-big {
+  color: #f0b968;
+}
+
+.pt-hero-caption {
+  color: alpha(@color8, 0.95);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 2px;
+}
+
+.pt-hero-arabic {
+  color: alpha(@color8, 0.75);
+  font-size: 14px;
+}
+
+.pt-hero-big {
+  color: @foreground;
+  font-size: 34px;
+  font-weight: 600;
+  font-feature-settings: "tnum";
+}
+
+.pt-hero-detail {
+  color: alpha(@foreground, 0.8);
+  font-size: 14px;
+  font-feature-settings: "tnum";
+}
+
+/* ---- table ------------------------------------------------------------- */
+
+.pt-head {
+  color: alpha(@color8, 0.8);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+}
+
+/* The iqama column is tinted in the header too, so the association between
+   heading and column is immediate. */
+.pt-head-iqama {
+  color: alpha(@color13, 0.95);
+}
+
+.pt-marker {
+  color: @color13;
+  font-size: 13px;
+}
+
+.pt-name {
+  color: @foreground;
+  font-size: 19px;
+  font-weight: 500;
+}
+
+.pt-arabic {
+  color: alpha(@color8, 0.7);
+  font-size: 15px;
+}
+
+/* Adhan: plain foreground. Iqama: tinted and lighter. Different colour AND
+   different weight, so they stay distinguishable in peripheral vision. */
+.pt-adhan {
+  color: @foreground;
+  font-size: 19px;
+  font-weight: 600;
+  font-feature-settings: "tnum";
+}
+
+.pt-iqama {
+  color: @color13;
+  font-size: 19px;
+  font-weight: 400;
+  font-feature-settings: "tnum";
+}
+
+.pt-row-live {
+  color: @foreground;
   font-weight: 700;
 }
 
-.panel-hint {
-  color: alpha(@color8, 0.85);
+.pt-row-live.pt-iqama {
+  color: @color14;
+}
+
+/* Past prayers recede so the eye lands on what is still ahead. */
+.pt-row-past {
+  opacity: 0.38;
+}
+
+.pt-sunrise {
+  color: alpha(@color8, 0.55);
   font-size: 13px;
+  font-style: italic;
+  font-feature-settings: "tnum";
 }

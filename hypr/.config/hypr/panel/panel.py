@@ -26,6 +26,7 @@ def _ensure_preload() -> None:
 _ensure_preload()
 
 import signal  # noqa: E402
+import threading  # noqa: E402
 
 import gi  # noqa: E402
 
@@ -35,9 +36,11 @@ gi.require_version("Gtk4LayerShell", "1.0")
 from gi.repository import Gdk, Gio, GLib, Gtk  # noqa: E402
 from gi.repository import Gtk4LayerShell as LS  # noqa: E402
 
+import alerts  # noqa: E402
 import content  # noqa: E402
 import monitor  # noqa: E402
 import theme  # noqa: E402
+import timetable  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 NAMESPACE = "hudpanel"
@@ -48,8 +51,30 @@ PID_FILE = os.path.join(os.environ.get("XDG_RUNTIME_DIR", "/tmp"), "hypr-panel.p
 CARD_FRACTION = 0.6  # card is 60% of the monitor in both axes
 
 
+REFRESH_INTERVAL_S = 6 * 60 * 60
+ALERT_TICK_S = 10          # worst-case lateness of a prayer notification
+
+
 def log(message: str) -> None:
     print(f"[hudpanel] {message}", file=sys.stderr, flush=True)
+
+
+def refresh_timetable_async() -> bool:
+    """Kick a timetable refresh on a worker thread.
+
+    Never runs on the main loop: it does network I/O, and blocking here would
+    freeze the panel. Returns True so it can be used as a GLib timeout source.
+    """
+    def worker():
+        try:
+            if timetable.refresh():
+                log("timetable refreshed from the published source")
+        except Exception as exc:  # noqa: BLE001
+            # The offline calculation covers us; a failed refresh is not fatal.
+            log(f"timetable refresh failed, using computed times: {exc!r}")
+
+    threading.Thread(target=worker, daemon=True, name="timetable").start()
+    return True
 
 
 class Panel:
@@ -64,6 +89,9 @@ class Panel:
         self.card = None
         self.last_monitor = None
         self.watchdog_id = 0
+        self.alert_events = []
+        self.alert_day = None
+        self.alert_last = None
 
     def build(self) -> None:
         self.window = Gtk.Window()
@@ -97,26 +125,72 @@ class Panel:
         card.set_halign(Gtk.Align.CENTER)
         card.set_valign(Gtk.Align.CENTER)
 
-        # A broken content.py must not kill the daemon.
-        try:
-            card.append(content.build())
-        except Exception as exc:  # noqa: BLE001 - deliberate catch-all
-            log(f"content.build() failed: {exc!r}")
-            card.append(Gtk.Label(label=f"content error:\n{exc}"))
-
         dim.append(card)
         self.card = card
         self.window.set_child(dim)
         self.app.add_window(self.window)
 
+    def alert_tick(self) -> bool:
+        """Announce any prayer or iqama that has come due since the last tick.
+
+        Re-derives the day's events from wall-clock time on every tick, so a
+        suspend/resume, a DST change, the day rolling over, or a timetable
+        refresh all resolve themselves without special handling.
+        """
+        try:
+            schedule = timetable.schedule()
+            now = schedule["now"]
+
+            # Rebuild the event list when the day changes (or on first run).
+            if self.alert_day != schedule["date"]:
+                self.alert_events = alerts.events_for(schedule)
+                self.alert_day = schedule["date"]
+                # Do not treat everything earlier today as newly due.
+                if self.alert_last is None:
+                    self.alert_last = now
+
+            for when, kind, name in alerts.due_events(
+                    self.alert_events, self.alert_last, now):
+                log(f"alert: {kind} {name} at {when:%H:%M}")
+                alerts.announce(kind, name, schedule)
+
+            self.alert_last = now
+        except Exception as exc:  # noqa: BLE001
+            # A broken tick must never take the daemon down with it.
+            log(f"alert tick failed: {exc!r}")
+        return True
+
+    def _rebuild_content(self) -> None:
+        """Rebuild the card's contents from scratch.
+
+        Called on every show, not once at startup: the panel displays a clock
+        and countdowns, so a tree built at login would be stale by the time it
+        is first looked at.
+        """
+        child = self.card.get_first_child()
+        while child is not None:
+            following = child.get_next_sibling()
+            self.card.remove(child)
+            child = following
+
+        # A broken content.py must not kill the daemon or leave a blank card.
+        try:
+            self.card.append(content.build())
+        except Exception as exc:  # noqa: BLE001 - deliberate catch-all
+            log(f"content.build() failed: {exc!r}")
+            self.card.append(Gtk.Label(label=f"content error:\n{exc}"))
+
     def _size_card(self, mon) -> None:
-        """Size the card to CARD_FRACTION of the monitor. Natural size otherwise."""
+        """Constrain the card's width; let its height follow the content.
+
+        A fixed 60% height left a large dead void under the table. Width is
+        still pinned so the card keeps a consistent shape across monitors and
+        the text does not reflow as the day's content changes length.
+        """
         if mon is None or self.card is None:
             return
         geo = mon.get_geometry()
-        self.card.set_size_request(
-            int(geo.width * CARD_FRACTION), int(geo.height * CARD_FRACTION)
-        )
+        self.card.set_size_request(int(geo.width * CARD_FRACTION), -1)
 
     def load_css(self) -> None:
         try:
@@ -148,7 +222,12 @@ class Panel:
         centring numerically rather than by eye."""
         if self.card is None or self.window is None:
             return False
-        alloc = self.card.get_allocation()
+        ok, bounds = self.card.compute_bounds(self.window)
+        if not ok:
+            log("could not compute card bounds")
+            return False
+        x, y = int(bounds.origin.x), int(bounds.origin.y)
+        width, height = int(bounds.size.width), int(bounds.size.height)
         # A layer surface reports 0x0 from get_width()/get_height(); take the
         # dimensions from the monitor it is anchored to instead.
         if self.last_monitor is not None:
@@ -156,12 +235,11 @@ class Panel:
             win_w, win_h = geo.width, geo.height
         else:
             win_w, win_h = self.window.get_width(), self.window.get_height()
-        left = alloc.x
-        right = win_w - (alloc.x + alloc.width)
-        top = alloc.y
-        bottom = win_h - (alloc.y + alloc.height)
-        log(f"surface {win_w}x{win_h}  card {alloc.width}x{alloc.height} "
-            f"at ({alloc.x},{alloc.y})")
+        left = x
+        right = win_w - (x + width)
+        top = y
+        bottom = win_h - (y + height)
+        log(f"surface {win_w}x{win_h}  card {width}x{height} at ({x},{y})")
         log(f"margins  left={left} right={right} top={top} bottom={bottom}  "
             f"centred={'YES' if abs(left - right) <= 1 and abs(top - bottom) <= 1 else 'NO'}")
         return False
@@ -184,10 +262,13 @@ class Panel:
 
     def show(self) -> None:
         # Kick first: a repeat heartbeat arriving while already visible must
-        # still keep the panel alive.
-        self.kick_watchdog()
+        # still keep the panel alive. Skipped in oneshot mode, which has no
+        # keybind feeding it heartbeats and is supposed to stay up on its own.
+        if not self.oneshot:
+            self.kick_watchdog()
         if self.window.get_visible():
             return
+        self._rebuild_content()
         target = self._target_monitor()
         if target is not None:
             LS.set_monitor(self.window, target)
@@ -221,13 +302,25 @@ def main() -> int:
             return
 
         app.hold()  # stay alive with no visible window
-        with open(PID_FILE, "w", encoding="utf-8") as handle:
-            handle.write(str(os.getpid()))
 
+        # Handlers BEFORE the PID file. panelctl only signals a PID it can read,
+        # so publishing the PID first opens a window where an early keypress
+        # delivers SIGUSR1 with no handler installed — whose default action is
+        # to terminate the process.
         GLib.unix_signal_add(GLib.PRIORITY_DEFAULT, signal.SIGUSR1,
                              lambda: (panel.show(), True)[1])
         GLib.unix_signal_add(GLib.PRIORITY_DEFAULT, signal.SIGUSR2,
                              lambda: (panel.hide(), True)[1])
+
+        with open(PID_FILE, "w", encoding="utf-8") as handle:
+            handle.write(str(os.getpid()))
+
+        refresh_timetable_async()
+        GLib.timeout_add_seconds(REFRESH_INTERVAL_S, refresh_timetable_async)
+
+        panel.alert_tick()      # seed alert_last so past prayers stay silent
+        GLib.timeout_add_seconds(ALERT_TICK_S, panel.alert_tick)
+
         log(f"ready, pid {os.getpid()}")
 
     app.connect("activate", on_activate)
