@@ -1,5 +1,6 @@
 """Alert scheduling tests. Nothing here may spawn a real notification."""
 
+import os
 import sys
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -134,22 +135,78 @@ def test_compose_iqama_is_distinct_from_adhan(schedule):
     assert f"{schedule['iqamas']['maghrib']:%H:%M}" in iqama_body
 
 
-def test_play_sound_prefers_canberra(monkeypatch):
+def test_play_sound_chains_wake_before_chime(monkeypatch, tmp_path):
+    """The silent pre-roll must play first, or an asleep HDMI sink eats the chime."""
+    calls = []
+    wake = str(tmp_path / "wake.wav")
+    monkeypatch.setattr(alerts, "_spawn", calls.append)
+    monkeypatch.setattr(alerts.shutil, "which",
+                        lambda name: "/usr/bin/paplay" if name == "paplay" else None)
+    monkeypatch.setattr(alerts, "WAKE_FILE", wake)
+    alerts.play_sound()
+    assert len(calls) == 1
+    argv = calls[0]
+    assert argv[:2] == ["sh", "-c"]
+    assert argv[2].index(wake) < argv[2].index(alerts.SOUND_FILE)
+
+
+def test_play_sound_without_wake_file_still_plays(monkeypatch):
+    calls = []
+    monkeypatch.setattr(alerts, "_spawn", calls.append)
+    monkeypatch.setattr(alerts.shutil, "which",
+                        lambda name: "/usr/bin/paplay" if name == "paplay" else None)
+    monkeypatch.setattr(alerts, "ensure_wake_file", lambda path=None: "")
+    alerts.play_sound()
+    assert len(calls) == 1
+    assert calls[0][:2] == ["sh", "-c"]
+    assert alerts.SOUND_FILE in calls[0][2]
+
+
+def test_play_sound_honours_repeat_count(monkeypatch):
+    calls = []
+    monkeypatch.setattr(alerts, "_spawn", calls.append)
+    monkeypatch.setattr(alerts.shutil, "which",
+                        lambda name: "/usr/bin/paplay" if name == "paplay" else None)
+    monkeypatch.setattr(alerts, "ensure_wake_file", lambda path=None: "")
+    monkeypatch.setattr(alerts, "SOUND_REPEATS", 3)
+    alerts.play_sound()
+    assert calls[0][2].count(alerts.SOUND_FILE) == 3
+
+
+def test_sound_file_exists_on_this_system():
+    """Guards against a typo in SOUND_FILE silently making alerts silent."""
+    assert os.path.exists(alerts.SOUND_FILE), alerts.SOUND_FILE
+
+
+def test_play_sound_falls_back_to_canberra(monkeypatch):
     calls = []
     monkeypatch.setattr(alerts, "_spawn", calls.append)
     monkeypatch.setattr(alerts.shutil, "which",
                         lambda name: "/usr/bin/canberra-gtk-play"
                         if name == "canberra-gtk-play" else None)
     alerts.play_sound()
-    assert calls == [["canberra-gtk-play", "-i", "message-new-instant"]]
+    # Reference the constant, not a literal: hardcoding the event name here
+    # made this test fail purely because the configured sound changed.
+    assert calls == [["canberra-gtk-play", "-i", alerts.SOUND_EVENT]]
 
 
-def test_play_sound_falls_back_to_paplay(monkeypatch):
-    calls = []
-    monkeypatch.setattr(alerts, "_spawn", calls.append)
-    monkeypatch.setattr(alerts.shutil, "which", lambda name: None)
-    alerts.play_sound()
-    assert calls == [["paplay", alerts.SOUND_FILE]]
+def test_wake_file_is_valid_silent_wav(tmp_path):
+    import wave
+    path = alerts.ensure_wake_file(str(tmp_path / "wake.wav"))
+    assert path
+    with wave.open(path, "rb") as handle:
+        assert handle.getnchannels() == 2
+        assert handle.getframerate() == 48000
+        assert handle.getnframes() > 0
+        assert set(handle.readframes(handle.getnframes())) == {0}, "must be silent"
+
+
+def test_wake_file_reused_not_regenerated(tmp_path):
+    path = str(tmp_path / "wake.wav")
+    alerts.ensure_wake_file(path)
+    before = os.stat(path).st_mtime_ns
+    alerts.ensure_wake_file(path)
+    assert os.stat(path).st_mtime_ns == before
 
 
 def test_notify_passes_app_and_urgency(monkeypatch):

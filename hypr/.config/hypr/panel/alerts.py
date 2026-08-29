@@ -10,8 +10,10 @@ does. The same mechanism handles the day rollover and a timetable refresh for
 free.
 """
 
+import os
 import shutil
 import subprocess
+import wave
 from datetime import timedelta
 
 import prayer
@@ -20,8 +22,14 @@ import prayer
 NOTIFY_IQAMA = True
 
 APP_NAME = "Prayer Times"
-SOUND_EVENT = "message-new-instant"
-SOUND_FILE = "/usr/share/sounds/freedesktop/stereo/message-new-instant.oga"
+
+# A 6.1s alarm tone, chosen over the 1s message ding so it carries from another
+# room. Swap SOUND_FILE for any .oga in /usr/share/sounds/freedesktop/stereo/,
+# and raise SOUND_REPEATS if one pass still is not enough.
+SOUND_EVENT = "alarm-clock-elapsed"
+SOUND_FILE = "/usr/share/sounds/freedesktop/stereo/alarm-clock-elapsed.oga"
+SOUND_REPEATS = 1
+SOUND_GAP_S = 0.15
 ICON = "appointment-soon"
 
 ADHAN = "adhan"
@@ -87,12 +95,53 @@ def _spawn(argv: list) -> None:
         pass
 
 
+WAKE_SECONDS = 1.2
+WAKE_FILE = os.path.join(
+    os.environ.get("XDG_CACHE_HOME", os.path.expanduser("~/.cache")),
+    "hypr-panel", "wake.wav")
+
+
+def ensure_wake_file(path: str = None) -> str:
+    """Generate a short silent WAV used to wake the output before the chime.
+
+    An idle HDMI sink resumes in software almost instantly, but the display's
+    own audio path can take about a second to come up, which swallows a chime
+    this short entirely. Playing silence first means the audible part lands
+    after the hardware is already awake. Costs a ~1s delay on a notification,
+    which does not matter here.
+
+    Written to the cache, not the repo — it is a generated artifact.
+    """
+    path = path or WAKE_FILE
+    if os.path.exists(path):
+        return path
+    try:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with wave.open(path, "wb") as handle:
+            handle.setnchannels(2)
+            handle.setsampwidth(2)
+            handle.setframerate(48000)
+            handle.writeframes(b"\x00" * int(48000 * WAKE_SECONDS) * 4)
+    except (OSError, wave.Error):
+        return ""
+    return path
+
+
 def play_sound() -> None:
-    """canberra by event id, falling back to the raw file via paplay."""
-    if shutil.which("canberra-gtk-play"):
+    """Wake the output, then play message-new-instant.
+
+    paplay is preferred over canberra-gtk-play because it takes a file path,
+    which lets the wake-up sample be chained ahead of the chime in one shell.
+    """
+    if shutil.which("paplay"):
+        plays = [f'paplay "{SOUND_FILE}"'] * max(1, SOUND_REPEATS)
+        script = f"; sleep {SOUND_GAP_S}; ".join(plays)
+        wake = ensure_wake_file()
+        if wake:
+            script = f'paplay "{wake}"; {script}'
+        _spawn(["sh", "-c", script])
+    elif shutil.which("canberra-gtk-play"):
         _spawn(["canberra-gtk-play", "-i", SOUND_EVENT])
-    else:
-        _spawn(["paplay", SOUND_FILE])
 
 
 def notify(summary: str, body: str, timeout_ms: int = 12000) -> None:
