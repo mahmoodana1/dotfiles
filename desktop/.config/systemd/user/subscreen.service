@@ -1,0 +1,14 @@
+[Unit]
+Description=Sub-screen state server (clock, prayer, taskvim) for the phone
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 %h/projects/subscreen/serve.py --port 8765
+Restart=always
+RestartSec=3
+# The phone polls this; if it dies the sub-screen just shows "stale",
+# so restarting quietly is always the right move.
+
+[Install]
+WantedBy=default.target

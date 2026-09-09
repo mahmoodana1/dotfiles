@@ -1,0 +1,10 @@
+[Unit]
+Description=Refresh the Awqaf prayer timetable and push it to the phone
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=%h/projects/subscreen/phonectl.sh sync-times
+# A failure here is not interesting: the phone keeps the month it already
+# has, and falls back to computed times only if it has none at all.
+SuccessExitStatus=0 1

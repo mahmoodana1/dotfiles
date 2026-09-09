@@ -1,0 +1,14 @@
+[Unit]
+Description=Weekly prayer-timetable refresh and push to the phone
+
+[Timer]
+# Weekly, not monthly: refresh() is a no-op when the month is already
+# cached, so this is nearly free, and four attempts a month means a phone
+# that was off for one of them still gets next month's timings before the
+# boundary. Persistent catches runs missed while the laptop was shut.
+OnCalendar=weekly
+Persistent=true
+RandomizedDelaySec=1h
+
+[Install]
+WantedBy=timers.target
