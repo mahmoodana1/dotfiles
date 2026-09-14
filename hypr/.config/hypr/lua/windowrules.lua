@@ -144,6 +144,9 @@ hl.window_rule({ match = { class = "^(mpv|com.github.rafostar.Clapper)$" }, floa
 hl.window_rule({ match = { class = "^([Qq]alculate-gtk)$" }, float = true })
 hl.window_rule({ match = { class = "^([Ff]erdium)$" }, float = true })
 hl.window_rule({ match = { title = "^(Picture-in-Picture)$" }, float = true })
+hl.window_rule({ match = { class = "^(alacritty-float)$" }, float = true })
+hl.window_rule({ match = { class = "^(alacritty-float)$" }, size = "75% 65%" })
+hl.window_rule({ match = { class = "^(alacritty-float)$" }, center = true })
 
 -- float popups and dialogues
 hl.window_rule({ match = { title = "^(Authentication Required)$" }, float = true })
