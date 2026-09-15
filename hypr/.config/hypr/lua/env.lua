@@ -8,6 +8,12 @@
 -- Current version of the JaKooLit dotfiles this config was derived from
 hl.env("DOTS_VERSION", "2.3.18")
 
+-- Modular defaults (single source of truth lives in defaults.lua).
+-- Export them as env vars so shell scripts spawned by Hyprland pick them up.
+local d = require("defaults")
+hl.env("TERMINAL",    d.terminal)
+hl.env("FILEMANAGER", d.fileManager)
+
 -- Toolkit backends
 hl.env("GDK_BACKEND", "wayland,x11,*")
 hl.env("QT_QPA_PLATFORM", "wayland;xcb")

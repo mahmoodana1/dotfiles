@@ -243,10 +243,11 @@ hl.bind(mod .. " + A", sh(scripts .. "/OpenTui.sh"), { description = "open OpenC
 hl.bind(mod .. " + ALT + A", sh(scripts .. "/OverviewToggle.sh"), { description = "desktop overview" })
 hl.bind(mod .. " + Return", sh(term), { description = "open terminal" })
 hl.bind(mod .. " + E", sh(files), { description = "file manager" })
+hl.bind(mod .. " + F", sh(term .. " -e bash -lc " .. os.getenv("HOME") .. "/.local/bin/tmux-sessionizer"), { description = "tmux sessionizer (pick project)" })
 hl.bind(
     mod .. " + SHIFT + Return",
     sh(
-        "alacritty --class alacritty-float & sleep 0.1 && hyprctl dispatch 'hl.dsp.window.resize({x=1344,y=756,absolute=true})' >/dev/null && hyprctl dispatch 'hl.dsp.window.center()' >/dev/null"
+        term .. " --class alacritty-float & sleep 0.1 && hyprctl dispatch 'hl.dsp.window.resize({x=1344,y=756,absolute=true})' >/dev/null && hyprctl dispatch 'hl.dsp.window.center()' >/dev/null"
     ),
     { description = "floating terminal (focused)" }
 )
@@ -255,7 +256,7 @@ hl.bind(
 -- FEATURES / EXTRAS
 ----------------------------------------------------------------------
 
-hl.bind(mod .. " + H", sh(scripts .. "/KeyHints.sh"), { description = "help / cheat sheet" })
+hl.bind(mod .. " + H", sh(os.getenv("HOME") .. "/.local/bin/shortcut-viewer"), { description = "shortcut viewer (rofi, from shortcuts.md)" })
 hl.bind(mod .. " + ALT + R", sh(scripts .. "/Refresh.sh"), { description = "refresh bar and menus" })
 hl.bind(mod .. " + ALT + E", sh(scripts .. "/RofiEmoji.sh"), { description = "emoji menu" })
 hl.bind(mod .. " + S", sh(scripts .. "/RofiSearch.sh"), { description = "web search" })

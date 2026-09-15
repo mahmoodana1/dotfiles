@@ -1,0 +1,192 @@
+/*
+ * modern-mocha.rasi
+ *
+ * Modern, crisp rofi theme.
+ * Colors: Catppuccin Mocha (matching alacritty).
+ * Font:   JetBrains Mono (matching terminal).
+ * Blur:   provided by Hyprland layer rule on namespace "rofi"
+ *         (see ~/.config/hypr/lua/windowrules.lua). This theme sets a
+ *         semi-transparent background so the blur is visible.
+ */
+
+* {
+    /* Catppuccin Mocha palette */
+    base:      rgba(30, 30, 46, 0.92);    /* #1e1e2e @ 92% — mostly opaque, slight blur peek */
+    mantle:    #181825;
+    surface0:  #313244;
+    surface1:  #45475a;
+    overlay0:  #6c7086;
+    text:      #cdd6f4;
+    subtext0:  #a6adc8;
+    subtext1:  #bac2de;
+    mauve:     #cba6f7;
+    blue:      #89b4fa;
+    sapphire:  #74c7ec;
+    lavender:  #b4befe;
+    green:     #a6e3a1;
+    red:       #f38ba8;
+    yellow:    #f9e2af;
+
+    accent:    @mauve;
+    on-accent: @mantle;
+
+    background-color: transparent;
+    text-color:       @text;
+
+    font: "JetBrains Mono 11";
+}
+
+window {
+    transparency:     "real";
+    background-color: @base;
+    border:           1px solid;
+    border-color:     @surface0;
+    border-radius:    14px;
+    padding:          22px;
+    width:            46em;
+    location:         center;
+    anchor:           center;
+    y-offset:         -6em;
+}
+
+mainbox {
+    spacing:  14px;
+    padding:  0;
+    children: [ inputbar, message, listview ];
+}
+
+/* ---- prompt / entry ---- */
+
+inputbar {
+    background-color: @surface0;
+    padding:          12px 16px;
+    border-radius:    10px;
+    spacing:          12px;
+    children:         [ prompt, entry ];
+}
+
+prompt {
+    text-color: @accent;
+    font:       "JetBrains Mono Bold 11";
+}
+
+entry {
+    placeholder:       "type to search…";
+    placeholder-color: @overlay0;
+    text-color:        @text;
+    cursor:            text;
+}
+
+/* ---- message dialog (rofi -e) ---- */
+
+message {
+    background-color: @surface0;
+    padding:          14px 16px;
+    border-radius:    10px;
+}
+
+textbox {
+    background-color: transparent;
+    text-color:       @text;
+    vertical-align:   0.5;
+}
+
+/* ---- listview ---- */
+
+listview {
+    lines:        10;
+    columns:      1;
+    scrollbar:    false;
+    spacing:      4px;
+    padding:      6px 0;
+    fixed-height: false;
+    dynamic:      true;
+    cycle:        true;
+}
+
+scrollbar {
+    handle-width: 4px;
+    handle-color: @surface1;
+    border:       0;
+    padding:      0;
+}
+
+/* ---- elements ---- */
+
+element {
+    padding:       10px 14px;
+    border-radius: 8px;
+    spacing:       12px;
+    cursor:        pointer;
+}
+
+element normal.normal,
+element alternate.normal {
+    background-color: transparent;
+    text-color:       @text;
+}
+
+element normal.urgent,
+element alternate.urgent {
+    background-color: transparent;
+    text-color:       @red;
+}
+
+element normal.active,
+element alternate.active {
+    background-color: transparent;
+    text-color:       @sapphire;
+}
+
+element selected.normal {
+    background-color: @accent;
+    text-color:       @on-accent;
+}
+
+element selected.urgent {
+    background-color: @red;
+    text-color:       @on-accent;
+}
+
+element selected.active {
+    background-color: @sapphire;
+    text-color:       @on-accent;
+}
+
+element-text {
+    background-color: inherit;
+    text-color:       inherit;
+    vertical-align:   0.5;
+    horizontal-align: 0.0;
+}
+
+element-icon {
+    background-color: inherit;
+    size:             1.2em;
+    vertical-align:   0.5;
+}
+
+/* ---- error / mode-switcher ---- */
+
+error-message {
+    background-color: @base;
+    text-color:       @red;
+    padding:          16px;
+    border-radius:    10px;
+}
+
+mode-switcher {
+    spacing: 8px;
+}
+
+button {
+    padding:          8px 14px;
+    background-color: @surface0;
+    text-color:       @subtext0;
+    border-radius:    8px;
+}
+
+button selected {
+    background-color: @accent;
+    text-color:       @on-accent;
+}

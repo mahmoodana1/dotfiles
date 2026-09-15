@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+# tmux-sessionizer: fuzzy-pick any git project under $HOME, jump to (or create) its tmux session.
+# Recent picks are floated to the top of the list (frecency).
+# Usage: tmux-sessionizer          → fzf-pick
+#        tmux-sessionizer <path>   → jump straight to that path
+
+HIST="$HOME/.cache/tmux-sessionizer/history"
+mkdir -p "$(dirname "$HIST")"
+touch "$HIST"
+
+if [[ $# -eq 1 ]]; then
+    selected="$1"
+else
+    # Recent picks (newest first, deduped, only still-existing dirs)
+    recent=$(tac "$HIST" | awk '!seen[$0]++' | while IFS= read -r p; do
+        [[ -d "$p" ]] && printf '%s\n' "$p"
+    done)
+
+    # Discover git repos anywhere under $HOME (fast even at depth 10).
+    # fd respects .gitignore by default — a project can hide itself from the
+    # sessionizer by adding `.git` to its own .gitignore. Intentional.
+    discovered=$(fd -H -t d '^\.git$' "$HOME" \
+        --max-depth 10 \
+        -E node_modules -E .cache -E .cargo -E .rustup -E .npm \
+        -E .bun -E .claude -E .local -E .config -E .var \
+        -E vendor -E target -E build -E dist \
+        2>/dev/null | sed 's|/\.git/*$||')
+
+    # Always include these explicit roots (even if not git repos)
+    extras=$(printf '%s\n' "$HOME/dotfiles" "$HOME/projects")
+
+    selected=$(
+        { printf '%s\n' "$recent"; printf '%s\n' "$discovered"; printf '%s\n' "$extras"; } \
+            | grep -v '^$' \
+            | awk '!seen[$0]++' \
+            | fzf --prompt='project » ' --height=60% --reverse --border --info=inline \
+                  --header='recent picks first, then discovered' \
+                  --preview='ls -la {} 2>/dev/null | head -30' --preview-window=right:40%:wrap
+    )
+fi
+
+[[ -z "$selected" ]] && exit 0
+
+# Record this pick
+printf '%s\n' "$selected" >> "$HIST"
+
+# Trim history to last 200 entries
+tail -n 200 "$HIST" > "$HIST.tmp" && mv "$HIST.tmp" "$HIST"
+
+session_name=$(basename "$selected" | tr '.:' '__')
+
+# Create the session if it doesn't exist. `-d` (detached) starts a tmux server
+# silently if none is running yet, so we don't need to detect the server state.
+if ! tmux has-session -t="$session_name" 2>/dev/null; then
+    tmux new-session -ds "$session_name" -c "$selected"
+fi
+
+# Attach (from outside tmux) or switch (from inside tmux) to the target session.
+if [[ -z "$TMUX" ]]; then
+    exec tmux attach -t "$session_name"
+else
+    exec tmux switch-client -t "$session_name"
+fi

@@ -19,7 +19,7 @@ if ! hyprctl clients -j | grep -q "\"class\": \"$CLASS\""; then
 
     # ~/.local/bin/openclaw-tui puts the nvm node bin dir on PATH and execs
     # `openclaw tui "$@"`, so the token flag passes straight through.
-    setsid -f alacritty --class "$CLASS" -T "OpenClaw TUI" \
+    setsid -f "${TERMINAL:-alacritty}" --class "$CLASS" -T "OpenClaw TUI" \
         -e "$HOME/.local/bin/openclaw-tui" \
         --token "$OPENCLAW_TOKEN" \
         >/dev/null 2>&1

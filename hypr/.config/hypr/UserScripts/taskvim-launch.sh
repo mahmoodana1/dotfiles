@@ -21,6 +21,6 @@ if ! hyprctl clients -j | grep -q "\"class\": \"$CLASS\""; then
   #     a command, so calling it that way fails silently under setsid;
   #   * the program must follow `-e`. kitty accepts a bare trailing command,
   #     alacritty treats it as an unrecognised argument and refuses to start.
-  setsid -f alacritty --class "$CLASS" -T taskvim -e "$HOME/.local/bin/taskvim" \
+  setsid -f "${TERMINAL:-alacritty}" --class "$CLASS" -T taskvim -e "$HOME/.local/bin/taskvim" \
     >/dev/null 2>&1
 fi
