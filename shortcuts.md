@@ -290,6 +290,8 @@ Prefix is `Ctrl+a` (rebound from default `Ctrl+b`). All shortcuts below mean: pr
 | `Ctrl+a ←/↓/↑/→` | Move to pane by arrow |
 | `Ctrl+a x` | Kill current pane (asks y/n) |
 | `Ctrl+a z` | Zoom pane toggle (fullscreen one pane) |
+| `Ctrl+a e` | Reopen the lens panel of Claude's edits (see below) |
+| `Ctrl+a E` | Toggle the lens auto-popup for the project in the current pane (capture keeps running) |
 
 ### Copy mode (vim-style)
 
@@ -316,6 +318,37 @@ Mouse drag → release also copies to system clipboard.
 | `tmux source-file ~/.tmux.conf` | Reload config live |
 
 Plugins loaded via TPM: `tmux-resurrect` + `tmux-continuum` — sessions auto-save every 2 min and restore on tmux start.
+
+---
+
+## lens — Claude change panel
+
+Pops up in a tmux popup when Claude finishes a turn that changed files (a turn that only
+answered a question leaves it closed; `Ctrl+a E` turns the auto-popup off and on for the project you're in, leaving other projects alone); shows every add/remove
+with the prompt that caused it. The popup holds the keyboard, so it scrolls straight away — no
+pane to switch to first. `Ctrl+a e` reopens it after you close it.
+Opens ready to search — type to filter by file name. The diff uses the same tokyonight-moon
+colours as nvim. Unread edits carry a `●` and stay bright; landing on one reads it. Read state is kept per
+session, so closing and reopening the popup doesn't mark everything new again.
+Session-only: the log is swept 24 hours after the last change.
+
+| Keys | Action |
+|---|---|
+| `j` / `k` | Move down / up |
+| `/` | Filter the list by file name as you type (`Enter` keeps it, `Esc` clears it) |
+| `CTRL + j` / `CTRL + k` | Move through the results while the filter prompt is open |
+| `CTRL + e` / `CTRL + y` | Scroll the diff one line, from either pane |
+| `CTRL + f` / `CTRL + b` | Scroll the diff one page, from either pane |
+| `CTRL + d` / `CTRL + u` | Half page down / up |
+| `gg` / `G` | First / last entry |
+| `n` / `N` | Next / previous hunk |
+| `J` / `K` | Next / previous file |
+| `t` | Toggle view (timeline ⇄ grouped by file) |
+| `+` / `-` | More / less surrounding context |
+| `Tab` | Move focus between the list and the diff (the diff gets its own cursor) |
+| `●` | Marks an edit you haven't looked at yet (it dims once you land on it) |
+| `?` | Help |
+| `q` | Close the popup (the log stays; `Ctrl+a e` reopens it) |
 
 ---
 
