@@ -1,5 +1,33 @@
 return {
-    { "neovim/nvim-lspconfig" },
+    {
+        "neovim/nvim-lspconfig",
+        opts = {
+            -- Global diagnostic settings live here so they win: LazyVim applies
+            -- its own vim.diagnostic.config() on VeryLazy and used to clobber
+            -- anything set earlier in config/lazy.lua.
+            diagnostics = {
+                virtual_text = true,
+                severity_sort = true,
+                update_in_insert = false,
+            },
+            servers = {
+                -- pyright (basedpyright was broken in Mason)
+                pyright = {
+                    settings = {
+                        pyright = { disableOrganizeImports = false },
+                        python = {
+                            analysis = {
+                                autoSearchPaths = true,
+                                typeCheckingMode = "basic",
+                                diagnosticMode = "openFilesOnly",
+                                useLibraryCodeForTypes = true,
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    },
     {
         "mason-org/mason.nvim",
         opts = { ui = { border = "rounded" } },

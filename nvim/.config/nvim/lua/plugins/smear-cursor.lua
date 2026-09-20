@@ -14,7 +14,11 @@ return {
         smear_between_neighbor_lines = true,
         scroll_buffer_space = true,
 
-        -- Hide the real cursor while smearing
-        hide_target_hack = true,
+        -- NOTE: do NOT set `hide_target_hack = true` here. It is the fallback for
+        -- setups WITHOUT termguicolors, and it is only valid together with
+        -- `never_draw_over_target = true`. On its own it paints a literal block
+        -- glyph at the target cell and never hides the real cursor -> stray
+        -- cursor artifacts. termguicolors is on, so the default path (blend=100
+        -- on SmearCursorHideable) hides the real cursor correctly.
     },
 }

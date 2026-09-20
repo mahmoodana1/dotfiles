@@ -52,40 +52,8 @@ require("lazy").setup({
     },
 })
 
-vim.bo.modifiable = true
-vim.bo.readonly = false
-vim.opt.termguicolors = true
-
--- Custom LSP configurations
-local lspconfig = require("lspconfig")
-
--- 🐍 Python LSP (pyright — basedpyright was broken in Mason)
-lspconfig.pyright.setup({
-    settings = {
-        pyright = {
-            disableOrganizeImports = false,
-        },
-        python = {
-            analysis = {
-                autoSearchPaths = true,
-                typeCheckingMode = "basic",
-                diagnosticMode = "openFilesOnly",
-                useLibraryCodeForTypes = true,
-            },
-        },
-    },
-})
-
--- ⚙️ Global diagnostic settings
-vim.diagnostic.config({
-    virtual_text = true, -- show inline warnings
-    severity_sort = true, -- sort by severity
-    update_in_insert = false, -- don't recheck while typing (keep it light)
-})
-
--- Helper: keymap to toggle diagnostics on/off
-vim.keymap.set("n", "<leader>ud", function()
-    local state = vim.diagnostic.config().virtual_text
-    vim.diagnostic.config({ virtual_text = not state })
-    vim.notify("Diagnostics " .. (state and "hidden" or "visible"), vim.log.levels.INFO)
-end, { desc = "Toggle diagnostics" })
+-- LSP servers, diagnostics and the <leader>ud toggle used to live here. They ran
+-- before LazyVim's own LSP/diagnostic setup and were silently overwritten on
+-- VeryLazy, and `lspconfig.pyright.setup()` attached a second pyright client on
+-- top of LazyVim's -- that duplication is what made virtual text and signs blink
+-- in and out. They now live in lua/plugins/lsp.lua and lua/config/options.lua.

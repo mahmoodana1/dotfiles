@@ -2,14 +2,31 @@ return {
     "folke/snacks.nvim",
     lazy = false,
     priority = 1000,
+    -- LazyVim registers its snacks-picker keymaps whenever `vim.g.lazyvim_picker`
+    -- resolves to snacks (the `auto` default) -- the `picker.enabled` flag below
+    -- only gates auto-setup, not the keys. These three are also declared by
+    -- telescope.lua, and whichever plugin got mapped last won, so <leader>ff
+    -- flipped between the two pickers between launches. Give them to telescope;
+    -- everything else (dashboard buttons, <leader>fc, searches) stays on snacks.
+    keys = {
+        { "<leader>ff", false },
+        { "<leader>fg", false },
+        { "<leader>fb", false },
+    },
     opts = {
         bigfile = { enabled = true },
         dashboard = { enabled = true },
+        -- Snacks.explorer owns <leader>e / <leader>E / <leader>fe / <leader>fE
+        -- (declared by LazyVim's snacks spec). Enabled here so it also replaces
+        -- netrw when you open a directory.
         explorer = { enabled = true },
         indent = { enabled = true },
-        input = { enabled = true },
-        notifier = { enabled = true },
-        picker = { enabled = true },
+        input = { enabled = false },
+        notifier = { enabled = false },
+        -- Left off deliberately: turning this on makes LazyVim register its own
+        -- <leader>ff / <leader>fb picker maps, which would collide with the ones
+        -- telescope.lua declares -- the same double-ownership bug <leader>e had.
+        picker = { enabled = false },
         quickfile = { enabled = true },
         scope = { enabled = true },
         scroll = { enabled = true },
@@ -22,21 +39,6 @@ return {
         snacks.setup(opts)
 
         local map = vim.keymap.set
-        map("n", "<leader>sf", function()
-            snacks.picker.files()
-        end, { desc = "Snacks Files" })
-        map("n", "<leader>sg", function()
-            snacks.picker.grep()
-        end, { desc = "Snacks Grep" })
-        map("n", "<leader>sb", function()
-            snacks.picker.buffers()
-        end, { desc = "Snacks Buffers" })
-        map("n", "<leader>sd", function()
-            snacks.picker.diagnostics()
-        end, { desc = "Snacks Diagnostics" })
-        map("n", "<leader>sn", function()
-            snacks.notifier.show_history()
-        end, { desc = "Notification History" })
         map("n", "<leader>z", function()
             snacks.zen()
         end, { desc = "Toggle Zen Mode" })
@@ -55,9 +57,6 @@ return {
         map({ "n", "t" }, "[[", function()
             snacks.words.jump(-vim.v.count1)
         end, { desc = "Previous Reference" })
-        map("n", "<leader>un", function()
-            snacks.notifier.hide()
-        end, { desc = "Dismiss Notifications" })
 
         snacks.toggle.option("spell", { name = "Spelling" }):map("<leader>us")
         snacks.toggle.option("wrap", { name = "Wrap" }):map("<leader>uw")
