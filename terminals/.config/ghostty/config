@@ -1,4 +1,1 @@
 theme = catppuccin-mocha
-
-# Match alacritty/kitty so transparent nvim looks the same everywhere.
-background-opacity = 0.95
