@@ -14,7 +14,10 @@ return {
         priority = 1000,
         opts = {
             flavour = "mocha",
-            transparent_background = false,
+            -- Let the terminal's own background (and its opacity) show
+            -- through instead of painting #1e1e2e over it. This is what makes
+            -- nvim match alacritty's translucent look.
+            transparent_background = true,
             styles = {
                 comments = { "italic" },
                 conditionals = { "italic" },
