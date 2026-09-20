@@ -319,6 +319,228 @@ Mouse drag → release also copies to system clipboard.
 
 Plugins loaded via TPM: `tmux-resurrect` + `tmux-continuum` — sessions auto-save every 2 min and restore on tmux start.
 
+
+## Neovim
+
+Leader is `SPACE`. Config: `~/.config/nvim` — **every keybinding lives in
+`lua/core/keymaps.lua`**, in numbered sections. Nothing else in the config sets
+a key. Press `SPACE s k` in nvim for a searchable picker of every active map,
+or just `SPACE` and wait for which-key.
+
+### Neovim — General
+
+| Keys | Action |
+|---|---|
+| `CTRL + S` | Save (works in insert + visual too) |
+| `ESC` | Clear search highlight |
+| `SPACE q q` | Quit all |
+| `ALT + J / K` | Move line or selection down / up |
+| `< / >` (visual) | Indent, keeping the selection |
+| `CTRL + D / U` | Half page down / up, recentred |
+| `n / N` | Next / prev search result, recentred |
+| `p` (visual) | Paste over selection without clobbering the register |
+| `SPACE y` / `SPACE Y` | Yank selection / line to system clipboard |
+| `s` / `S` | Flash jump / Flash treesitter jump |
+| `SPACE u i` | Inspect syntax highlight under cursor |
+
+### Neovim — Windows, Buffers, Tabs
+
+| Keys | Action |
+|---|---|
+| `CTRL + H/J/K/L` | Move to window left/down/up/right (works from a terminal too) |
+| `CTRL + arrows` | Resize window |
+| `SPACE -` / `SPACE \|` | Split below / right |
+| `SPACE w d` | Close window |
+| `SPACE w m` | Maximise window (toggle) |
+| `SHIFT + H / L` | Previous / next buffer |
+| `[b` / `]b` | Previous / next buffer |
+| `SPACE b b` | Switch to the other buffer |
+| `SPACE b d` / `SPACE b o` | Delete buffer / delete all other buffers |
+| `SPACE b p` | Pin buffer in the bufferline |
+| `SPACE TAB TAB` | New tab |
+| `SPACE TAB d` / `[` / `]` | Close / prev / next tab |
+
+### Neovim — Find & Search (telescope)
+
+| Keys | Action |
+|---|---|
+| `SPACE SPACE` | Find files (project root) |
+| `SPACE f f` / `SPACE f F` | Find files — root / cwd |
+| `SPACE f g` | Live grep (root) |
+| `SPACE f b` | Buffers |
+| `SPACE f r` | Recent files |
+| `SPACE f h` | Help tags |
+| `SPACE f c` | Find a file in the nvim config |
+| `SPACE /` or `SPACE s g` | Grep (root) |
+| `SPACE s G` | Grep (cwd) |
+| `SPACE s b` | Grep inside current buffer |
+| `SPACE s w` | Grep the word under the cursor |
+| `SPACE s k` | **Every keymap** — searchable |
+| `SPACE s c` | Commands |
+| `SPACE s d` | Workspace diagnostics |
+| `SPACE s m` | Marks |
+| `SPACE s R` | Resume last picker |
+| `SPACE s s` / `SPACE s S` | Document / workspace symbols |
+| `SPACE s h` | Highlight groups |
+| `SPACE s t` | Todo comments |
+
+Inside a picker: `CTRL + J/K` move, `CTRL + Q` send to quickfix, `ESC` closes
+(one press), `CTRL + U` clears the prompt.
+
+### Neovim — File Explorer
+
+| Keys | Action |
+|---|---|
+| `SPACE e` | Explorer at project root (snacks) |
+| `SPACE E` | Explorer at cwd |
+| `H` (in tree) | Toggle hidden / dotfiles |
+
+### Neovim — Code & LSP
+
+Buffer-local; these appear once a language server attaches.
+
+| Keys | Action |
+|---|---|
+| `g d` / `g r` | Goto definition / references |
+| `g I` / `g y` / `g D` | Implementation / type definition / declaration |
+| `K` | Hover documentation |
+| `g K` / `CTRL + K` (insert) | Signature help |
+| `SPACE c a` | Code action |
+| `SPACE c r` | Rename symbol |
+| `SPACE c f` | Format buffer now |
+| `SPACE c c` | Run code lens (when the server offers one) |
+| `SPACE c R` | Rename the file |
+| `SPACE c m` | Mason (install servers/formatters) |
+| `SPACE c l` | LSP health check |
+| `SPACE L` | Lazy (plugin manager) |
+
+### Neovim — Diagnostics
+
+| Keys | Action |
+|---|---|
+| `D` | Show the diagnostic under the cursor |
+| `SPACE c d` | Same, as a float |
+| `]d` / `[d` | Next / previous diagnostic |
+| `]e` / `[e` | Next / previous **error** |
+| `]w` / `[w` | Next / previous **warning** |
+| `SPACE x x` / `SPACE x X` | Trouble — workspace / buffer diagnostics |
+| `SPACE x s` | Trouble — symbols |
+| `SPACE x l` / `SPACE x q` | Location list / quickfix list |
+| `SPACE x t` | Todo comments |
+
+### Neovim — Git
+
+| Keys | Action |
+|---|---|
+| `SPACE g g` or `SPACE l g` | LazyGit |
+| `SPACE g f` | LazyGit on the current file |
+| `SPACE g c` / `SPACE g s` / `SPACE g B` | Commits / status / branches (telescope) |
+| `SPACE g y` | Open current line on the git host in a browser |
+| `]h` / `[h` | Next / previous hunk |
+| `SPACE g h s` / `SPACE g h r` | Stage / reset hunk (works on a visual selection) |
+| `SPACE g h S` / `SPACE g h R` | Stage / reset whole buffer |
+| `SPACE g h p` | Preview hunk inline |
+| `SPACE g h b` or `SPACE g b` | Blame line (full) |
+| `SPACE g h d` | Diff this file |
+
+### Neovim — Toggles (`SPACE u`)
+
+| Keys | Action |
+|---|---|
+| `SPACE u f` | **Format on save** |
+| `SPACE u s` / `SPACE u w` | Spelling / wrap |
+| `SPACE u l` / `SPACE u L` | Line numbers / relative numbers |
+| `SPACE u d` | Diagnostics |
+| `SPACE u h` | Inlay hints |
+| `SPACE u g` | Indent guides |
+| `SPACE u c` | Conceal |
+| `SPACE u T` | Treesitter highlight |
+| `SPACE u D` | Dim inactive code |
+| `SPACE u b` | Dark / light background |
+| `SPACE u n` | Dismiss notifications |
+| `SPACE u r` | Redraw / clear highlights |
+
+### Neovim — Terminal
+
+| Keys | Action |
+|---|---|
+| `CTRL + /` | Toggle floating terminal (also works from inside it) |
+| `SPACE t f / t h / t v` | Terminal float / horizontal / vertical |
+| `ESC ESC` | Leave terminal mode |
+
+### Neovim — Run & Build
+
+| Keys | Action |
+|---|---|
+| `SPACE r r` | Compile **and run** the current C/C++ file in a tmux window named `run` |
+| `SPACE r b` | Compile only |
+| `SPACE r p` | Run the current Python file in the `run` tmux window |
+
+Compiles with `-Wall -Wextra -g`. Falls back to a split `:terminal` when not
+inside tmux. (This was `SPACE c a r` before — it moved because it made every
+`SPACE c a` code action wait 400ms.)
+
+### Neovim — Debug (DAP)
+
+| Keys | Action |
+|---|---|
+| `F5` | Start / continue |
+| `F9` | Toggle breakpoint |
+| `F10` / `F11` / `F12` | Step over / into / out |
+| `SPACE d b` / `SPACE d B` | Toggle breakpoint / conditional breakpoint |
+| `SPACE d c` | Continue |
+| `SPACE d o` / `SPACE d i` / `SPACE d O` | Step over / into / out |
+| `SPACE d u` | Toggle the debugger UI |
+| `SPACE d e` | Evaluate expression |
+| `SPACE d r` | Toggle REPL |
+| `SPACE d t` | Terminate |
+
+The UI opens and closes with the session automatically.
+
+### Neovim — AI / Claude
+
+| Keys | Action |
+|---|---|
+| `SPACE a c` | Toggle Claude |
+| `SPACE a f` | Focus Claude |
+| `SPACE a r` / `SPACE a C` | Resume / continue a session |
+| `SPACE a s` (visual) | Send the selection to Claude |
+| `SPACE a b` | Add the current buffer to Claude's context |
+
+Copilot appears as a source in the completion menu (top-ranked), not as ghost
+text you have to fight.
+
+### Neovim — Completion (while the popup is open)
+
+| Keys | Action |
+|---|---|
+| `CTRL + SPACE` | Open the completion menu |
+| `TAB` / `SHIFT + TAB` | Next / previous item, or jump snippet placeholders |
+| `CTRL + J / K` | Next / previous item |
+| `ENTER` | Accept |
+| `CTRL + E` | Dismiss |
+
+### Neovim — Sessions & Scratch
+
+| Keys | Action |
+|---|---|
+| `SPACE q s` / `SPACE q l` | Restore session for cwd / last session |
+| `SPACE q d` | Stop saving the current session |
+| `SPACE .` / `SPACE S` | Toggle scratch buffer / pick one |
+| `SPACE z` / `SPACE Z` | Zen mode / zoom |
+| `]]` / `[[` | Next / previous reference to the word under the cursor |
+
+### Neovim — Textobjects
+
+Only meaningful after an operator (`d`, `c`, `y`, `v`):
+
+| Keys | Selects |
+|---|---|
+| `af` / `if` | A function / its body |
+| `ac` / `ic` | A class / its body |
+| `aa` / `ia` | An argument / its contents |
+| `]f` / `[f` | Jump to next / previous function |
+
 ---
 
 ## lens — Claude change panel

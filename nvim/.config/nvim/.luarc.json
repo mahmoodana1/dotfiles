@@ -1,7 +1,4 @@
 {
-    "diagnostics.disable": [
-        "param-type-mismatch",
-        "need-check-nil",
-        "undefined-field"
-    ]
+  "workspace.library": ["${3rd}/luv/library"],
+  "workspace.checkThirdParty": false
 }
