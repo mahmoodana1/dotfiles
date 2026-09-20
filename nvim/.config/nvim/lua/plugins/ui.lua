@@ -5,6 +5,93 @@
 --  lua/core/keymaps.lua.
 -- ===========================================================================
 
+-- How much lighter to make the dark end of the palette, in HSL lightness
+-- points. 0 = stock catppuccin mocha. Raise this one number if it is still too
+-- dark, lower it if it has gone washed out.
+--
+-- The shift is done in HSL so hue and saturation are untouched: the background
+-- keeps catppuccin's blue-purple tint instead of drifting to flat grey, which
+-- is what happens if you just blend toward white. Only the neutral ramp moves;
+-- accent colours (red, green, blue, ...) ship unchanged, so syntax looks normal.
+local LIGHTEN = 20
+
+local function rgb_to_hsl(r, g, b)
+    r, g, b = r / 255, g / 255, b / 255
+    local max, min = math.max(r, g, b), math.min(r, g, b)
+    local l = (max + min) / 2
+    if max == min then
+        return 0, 0, l
+    end
+    local d = max - min
+    local s = l > 0.5 and d / (2 - max - min) or d / (max + min)
+    local h
+    if max == r then
+        h = (g - b) / d + (g < b and 6 or 0)
+    elseif max == g then
+        h = (b - r) / d + 2
+    else
+        h = (r - g) / d + 4
+    end
+    return h / 6, s, l
+end
+
+local function hsl_to_rgb(h, s, l)
+    if s == 0 then
+        local v = math.floor(l * 255 + 0.5)
+        return v, v, v
+    end
+    local function hue(p, q, t)
+        if t < 0 then
+            t = t + 1
+        end
+        if t > 1 then
+            t = t - 1
+        end
+        if t < 1 / 6 then
+            return p + (q - p) * 6 * t
+        end
+        if t < 1 / 2 then
+            return q
+        end
+        if t < 2 / 3 then
+            return p + (q - p) * (2 / 3 - t) * 6
+        end
+        return p
+    end
+    local q = l < 0.5 and l * (1 + s) or l + s - l * s
+    local p = 2 * l - q
+    return math.floor(hue(p, q, h + 1 / 3) * 255 + 0.5),
+        math.floor(hue(p, q, h) * 255 + 0.5),
+        math.floor(hue(p, q, h - 1 / 3) * 255 + 0.5)
+end
+
+---@param hex string "#rrggbb"
+---@param points number lightness points to add (0-100 scale)
+local function lighten(hex, points)
+    local r, g, b = hex:match("#(%x%x)(%x%x)(%x%x)")
+    local h, s, l = rgb_to_hsl(tonumber(r, 16), tonumber(g, 16), tonumber(b, 16))
+    l = math.min(1, l + points / 100)
+    return ("#%02x%02x%02x"):format(hsl_to_rgb(h, s, l))
+end
+
+-- Only the background layers of catppuccin mocha, darkest to lightest.
+-- The overlay greys (#6c7086 / #7f849c / #9399b2) are deliberately NOT in
+-- here: overlay2 is the Comment colour, and lifting it too made comments as
+-- bright as ordinary code.
+local mocha_backgrounds = {
+    crust = "#11111b",
+    mantle = "#181825",
+    base = "#1e1e2e", -- the editor background
+    surface0 = "#313244",
+    surface1 = "#45475a",
+    surface2 = "#585b70",
+}
+
+local lifted = {}
+for name, hex in pairs(mocha_backgrounds) do
+    lifted[name] = lighten(hex, LIGHTEN)
+end
+
 return {
     -- --- Colourscheme ------------------------------------------------------
     {
@@ -14,6 +101,7 @@ return {
         priority = 1000,
         opts = {
             flavour = "mocha",
+            color_overrides = { mocha = lifted },
             transparent_background = false,
             styles = {
                 comments = { "italic" },
