@@ -80,8 +80,17 @@ end
 -- saturation and, in the same proportion, pulls lightness down toward
 -- VIVID_TARGET_L -- which is what actually reads as "lively" rather than
 -- "slightly less washed out".
-local VIVID = 25
+local VIVID = 10
 local VIVID_TARGET_L = 0.62
+
+-- How much to blend every accent toward a single shared anchor colour, in
+-- percent. This is the "make them compliment one another" knob: mixing each
+-- accent a little way toward one common point pulls them closer together as a
+-- family, lifts them lighter, and softens the contrast between them -- without
+-- flattening hue differences the way desaturating everything would.
+-- 0 = accents keep their own separate intensity.
+local BLEND = 20
+local BLEND_ANCHOR = "#cdd6f4" -- catppuccin mocha `text`, a neutral light lavender
 
 ---@param hex string "#rrggbb"
 local function vivid(hex, points)
@@ -91,6 +100,19 @@ local function vivid(hex, points)
     s = math.min(1, s + f)
     l = l - (l - VIVID_TARGET_L) * f
     return ("#%02x%02x%02x"):format(hsl_to_rgb(h, s, math.max(0, math.min(1, l))))
+end
+
+---@param hex string "#rrggbb"
+---@param anchor string "#rrggbb" the colour to mix toward
+---@param pct number how far to mix, 0-100
+local function blend(hex, anchor, pct)
+    local f = pct / 100
+    local r1, g1, b1 = hex:match("#(%x%x)(%x%x)(%x%x)")
+    local r2, g2, b2 = anchor:match("#(%x%x)(%x%x)(%x%x)")
+    local function mix(a, b)
+        return math.floor(tonumber(a, 16) + (tonumber(b, 16) - tonumber(a, 16)) * f + 0.5)
+    end
+    return ("#%02x%02x%02x"):format(mix(r1, r2), mix(g1, g2), mix(b1, b2))
 end
 
 -- Only the background layers of catppuccin mocha, darkest to lightest.
@@ -129,7 +151,7 @@ for name, hex in pairs(mocha_backgrounds) do
     overrides[name] = lighten(hex, LIGHTEN)
 end
 for name, hex in pairs(mocha_accents) do
-    overrides[name] = vivid(hex, VIVID)
+    overrides[name] = blend(vivid(hex, VIVID), BLEND_ANCHOR, BLEND)
 end
 
 return {
