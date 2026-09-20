@@ -74,6 +74,25 @@ local function lighten(hex, points)
     return ("#%02x%02x%02x"):format(hsl_to_rgb(h, s, l))
 end
 
+-- How much punchier to make the accent colours (red, green, blue, ...).
+-- 0 = stock catppuccin mocha. Catppuccin's accents are pastels: quite light
+-- AND fairly desaturated, so raising saturation alone barely shows. This adds
+-- saturation and, in the same proportion, pulls lightness down toward
+-- VIVID_TARGET_L -- which is what actually reads as "lively" rather than
+-- "slightly less washed out".
+local VIVID = 25
+local VIVID_TARGET_L = 0.62
+
+---@param hex string "#rrggbb"
+local function vivid(hex, points)
+    local r, g, b = hex:match("#(%x%x)(%x%x)(%x%x)")
+    local h, s, l = rgb_to_hsl(tonumber(r, 16), tonumber(g, 16), tonumber(b, 16))
+    local f = points / 100
+    s = math.min(1, s + f)
+    l = l - (l - VIVID_TARGET_L) * f
+    return ("#%02x%02x%02x"):format(hsl_to_rgb(h, s, math.max(0, math.min(1, l))))
+end
+
 -- Only the background layers of catppuccin mocha, darkest to lightest.
 -- The overlay greys (#6c7086 / #7f849c / #9399b2) are deliberately NOT in
 -- here: overlay2 is the Comment colour, and lifting it too made comments as
@@ -87,9 +106,30 @@ local mocha_backgrounds = {
     surface2 = "#585b70",
 }
 
-local lifted = {}
+-- The accent colours of catppuccin mocha.
+local mocha_accents = {
+    rosewater = "#f5e0dc",
+    flamingo = "#f2cdcd",
+    pink = "#f5c2e7",
+    mauve = "#cba6f7",
+    red = "#f38ba8",
+    maroon = "#eba0ac",
+    peach = "#fab387",
+    yellow = "#f9e2af",
+    green = "#a6e3a1",
+    teal = "#94e2d5",
+    sky = "#89dceb",
+    sapphire = "#74c7ec",
+    blue = "#89b4fa",
+    lavender = "#b4befe",
+}
+
+local overrides = {}
 for name, hex in pairs(mocha_backgrounds) do
-    lifted[name] = lighten(hex, LIGHTEN)
+    overrides[name] = lighten(hex, LIGHTEN)
+end
+for name, hex in pairs(mocha_accents) do
+    overrides[name] = vivid(hex, VIVID)
 end
 
 return {
@@ -101,7 +141,7 @@ return {
         priority = 1000,
         opts = {
             flavour = "mocha",
-            color_overrides = { mocha = lifted },
+            color_overrides = { mocha = overrides },
             transparent_background = false,
             styles = {
                 comments = { "italic" },
