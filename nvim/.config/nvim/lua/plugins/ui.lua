@@ -272,8 +272,13 @@ return {
                 always_show_bufferline = false,
                 show_buffer_close_icons = false,
                 separator_style = "slant",
+                -- Reserve the sidebar's width so the buffer tabs start to the
+                -- right of the explorer instead of sliding under it. No `text`
+                -- on purpose: snacks already draws "Explorer" as its own border
+                -- title, and setting one here printed the label twice once a
+                -- second buffer made the bufferline visible.
                 offsets = {
-                    { filetype = "snacks_layout_box", text = "Explorer", highlight = "Directory" },
+                    { filetype = "snacks_layout_box", text = "", separator = true },
                 },
             },
         },
