@@ -13,7 +13,7 @@
 -- keeps catppuccin's blue-purple tint instead of drifting to flat grey, which
 -- is what happens if you just blend toward white. Only the neutral ramp moves;
 -- accent colours (red, green, blue, ...) ship unchanged, so syntax looks normal.
-local LIGHTEN = 20
+local LIGHTEN = 5
 
 local function rgb_to_hsl(r, g, b)
     r, g, b = r / 255, g / 255, b / 255
