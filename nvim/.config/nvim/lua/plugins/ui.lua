@@ -225,7 +225,13 @@ return {
         opts = function()
             return {
                 options = {
-                    theme = "catppuccin",
+                    -- Catppuccin ships its lualine themes per flavour
+                    -- (catppuccin-mocha/-frappe/...) plus "catppuccin-nvim",
+                    -- which follows whichever flavour is active. There is no
+                    -- plain "catppuccin" module, so that name silently fell
+                    -- back to `auto` and lualine warned about it on startup.
+                    -- The flavour is pinned to mocha above, so name it.
+                    theme = "catppuccin-mocha",
                     globalstatus = true,
                     component_separators = { left = "", right = "" },
                     section_separators = { left = "", right = "" },

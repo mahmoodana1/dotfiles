@@ -160,6 +160,14 @@ function M.setup()
     map("n", "<leader>sh", pick("highlights"), "Highlight groups")
     map("n", "<leader>st", "<cmd>TodoTelescope<cr>", "Todo comments")
 
+    -- Message history. noice routes messages into its own log, so `:messages`
+    -- can look empty even when something errored. These two show the real
+    -- thing, scrollable and untruncated.
+    -- sN rather than sne: a two-key prefix would make <leader>sn wait out
+    -- timeoutlen on every press.
+    map("n", "<leader>sn", "<cmd>Noice history<cr>", "Notifications (all)")
+    map("n", "<leader>sN", "<cmd>Noice errors<cr>", "Notifications (errors only)")
+
     -- =======================================================================
     --  5. FILE EXPLORER   (snacks explorer)
     -- =======================================================================
@@ -224,6 +232,40 @@ function M.setup()
     end, "Toggle flash search")
 
     map("n", "<leader>ui", vim.show_pos, "Inspect syntax under cursor")
+
+    -- Treesitter textobjects. These used to be declared inside the treesitter
+    -- spec's `opts.textobjects`; the `main` branch dropped that table, so they
+    -- are plain keymaps now -- which is where they belonged anyway.
+    --
+    -- af/if/ac/ic/aa/ia are textobjects, not commands: they only mean
+    -- something after an operator (d, c, y) or in visual mode.
+    local function select_to(obj)
+        return function()
+            require("nvim-treesitter-textobjects.select").select_textobject(obj, "textobjects")
+        end
+    end
+    local function goto_start(obj)
+        return function()
+            require("nvim-treesitter-textobjects.move").goto_next_start(obj, "textobjects")
+        end
+    end
+    local function goto_prev_start(obj)
+        return function()
+            require("nvim-treesitter-textobjects.move").goto_previous_start(obj, "textobjects")
+        end
+    end
+
+    map({ "x", "o" }, "af", select_to("@function.outer"), "A function")
+    map({ "x", "o" }, "if", select_to("@function.inner"), "Inner function")
+    map({ "x", "o" }, "ac", select_to("@class.outer"), "A class")
+    map({ "x", "o" }, "ic", select_to("@class.inner"), "Inner class")
+    map({ "x", "o" }, "aa", select_to("@parameter.outer"), "A parameter")
+    map({ "x", "o" }, "ia", select_to("@parameter.inner"), "Inner parameter")
+
+    map({ "n", "x", "o" }, "]f", goto_start("@function.outer"), "Next function")
+    map({ "n", "x", "o" }, "]c", goto_start("@class.outer"), "Next class")
+    map({ "n", "x", "o" }, "[f", goto_prev_start("@function.outer"), "Previous function")
+    map({ "n", "x", "o" }, "[c", goto_prev_start("@class.outer"), "Previous class")
 
     -- =======================================================================
     --  9. GIT

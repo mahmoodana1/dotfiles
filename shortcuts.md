@@ -396,6 +396,8 @@ or just `SPACE` and wait for which-key.
 | `SPACE s s` / `SPACE s S` | Document / workspace symbols |
 | `SPACE s h` | Highlight groups |
 | `SPACE s t` | Todo comments |
+| `SPACE s n` | Message history (noice) — full, scrollable, untruncated |
+| `SPACE s N` | Errors only (noice) |
 
 Inside a picker: `CTRL + J/K` move, `CTRL + Q` send to quickfix, `ESC` closes
 (one press), `CTRL + U` clears the prompt.
