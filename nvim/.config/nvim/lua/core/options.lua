@@ -72,6 +72,19 @@ opt.clipboard = "unnamedplus"
 opt.wildmode = "longest:full,full"
 opt.sessionoptions = { "buffers", "curdir", "tabpages", "winsize", "help", "globals", "folds" }
 
+-- --- LSP log ---------------------------------------------------------------
+-- Nothing rotates ~/.local/state/nvim/lsp.log and it had grown to 246 MB,
+-- almost entirely copilot logging routine request cancellations
+-- ("AbortError: The operation was aborted") at ERROR level -- a logging bug
+-- on their side, not a real failure.
+--
+-- OFF rather than WARN: WARN is already the default, and ERROR outranks it,
+-- so every level except OFF keeps writing exactly the lines that filled the
+-- file. Flip this to "WARN" or "DEBUG" for the session when an LSP actually
+-- misbehaves, then look at :LspLog.
+-- vim.lsp.set_log_level() is deprecated in 0.12, gone in 0.13.
+vim.lsp.log.set_level("OFF")
+
 -- --- Providers -------------------------------------------------------------
 -- Only the python provider is used; disabling the rest shaves off startup
 -- checks and keeps :checkhealth quiet.
