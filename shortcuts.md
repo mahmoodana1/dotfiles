@@ -317,7 +317,20 @@ Mouse drag → release also copies to system clipboard.
 |---|---|
 | `tmux source-file ~/.tmux.conf` | Reload config live |
 
-Plugins loaded via TPM: `tmux-resurrect` + `tmux-continuum` — sessions auto-save every 2 min and restore on tmux start.
+### Session persistence
+
+| Keys | Action |
+|---|---|
+| `Ctrl+a Ctrl+s` | Save session layout now (tmux-resurrect) |
+| `Ctrl+a Ctrl+r` | Restore the last saved layout |
+
+Plugins loaded via TPM: `tmux-resurrect` + `tmux-continuum` — sessions auto-save
+every 2 min and restore on tmux start, so they survive a reboot.
+
+Restored automatically: **pane scrollback**, `nvim`/`vim`, `ssh`, `btop`,
+`lazygit`, `yazi`, `lazydocker`, and `claude` — Claude panes come back as
+`claude --continue`, i.e. on the same conversation, not a blank one.
+Snapshots live in `~/.local/share/tmux/resurrect/` (newest 20 kept).
 
 
 ## Neovim
