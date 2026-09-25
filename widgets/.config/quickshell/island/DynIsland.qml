@@ -174,19 +174,40 @@ PanelWindow {
 
     // ---- geometry per mode ----------------------------------------------------
     readonly property real fullW: 16 + wsStrip.width + 18 + fullExtra.implicitWidth + 16
-    readonly property real targetW: viewMode === "ws" ? wsStrip.width + 28
-        : viewMode === "level" ? 300
-        : viewMode === "notif" ? Math.min(560, Math.max(340, notifRow.implicitWidth + 40))
-        : viewMode === "toast" ? toastRow.implicitWidth + 40
-        : viewMode === "full" ? fullW
-        : viewMode === "info" ? Math.max(infoTop.implicitWidth, infoBottom.implicitWidth) + 44
-        : viewMode === "wifi" ? wifiPanel.implicitWidth
-        : viewMode === "bt" ? btPanel.implicitWidth
-        : 120
-    readonly property real targetH: viewMode === "notif" ? 64 : viewMode === "info" ? 72
-        : viewMode === "wifi" ? wifiPanel.implicitHeight
-        : viewMode === "bt" ? btPanel.implicitHeight
-        : 36
+    function modeW(m) {
+        return m === "ws" ? wsStrip.width + 28
+            : m === "level" ? 300
+            : m === "notif" ? Math.min(560, Math.max(340, notifRow.implicitWidth + 40))
+            : m === "toast" ? toastRow.implicitWidth + 40
+            : m === "full" ? fullW
+            : m === "info" ? Math.max(infoTop.implicitWidth, infoBottom.implicitWidth) + 44
+            : m === "wifi" ? wifiPanel.implicitWidth
+            : m === "bt" ? btPanel.implicitWidth
+            : 120
+    }
+    function modeH(m) {
+        return m === "notif" ? 64 : m === "info" ? 72
+            : m === "wifi" ? wifiPanel.implicitHeight
+            : m === "bt" ? btPanel.implicitHeight
+            : 36
+    }
+    readonly property real targetW: modeW(viewMode)
+    readonly property real targetH: modeH(viewMode)
+
+    // Each view is pinned to ITS OWN final frame, on whole pixels, in pill
+    // coordinates: text never creeps while the glass springs and settles,
+    // and a view fading out stays put instead of jumping to the new layout.
+    function fx(m) { return Math.round((winW - modeW(m)) / 2) - pill.x }          // frame left
+    function fcx(m, w) { return fx(m) + Math.round((modeW(m) - w) / 2) }          // centered x
+    function fcy(m, h) { return Math.round((modeH(m) - h) / 2) }                  // centered y
+    // workspace strip: slides between its ws (centered) and full (left) spots
+    property string stripMode: "ws"
+    onViewModeChanged: if (viewMode === "ws" || viewMode === "full") stripMode = viewMode
+    readonly property real stripTargetX: stripMode === "full"
+        ? Math.round((winW - modeW("full")) / 2) + 16
+        : Math.round((winW - wsStrip.width) / 2)
+    property real stripAbsX: stripTargetX
+    Behavior on stripAbsX { enabled: win.morphReady; SpringAnimation { spring: 7.5; damping: 0.48; epsilon: 0.2 } }
 
     // stiff + well damped: responsive, one soft overshoot, settles in ~0.25 s
     component Spring: SpringAnimation { spring: 7.5; damping: 0.48; epsilon: 0.2 }
@@ -250,7 +271,8 @@ PanelWindow {
             }
 
             // Content pops in without overshoot (the glass keeps its bounce),
-            // so text never shrinks back at the end of the pop.
+            // so text never shrinks back at the end of the pop. Views inside
+            // are pinned to their own frames (fx / fcx above).
             Item {
                 id: contentClip
                 anchors.fill: parent
@@ -265,8 +287,8 @@ PanelWindow {
                     id: wsStrip
                     visible: opacity > 0.01
                     monitor: win.monitor
-                    height: pill.height
-                    x: win.viewMode === "full" ? 16 : (pill.width - width) / 2
+                    height: 36
+                    x: win.stripAbsX - pill.x
                     opacity: win.viewMode === "ws" || win.viewMode === "full" ? 1 : 0
                     Behavior on opacity { enabled: win.morphReady; NumberAnimation { duration: 100 } }
                     // no Behavior on x: it must track the springing pill width exactly
@@ -277,7 +299,7 @@ PanelWindow {
                     id: fullExtra
                     visible: opacity > 0.01
                     x: wsStrip.x + wsStrip.width + 18
-                    anchors.verticalCenter: parent.verticalCenter
+                    y: Math.round((wsStrip.height - height) / 2)
                     spacing: 14
                     opacity: win.viewMode === "full" ? 1 : 0
                     Behavior on opacity { enabled: win.morphReady; NumberAnimation { duration: 100 } }
@@ -300,7 +322,7 @@ PanelWindow {
                 Row {
                     id: levelRow
                     visible: opacity > 0.01
-                    anchors.centerIn: parent
+                    x: win.fcx("level", width); y: win.fcy("level", height)
                     spacing: 12
                     opacity: win.viewMode === "level" ? 1 : 0
                     Behavior on opacity { enabled: win.morphReady; NumberAnimation { duration: 100 } }
@@ -342,7 +364,7 @@ PanelWindow {
                 Row {
                     id: toastRow
                     visible: opacity > 0.01
-                    anchors.centerIn: parent
+                    x: win.fcx("toast", width); y: win.fcy("toast", height)
                     spacing: 10
                     opacity: win.viewMode === "toast" ? 1 : 0
                     Behavior on opacity { enabled: win.morphReady; NumberAnimation { duration: 110 } }
@@ -362,7 +384,7 @@ PanelWindow {
                 Column {
                     id: infoCol
                     visible: opacity > 0.01
-                    anchors.centerIn: parent
+                    x: win.fcx("info", width); y: win.fcy("info", height)
                     spacing: 7
                     opacity: win.viewMode === "info" ? 1 : 0
                     Behavior on opacity { enabled: win.morphReady; NumberAnimation { duration: 110 } }
@@ -457,6 +479,7 @@ PanelWindow {
                 WifiPanel {
                     id: wifiPanel
                     host: win
+                    x: win.fx("wifi"); y: 0
                     onDetach: win.detachPanel("wifi")
                     active: win.viewMode === "wifi" && win.shown
                     width: implicitWidth
@@ -467,6 +490,7 @@ PanelWindow {
                 BtPanel {
                     id: btPanel
                     host: win
+                    x: win.fx("bt"); y: 0
                     onDetach: win.detachPanel("bt")
                     active: win.viewMode === "bt" && win.shown
                     width: implicitWidth
@@ -479,8 +503,8 @@ PanelWindow {
                 Row {
                     id: notifRow
                     visible: opacity > 0.01
-                    anchors.verticalCenter: parent.verticalCenter
-                    x: 18
+                    x: win.fx("notif") + 18
+                    y: win.fcy("notif", height)
                     spacing: 12
                     opacity: win.viewMode === "notif" ? 1 : 0
                     Behavior on opacity { enabled: win.morphReady; NumberAnimation { duration: 110 } }
@@ -557,12 +581,12 @@ PanelWindow {
             id: droplet
             readonly property real restW: 24
             readonly property real w: Math.max(restW, wsStrip.dropR - wsStrip.dropL)
-            readonly property real h: (pill.height - 6) * Math.pow(restW / w, 0.25)
+            readonly property real h: (wsStrip.height - 6) * Math.pow(restW / w, 0.25)
             visible: wsStrip.hasActive && wsStrip.opacity > 0.01
             opacity: wsStrip.opacity
             pad: 6
             x: wsStrip.x + wsStrip.dropL - pad
-            y: (pill.height - h) / 2 - pad
+            y: wsStrip.y + (wsStrip.height - h) / 2 - pad
             width: w + pad * 2
             height: h + pad * 2
             source: lensSrc
