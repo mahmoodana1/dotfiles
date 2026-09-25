@@ -44,6 +44,9 @@ hl.on("hyprland.start", function()
     -- Hold-to-show HUD panel daemon (SUPER+SHIFT+P)
     hl.exec_cmd(d.home .. "/.config/hypr/panel/panel.py")
 
+    -- Auto-hide driver for the Peek waybar (inert unless that layout is active)
+    hl.exec_cmd(scripts .. "/WaybarPeek.py")
+
     -- Clipboard manager
     hl.exec_cmd("wl-paste --type text --watch cliphist store")
     hl.exec_cmd("wl-paste --type image --watch cliphist store")

@@ -129,6 +129,8 @@ Legend: `SUPER` = mainMod (Windows key).
 | `SUPER + CTRL + ALT + B` | Toggle waybar on/off |
 | `SUPER + CTRL + B` | Waybar styles menu |
 | `SUPER + ALT + B` | Waybar layout menu |
+| `SUPER + SHIFT + B` | Toggle **Peek** auto-hiding bar ↔ previous layout/style |
+| `SUPER` (hold) | Peek mode: show the bar while held (also flashes on workspace change, or push mouse to top edge) |
 
 ## Hyprland — Zoom / Magnifier
 
