@@ -131,6 +131,7 @@ Legend: `SUPER` = mainMod (Windows key).
 | `SUPER + ALT + B` | Waybar layout menu |
 | `SUPER + SHIFT + B` | Cycle top bar: waybar → **Peek** glass bar → **Dynamic Island** |
 | `SUPER` (hold) | Peek / Island modes: show the full glass bar while held |
+| `SUPER + SHIFT` (hold) | Island mode over a fullscreen window: the only way to show the island |
 
 ## Hyprland — Zoom / Magnifier
 
