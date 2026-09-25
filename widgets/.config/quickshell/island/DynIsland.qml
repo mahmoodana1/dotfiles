@@ -68,7 +68,7 @@ PanelWindow {
         : 120
     readonly property real targetH: mode === "notif" ? 64 : mode === "hidden" ? 26 : 36
 
-    component Spring: SpringAnimation { spring: 3.2; damping: 0.30; epsilon: 0.25 }
+    component Spring: SpringAnimation { spring: 5.0; damping: 0.36; epsilon: 0.25 }
 
     Item {
         id: pill
@@ -79,8 +79,8 @@ PanelWindow {
         opacity: win.shown ? 1 : 0
         Behavior on width { Spring { } }
         Behavior on height { Spring { } }
-        Behavior on y { Spring { spring: 3.6; damping: 0.36 } }
-        Behavior on opacity { NumberAnimation { duration: win.shown ? 90 : 220 } }
+        Behavior on y { Spring { spring: 6.0; damping: 0.42 } }
+        Behavior on opacity { NumberAnimation { duration: win.shown ? 70 : 150 } }
         visible: opacity > 0
 
         // glass + content, grouped so the droplet can lens both
@@ -110,7 +110,7 @@ PanelWindow {
                     height: pill.height
                     x: win.mode === "full" ? 16 : (pill.width - width) / 2
                     opacity: win.mode === "ws" || win.mode === "full" ? 1 : 0
-                    Behavior on opacity { NumberAnimation { duration: 140 } }
+                    Behavior on opacity { NumberAnimation { duration: 100 } }
                     // no Behavior on x: it must track the springing pill width exactly
                 }
 
@@ -121,7 +121,7 @@ PanelWindow {
                     anchors.verticalCenter: parent.verticalCenter
                     spacing: 14
                     opacity: win.mode === "full" ? 1 : 0
-                    Behavior on opacity { NumberAnimation { duration: 140 } }
+                    Behavior on opacity { NumberAnimation { duration: 100 } }
                     GlassText {
                         text: Qt.formatDateTime(clock.date, "HH:mm")
                         size: 13; weight: Font.Bold
@@ -143,7 +143,7 @@ PanelWindow {
                     anchors.centerIn: parent
                     spacing: 12
                     opacity: win.mode === "level" ? 1 : 0
-                    Behavior on opacity { NumberAnimation { duration: 140 } }
+                    Behavior on opacity { NumberAnimation { duration: 100 } }
                     readonly property string kind: win.ctl ? win.ctl.levelKind : "volume"
                     readonly property bool muted: win.ctl ? win.ctl.levelMuted : false
                     readonly property real value: win.ctl ? Math.max(0, Math.min(1, win.ctl.levelValue)) : 0
@@ -185,7 +185,7 @@ PanelWindow {
                     x: 18
                     spacing: 12
                     opacity: win.mode === "notif" ? 1 : 0
-                    Behavior on opacity { NumberAnimation { duration: 160 } }
+                    Behavior on opacity { NumberAnimation { duration: 110 } }
                     readonly property var n: win.ctl ? win.ctl.notif : ({})
                     readonly property string iconSrc: {
                         const i = n.icon || ""
@@ -250,6 +250,9 @@ PanelWindow {
             visible: false
             width: pill.width
             height: pill.height
+            // 2x so the droplet's 1.25x magnification stays sharp
+            textureSize: Qt.size(pill.width * 2, pill.height * 2)
+            smooth: true
         }
         Glass {
             id: droplet

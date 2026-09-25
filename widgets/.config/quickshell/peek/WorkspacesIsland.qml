@@ -50,8 +50,9 @@ Island {
         if (!it || !it.isActive) return
         const p = it.mapToItem(island, 0, 0)
         const movingRight = p.x > dropL
-        lAnim.duration = movingRight ? 380 : 230
-        rAnim.duration = movingRight ? 230 : 380
+        // leading edge stiffer than trailing: stretches in flight, snaps back
+        lAnim.spring = movingRight ? 5.5 : 9
+        rAnim.spring = movingRight ? 9 : 5.5
         targetL = p.x + 1
         targetR = p.x + it.width - 1
     }
@@ -62,8 +63,8 @@ Island {
 
     property real dropL: targetL
     property real dropR: targetR
-    Behavior on dropL { NumberAnimation { id: lAnim; duration: 300; easing.type: Easing.OutBack; easing.overshoot: 0.9 } }
-    Behavior on dropR { NumberAnimation { id: rAnim; duration: 300; easing.type: Easing.OutBack; easing.overshoot: 0.9 } }
+    Behavior on dropL { SpringAnimation { id: lAnim; spring: 7; damping: 0.42; epsilon: 0.2 } }
+    Behavior on dropR { SpringAnimation { id: rAnim; spring: 7; damping: 0.42; epsilon: 0.2 } }
 
     overlay: [
     ShaderEffectSource {
@@ -73,6 +74,9 @@ Island {
         visible: false
         width: island.width
         height: island.height
+        // 2x so the droplet's 1.25x magnification stays sharp
+        textureSize: Qt.size(island.width * 2, island.height * 2)
+        smooth: true
     },
 
     // glass bead; squashes a little vertically while stretched

@@ -51,13 +51,14 @@ Item {
     function moveTo(it) {
         if (!it || !it.isActive) return
         const movingRight = it.x > dropL
-        lAnim.duration = movingRight ? 380 : 230
-        rAnim.duration = movingRight ? 230 : 380
+        // leading edge stiffer than trailing: stretches in flight, snaps back
+        lAnim.spring = movingRight ? 5.5 : 9
+        rAnim.spring = movingRight ? 9 : 5.5
         targetL = it.x + 1
         targetR = it.x + it.width - 1
     }
     property real dropL: targetL
     property real dropR: targetR
-    Behavior on dropL { NumberAnimation { id: lAnim; duration: 300; easing.type: Easing.OutBack; easing.overshoot: 0.9 } }
-    Behavior on dropR { NumberAnimation { id: rAnim; duration: 300; easing.type: Easing.OutBack; easing.overshoot: 0.9 } }
+    Behavior on dropL { SpringAnimation { id: lAnim; spring: 7; damping: 0.42; epsilon: 0.2 } }
+    Behavior on dropR { SpringAnimation { id: rAnim; spring: 7; damping: 0.42; epsilon: 0.2 } }
 }
