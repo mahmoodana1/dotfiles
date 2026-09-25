@@ -66,6 +66,22 @@ void main() {
     float t = clamp(-d / bezel, 0.0, 1.0);            // 0 at rim -> 1 past bezel
     float edge = 1.0 - t;
 
+    // island: average backdrop brightness all around the capsule (samples
+    // past the shadow, so never ourselves). One value for every pixel, so
+    // the whole island tints evenly instead of in patches.
+    float avgBright = 0.0;
+    if (mode < 0.5) {
+        // beside and below only: above the bar is the screen's top gap
+        float acc = 0.0;
+        for (int i = 0; i < 5; i++) {
+            float a = float(i) * 0.785398;            // 0°..180°, y down
+            vec2 dir = vec2(cos(a), sin(a));
+            vec2 q = itemPos + center + dir * (halfBox + vec2(pad + 3.0));
+            acc += dot(texture(source, clamp(q / srcSize, 0.0, 1.0)).rgb, vec3(0.2126, 0.7152, 0.0722));
+        }
+        avgBright = smoothstep(0.40, 0.85, acc / 5.0);
+    }
+
     vec3 col;
     float alpha;
 
@@ -80,13 +96,15 @@ void main() {
         ring.g = soft(base + n * reach).g;
         ring.b = soft(base + n * reach * 0.95).b;
 
-        // brightness of the backdrop right outside this point
+        // mostly the island-wide brightness, a little local variation
         float lum = dot(ring, vec3(0.2126, 0.7152, 0.0722));
-        float bright = smoothstep(0.35, 0.85, lum);
+        float bright = mix(smoothstep(0.35, 0.85, lum), avgBright, 0.8);
 
-        // interior: light frost over dark backdrops, smoky over bright ones
+        // interior: near-clear over dark backdrops, smoked glass over bright
+        // ones so white labels stay readable (iOS-style)
         vec3 tintCol = mix(vec3(1.0), vec3(0.0), bright);
-        float tintA = mix(tint, tint * 2.5, bright);
+        float tintA = mix(tint, 0.62, bright);
+        ring *= mix(1.0, 0.45, bright);               // smoke the rim too
 
         // glass thickness: a thin darker line where the rim meets the flat
         float lip = exp(-pow((-d - bezel * 0.85) / 1.2, 2.0));
@@ -96,6 +114,11 @@ void main() {
         alpha = mix(tintA, 0.95, w);
         col = mix(col, vec3(0.0), lip * 0.35);
         alpha = max(alpha, lip * 0.18);
+
+        // hairline outline so the edge reads on white
+        float outline = (1.0 - smoothstep(0.0, 1.3, -d)) * bright * 0.55;
+        col = mix(col, vec3(0.0), outline);
+        alpha = max(alpha, outline);
     } else {
         // ---- lens: magnify the island under the droplet -----------------
         vec2 base = itemPos + center + p / magnify;
@@ -122,7 +145,7 @@ void main() {
 
     // drop shadow outside; fades to zero before the padding edge
     float sd = sdRoundBox(p - vec2(0.0, 2.0), halfBox, r);
-    float shadowA = shadow * exp(-max(sd, 0.0) / 4.0)
+    float shadowA = shadow * (1.0 + 2.2 * avgBright) * exp(-max(sd, 0.0) / 4.0)
                   * (1.0 - smoothstep(-1.0, 0.5, -sd))
                   * (1.0 - smoothstep(pad * 0.4, pad - 1.0, sd));
     vec4 shade = vec4(0.0, 0.0, 0.0, shadowA * (1.0 - inside));
