@@ -4,9 +4,9 @@
 // mode 0 (island): the source is a LIVE capture of the screen, which also
 //   contains this bar. To avoid sampling itself, the refracting rim only
 //   samples pixels just outside the capsule (beyond the shadow), bending
-//   them inward like a convex edge. The interior is translucent so
-//   Hyprland's layer blur (live) frosts whatever is behind; it is tinted
-//   lighter or darker from the backdrop's brightness, as iOS does.
+//   them inward like a convex edge. The interior is nearly clear (the real
+//   screen shows through, sharp) with a faint tint that turns smoky over
+//   bright backdrops so labels stay legible.
 // mode 1 (lens): the source is the island itself; the droplet magnifies it.
 //
 // Compile: /usr/lib/qt6/bin/qsb --glsl "100es,120,150" --hlsl 50 --msl 12 -o glass.frag.qsb glass.frag
@@ -86,11 +86,16 @@ void main() {
 
         // interior: light frost over dark backdrops, smoky over bright ones
         vec3 tintCol = mix(vec3(1.0), vec3(0.0), bright);
-        float tintA = mix(tint, tint * 1.6, bright);
+        float tintA = mix(tint, tint * 2.5, bright);
 
-        float w = pow(edge, 1.6);                     // rim weight
-        col = mix(tintCol, ring * mix(1.0, 0.75, bright), w);
-        alpha = mix(tintA, 0.9, w);
+        // glass thickness: a thin darker line where the rim meets the flat
+        float lip = exp(-pow((-d - bezel * 0.85) / 1.2, 2.0));
+
+        float w = pow(edge, 2.2);                     // rim weight, clear middle
+        col = mix(tintCol, ring, w);
+        alpha = mix(tintA, 0.95, w);
+        col = mix(col, vec3(0.0), lip * 0.35);
+        alpha = max(alpha, lip * 0.18);
     } else {
         // ---- lens: magnify the island under the droplet -----------------
         vec2 base = itemPos + center + p / magnify;

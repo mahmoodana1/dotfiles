@@ -17,10 +17,10 @@ ShaderEffect {
     property real bezel: 10
     property real refraction: 8
     property real magnify: 1.0
-    property real blurPx: 1.5
-    property real tint: 0.22       // island: interior opacity; lens: whitening
-    property real shadow: 0.14
-    property real mode: 0          // 0 island (live rim over compositor blur), 1 lens
+    property real blurPx: 0
+    property real tint: 0.07       // island: interior tint opacity; lens: whitening
+    property real shadow: 0.10
+    property real mode: 0          // 0 island (clear, live refracted rim), 1 lens
 
     // uniforms (names must match the shader's buffer)
     readonly property size itemSize: Qt.size(width, height)
