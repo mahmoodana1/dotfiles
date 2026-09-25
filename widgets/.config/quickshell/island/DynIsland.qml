@@ -268,8 +268,8 @@ PanelWindow {
                     id: wsStrip
                     visible: opacity > 0.01
                     monitor: win.monitor
-                    height: pill.height
-                    x: win.viewMode === "full" ? 16 : (pill.width - width) / 2
+                    height: content.height
+                    x: win.viewMode === "full" ? 16 : Math.round((content.width - width) / 2)
                     opacity: win.viewMode === "ws" || win.viewMode === "full" ? 1 : 0
                     Behavior on opacity { enabled: win.morphReady; NumberAnimation { duration: 100 } }
                     // no Behavior on x: it must track the springing pill width exactly
@@ -560,12 +560,12 @@ PanelWindow {
             id: droplet
             readonly property real restW: 24
             readonly property real w: Math.max(restW, wsStrip.dropR - wsStrip.dropL)
-            readonly property real h: (pill.height - 6) * Math.pow(restW / w, 0.25)
+            readonly property real h: (content.height - 6) * Math.pow(restW / w, 0.25)
             visible: wsStrip.hasActive && wsStrip.opacity > 0.01
             opacity: wsStrip.opacity
             pad: 6
-            x: wsStrip.x + wsStrip.dropL - pad
-            y: (pill.height - h) / 2 - pad
+            x: content.x + wsStrip.x + wsStrip.dropL - pad     // strip lives in the pinned content
+            y: content.y + (content.height - h) / 2 - pad
             width: w + pad * 2
             height: h + pad * 2
             source: lensSrc
