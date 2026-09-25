@@ -257,8 +257,8 @@ PanelWindow {
                 radius: win.viewMode === "wifi" || win.viewMode === "bt" || win.viewMode === "notif" ? 26 : 999
                 // text-heavy views get smoked glass so they read over busy backdrops
                 // (a little everywhere there's text: clear water, still readable)
-                smoke: win.viewMode === "wifi" || win.viewMode === "bt" ? 0.85
-                     : win.viewMode === "info" || win.viewMode === "notif" ? 0.55 : 0.35
+                smoke: win.viewMode === "wifi" || win.viewMode === "bt" ? 0.5
+                     : win.viewMode === "info" || win.viewMode === "notif" ? 0.22 : 0.1
                 useLum: 1
                 x: -pad; y: -pad
                 width: pill.width + pad * 2

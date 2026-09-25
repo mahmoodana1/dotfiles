@@ -73,7 +73,7 @@ void main() {
     float bright = useLum > 0.5 ? smoothstep(0.45, 0.9, texture(lumTex, vec2(0.5)).r) : 0.0;
 
     // ---- body: clear, smoked only when it has to be --------------------
-    float smokeA = max(0.38 * bright, smoke * 0.8);
+    float smokeA = max(0.26 * bright, smoke * 0.8);
     vec3 pc = vec3(0.0);                               // premultiplied colour
     float pa = smokeA;
 
