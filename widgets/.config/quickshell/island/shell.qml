@@ -100,7 +100,7 @@ ShellRoot {
 
     // ---- workspace switches -----------------------------------------------
     readonly property int focusedWs: Hyprland.focusedWorkspace ? Hyprland.focusedWorkspace.id : -1
-    onFocusedWsChanged: pulse("ws", 700)
+    onFocusedWsChanged: pulse("ws", 350)   // droplet lands in ~0.2s, then go
 
     // ---- volume / mic -----------------------------------------------------
     readonly property var sink: Pipewire.defaultAudioSink
@@ -173,7 +173,7 @@ ShellRoot {
         target: "island"
         function down(): void { root.held = true }
         function up(): void { root.held = false }
-        function ws(): void { root.pulse("ws", 700) }
+        function ws(): void { root.pulse("ws", 350) }
         function charger(): void { root.toast("\u{f0084}", "Charging  " + Stats.batteryPct + "%", 1600) }
         function notify(summary: string, body: string): void {
             root.notif = { app: "Test", summary: summary, body: body, icon: "", urgency: 1 }

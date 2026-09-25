@@ -24,6 +24,25 @@ PanelWindow {
     readonly property string mode: isFocused && ctl ? ctl.mode : "hidden"
     readonly property bool shown: mode !== "hidden"
 
+    // Keep drawing the last mode while fading out (no shrink on the way out).
+    property string lastMode: "ws"
+    onModeChanged: if (mode !== "hidden") lastMode = mode
+    readonly property string viewMode: shown ? mode : lastMode
+
+    // Appear instantly; animate only changes made while already visible.
+    property bool morphReady: false
+    onShownChanged: {
+        morphReady = false
+        if (shown) {
+            fadeOut.stop()
+            pill.fade = 1                       // in: instant
+            Qt.callLater(() => win.morphReady = win.shown)
+        } else {
+            fadeOut.restart()                   // out: a quick fade
+        }
+    }
+    NumberAnimation { id: fadeOut; target: pill; property: "fade"; to: 0; duration: 90 }
+
     readonly property int winW: 760
     readonly property int winH: 110
     readonly property real winX: (modelData.width - winW) / 2   // layer is centered
@@ -62,13 +81,13 @@ PanelWindow {
 
     // ---- geometry per mode ----------------------------------------------------
     readonly property real fullW: 16 + wsStrip.width + 18 + fullExtra.implicitWidth + 16
-    readonly property real targetW: mode === "ws" ? wsStrip.width + 28
-        : mode === "level" ? 300
-        : mode === "notif" ? Math.min(560, Math.max(340, notifRow.implicitWidth + 40))
-        : mode === "toast" ? toastRow.implicitWidth + 40
-        : mode === "full" ? fullW
+    readonly property real targetW: viewMode === "ws" ? wsStrip.width + 28
+        : viewMode === "level" ? 300
+        : viewMode === "notif" ? Math.min(560, Math.max(340, notifRow.implicitWidth + 40))
+        : viewMode === "toast" ? toastRow.implicitWidth + 40
+        : viewMode === "full" ? fullW
         : 120
-    readonly property real targetH: mode === "notif" ? 64 : mode === "hidden" ? 26 : 36
+    readonly property real targetH: viewMode === "notif" ? 64 : 36
 
     component Spring: SpringAnimation { spring: 5.0; damping: 0.36; epsilon: 0.25 }
 
@@ -77,12 +96,11 @@ PanelWindow {
         width: win.targetW
         height: win.targetH
         x: (win.winW - width) / 2
-        y: win.shown ? 6 : -height - 14
-        opacity: win.shown ? 1 : 0
-        Behavior on width { Spring { } }
-        Behavior on height { Spring { } }
-        Behavior on y { Spring { spring: 6.0; damping: 0.42 } }
-        Behavior on opacity { NumberAnimation { duration: win.shown ? 70 : 150 } }
+        y: 6
+        property real fade: 0
+        opacity: fade
+        Behavior on width { enabled: win.morphReady; Spring { } }
+        Behavior on height { enabled: win.morphReady; Spring { } }
         visible: opacity > 0
 
         HoverHandler { id: pillHover }
@@ -94,8 +112,17 @@ PanelWindow {
             id: surface
             anchors.fill: parent
 
+            GlassLum {
+                id: lum
+                source: behind
+                shape: Qt.rect(pill.x, pill.y, pill.width, pill.height)
+                srcSize: Qt.size(win.winW, win.winH)
+            }
+
             Glass {
                 id: glass
+                lumTex: lum.texture
+                useLum: 1
                 x: -pad; y: -pad
                 width: pill.width + pad * 2
                 height: pill.height + pad * 2
@@ -114,9 +141,9 @@ PanelWindow {
                     id: wsStrip
                     monitor: win.monitor
                     height: pill.height
-                    x: win.mode === "full" ? 16 : (pill.width - width) / 2
-                    opacity: win.mode === "ws" || win.mode === "full" ? 1 : 0
-                    Behavior on opacity { NumberAnimation { duration: 100 } }
+                    x: win.viewMode === "full" ? 16 : (pill.width - width) / 2
+                    opacity: win.viewMode === "ws" || win.viewMode === "full" ? 1 : 0
+                    Behavior on opacity { enabled: win.morphReady; NumberAnimation { duration: 100 } }
                     // no Behavior on x: it must track the springing pill width exactly
                 }
 
@@ -126,8 +153,8 @@ PanelWindow {
                     x: wsStrip.x + wsStrip.width + 18
                     anchors.verticalCenter: parent.verticalCenter
                     spacing: 14
-                    opacity: win.mode === "full" ? 1 : 0
-                    Behavior on opacity { NumberAnimation { duration: 100 } }
+                    opacity: win.viewMode === "full" ? 1 : 0
+                    Behavior on opacity { enabled: win.morphReady; NumberAnimation { duration: 100 } }
                     GlassText {
                         text: Qt.formatDateTime(clock.date, "HH:mm")
                         size: 13; weight: Font.Bold
@@ -148,8 +175,8 @@ PanelWindow {
                     id: levelRow
                     anchors.centerIn: parent
                     spacing: 12
-                    opacity: win.mode === "level" ? 1 : 0
-                    Behavior on opacity { NumberAnimation { duration: 100 } }
+                    opacity: win.viewMode === "level" ? 1 : 0
+                    Behavior on opacity { enabled: win.morphReady; NumberAnimation { duration: 100 } }
                     readonly property string kind: win.ctl ? win.ctl.levelKind : "volume"
                     readonly property bool muted: win.ctl ? win.ctl.levelMuted : false
                     readonly property real value: win.ctl ? Math.max(0, Math.min(1, win.ctl.levelValue)) : 0
@@ -189,8 +216,8 @@ PanelWindow {
                     id: toastRow
                     anchors.centerIn: parent
                     spacing: 10
-                    opacity: win.mode === "toast" ? 1 : 0
-                    Behavior on opacity { NumberAnimation { duration: 110 } }
+                    opacity: win.viewMode === "toast" ? 1 : 0
+                    Behavior on opacity { enabled: win.morphReady; NumberAnimation { duration: 110 } }
                     GlassText {
                         anchors.verticalCenter: parent.verticalCenter
                         text: win.ctl ? win.ctl.toastIcon : ""
@@ -209,8 +236,8 @@ PanelWindow {
                     anchors.verticalCenter: parent.verticalCenter
                     x: 18
                     spacing: 12
-                    opacity: win.mode === "notif" ? 1 : 0
-                    Behavior on opacity { NumberAnimation { duration: 110 } }
+                    opacity: win.viewMode === "notif" ? 1 : 0
+                    Behavior on opacity { enabled: win.morphReady; NumberAnimation { duration: 110 } }
                     readonly property var n: win.ctl ? win.ctl.notif : ({})
                     readonly property string iconSrc: {
                         const i = n.icon || ""

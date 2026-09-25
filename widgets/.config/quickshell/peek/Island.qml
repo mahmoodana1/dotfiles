@@ -22,8 +22,17 @@ Item {
         id: surface
         anchors.fill: parent
 
+        GlassLum {
+            id: lum
+            source: island.behind
+            shape: Qt.rect(island.x, island.y, island.width, island.height)
+            srcSize: glass.sourceSize
+        }
+
         Glass {
             id: glass
+            lumTex: lum.texture
+            useLum: 1
             x: -pad; y: -pad
             width: island.width + pad * 2
             height: island.height + pad * 2

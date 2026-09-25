@@ -29,8 +29,10 @@ layout(std140, binding = 0) uniform buf {
     float tint;        // interior tint strength
     float shadow;      // drop shadow strength
     float mode;        // 0 island, 1 lens
+    float useLum;      // 1: take brightness from lumTex (smoothed, GlassLum.qml)
 };
 layout(binding = 1) uniform sampler2D source;
+layout(binding = 2) uniform sampler2D lumTex;
 
 float sdRoundBox(vec2 p, vec2 b, float r) {
     vec2 q = abs(p) - b + r;
@@ -70,7 +72,9 @@ void main() {
     // past the shadow, so never ourselves). One value for every pixel, so
     // the whole island tints evenly instead of in patches.
     float avgBright = 0.0;
-    if (mode < 0.5) {
+    if (mode < 0.5 && useLum > 0.5) {
+        avgBright = smoothstep(0.40, 0.85, texture(lumTex, vec2(0.5)).r);
+    } else if (mode < 0.5) {
         // beside and below only: above the bar is the screen's top gap
         float acc = 0.0;
         for (int i = 0; i < 5; i++) {

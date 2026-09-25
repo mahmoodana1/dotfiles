@@ -21,6 +21,8 @@ ShaderEffect {
     property real tint: 0.07       // island: interior tint opacity; lens: whitening
     property real shadow: 0.10
     property real mode: 0          // 0 island (clear, live refracted rim), 1 lens
+    property var lumTex: source    // GlassLum.texture for smoothed tinting
+    property real useLum: 0
 
     // uniforms (names must match the shader's buffer)
     readonly property size itemSize: Qt.size(width, height)
