@@ -117,7 +117,7 @@ hl.window_rule({ match = { title = "^(Keybindings)$" }, center = true })
 hl.window_rule({ match = { class = "^(pavucontrol|org.pulseaudio.pavucontrol|com.saivert.pwvucontrol)$" }, center = true })
 hl.window_rule({ match = { class = "^([Ww]hatsapp-for-linux|ZapZap|com.rtosta.zapzap)$" }, center = true })
 hl.window_rule({ match = { class = "^([Ff]erdium)$" }, center = true })
-hl.window_rule({ match = { title = "^(Picture-in-Picture)$" }, move = "72% 7%" })
+hl.window_rule({ match = { title = "^(Picture-in-Picture)$" }, move = "monitor_w*0.72 monitor_h*0.07" })
 
 -- avoid idle for fullscreen apps
 hl.window_rule({ match = { fullscreen = true }, idle_inhibit = "fullscreen" })
@@ -157,27 +157,27 @@ hl.window_rule({ match = { class = "^([Ss]team)$", title = "negative:^([Ss]team)
 hl.window_rule({ match = { class = "([Tt]hunar)", title = "negative:(.*[Tt]hunar.*)" }, float = true })
 
 hl.window_rule({ match = { title = "^(Add Folder to Workspace)$" }, float = true })
-hl.window_rule({ match = { title = "^(Add Folder to Workspace)$" }, size = "70% 60%" })
+hl.window_rule({ match = { title = "^(Add Folder to Workspace)$" }, size = "monitor_w*0.7 monitor_h*0.6" })
 hl.window_rule({ match = { title = "^(Add Folder to Workspace)$" }, center = true })
 
 hl.window_rule({ match = { title = "^(Save As)$" }, float = true })
-hl.window_rule({ match = { title = "^(Save As)$" }, size = "70% 60%" })
+hl.window_rule({ match = { title = "^(Save As)$" }, size = "monitor_w*0.7 monitor_h*0.6" })
 hl.window_rule({ match = { title = "^(Save As)$" }, center = true })
 
 -- KooL's dots YAD for setting the SDDM background
 hl.window_rule({ match = { title = "^(SDDM Background)$" }, float = true })
 hl.window_rule({ match = { title = "^(SDDM Background)$" }, center = true })
-hl.window_rule({ match = { title = "^(SDDM Background)$" }, size = "16% 12%" })
+hl.window_rule({ match = { title = "^(SDDM Background)$" }, size = "monitor_w*0.16 monitor_h*0.12" })
 
 ----------------------------------------------------------------------
 -- SIZE
 ----------------------------------------------------------------------
 
-hl.window_rule({ match = { tag = "KooL_Cheat*" }, size = "65% 90%" })
-hl.window_rule({ match = { tag = "wallpaper*" },  size = "70% 70%" })
-hl.window_rule({ match = { tag = "settings*" },   size = "70% 70%" })
-hl.window_rule({ match = { class = "^([Ww]hatsapp-for-linux|ZapZap|com.rtosta.zapzap)$" }, size = "60% 70%" })
-hl.window_rule({ match = { class = "^([Ff]erdium)$" }, size = "60% 70%" })
+hl.window_rule({ match = { tag = "KooL_Cheat*" }, size = "monitor_w*0.65 monitor_h*0.9" })
+hl.window_rule({ match = { tag = "wallpaper*" },  size = "monitor_w*0.7 monitor_h*0.7" })
+hl.window_rule({ match = { tag = "settings*" },   size = "monitor_w*0.7 monitor_h*0.7" })
+hl.window_rule({ match = { class = "^([Ww]hatsapp-for-linux|ZapZap|com.rtosta.zapzap)$" }, size = "monitor_w*0.6 monitor_h*0.7" })
+hl.window_rule({ match = { class = "^([Ff]erdium)$" }, size = "monitor_w*0.6 monitor_h*0.7" })
 
 ----------------------------------------------------------------------
 -- PINNING AND EXTRAS
@@ -202,8 +202,8 @@ hl.window_rule({ match = { class = "^(org.gnome.Calculator)$", title = "(Calcula
 hl.window_rule({ match = { class = "^(Zoom|onedriver|onedriver-launcher)$" }, float = true })
 hl.window_rule({ match = { title = "^(Picture-in-Picture|Authentication Required|Save As|Add Folder to Workspace|Open Files|SDDM Background)$" }, float = true })
 hl.window_rule({ match = { tag = "terminal*" }, opacity = "0.98 0.98" })
-hl.window_rule({ match = { title = "^(SDDM Background)$" }, size = "16% 12%" })
-hl.window_rule({ match = { title = "^(Add Folder to Workspace|Save As|Open Files)$" }, size = "70% 60%" })
+hl.window_rule({ match = { title = "^(SDDM Background)$" }, size = "monitor_w*0.16 monitor_h*0.12" })
+hl.window_rule({ match = { title = "^(Add Folder to Workspace|Save As|Open Files)$" }, size = "monitor_w*0.7 monitor_h*0.6" })
 
 -- TUIs with a dedicated home workspace. Both are launched from a script with a
 -- unique --class, so these rules place and fullscreen them before they map.
