@@ -1,10 +1,11 @@
 // ### Peek ### minimal auto-hiding bar
-// Hidden by default. Flashes on workspace change, shows while SUPER is held,
-// and when the mouse is pushed to the top edge (stays while hovered).
+// Hidden; visible only while SUPER is physically held.
 // Driven by ~/.config/hypr/scripts/WaybarPeek.py.
+// "name" also sets the layer namespace to "peek" (blur rule in hypr/lua/peek.lua).
 // Switch on/off (restores your previous layout+style): SUPER+SHIFT+B
 
 {
+"name": "peek",
 "layer": "overlay",
 "position": "top",
 "exclusive": false,
@@ -93,27 +94,29 @@
 		],
 	},
 "custom/peek-dot": {
-	"format": "",
+	"exec": "echo ",
+	"interval": "once",
+	"format": "{}",
 	"tooltip": false,
 	},
 "cpu#peek": {
 	"interval": 5,
-	"format": " {usage}%",
+	"format": " {usage}%",
 	},
 "memory#peek": {
 	"interval": 10,
-	"format": " {percentage}%",
+	"format": "󰍛 {percentage}%",
 	"tooltip-format": "{used:0.1f} / {total:0.1f} GiB",
 	},
 "temperature#peek": {
 	"interval": 10,
 	"critical-threshold": 85,
-	"format": " {temperatureC}°",
+	"format": " {temperatureC}°",
 	},
 "disk#peek": {
 	"interval": 60,
 	"path": "/",
-	"format": " {percentage_used}%",
+	"format": " {percentage_used}%",
 	},
 "battery#peek-info": {
 	"format": "{icon} {capacity}%",
@@ -123,7 +126,7 @@
 "pulseaudio#peek-info": {
 	"format": "{icon} {volume}%",
 	"format-muted": "󰝟 {volume}%",
-	"format-icons": { "default": ["", "", ""] },
+	"format-icons": { "default": ["", "", ""] },
 	"on-click": "$HOME/.config/hypr/scripts/Volume.sh --toggle",
 	"on-scroll-up": "$HOME/.config/hypr/scripts/Volume.sh --inc",
 	"on-scroll-down": "$HOME/.config/hypr/scripts/Volume.sh --dec",

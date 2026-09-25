@@ -4,8 +4,6 @@
 #   WaybarPeek.sh on       switch to Peek layout+style (remembers the current ones)
 #   WaybarPeek.sh off      restore the layout+style that were active before `on`
 #   WaybarPeek.sh toggle   on <-> off
-#   WaybarPeek.sh press    SUPER pressed  (from the Hyprland bind)
-#   WaybarPeek.sh release  SUPER released (from the Hyprland bind)
 set -u
 
 WB="$HOME/.config/waybar"
@@ -28,11 +26,6 @@ ensure_daemon() {
   if ! { [ -r "$PID_FILE" ] && kill -0 "$(cat "$PID_FILE")" 2>/dev/null; }; then
     setsid -f "$DAEMON" >/dev/null 2>&1
   fi
-}
-
-signal_daemon() {
-  [ -r "$PID_FILE" ] || exit 0
-  kill -"$1" "$(cat "$PID_FILE")" 2>/dev/null || true
 }
 
 turn_on() {
@@ -63,7 +56,5 @@ case "${1:-}" in
   on)      turn_on ;;
   off)     turn_off ;;
   toggle)  if is_on; then turn_off; else turn_on; fi ;;
-  press)   signal_daemon USR1 ;;
-  release) signal_daemon USR2 ;;
-  *) echo "usage: $0 {on|off|toggle|press|release}" >&2; exit 2 ;;
+  *) echo "usage: $0 {on|off|toggle}" >&2; exit 2 ;;
 esac

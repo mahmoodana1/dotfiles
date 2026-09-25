@@ -1,5 +1,6 @@
-/* Peek — minimal auto-hiding bar. Pairs with the "[TOP] Peek" layout. */
-/* Colors follow the wallpaper via wallust. */
+/* Peek — minimal glass bar, visible while SUPER is held.
+   Pairs with the "[TOP] Peek" layout. Blur comes from the Hyprland layer
+   rule for namespace "peek" (hypr/lua/peek.lua); colors follow wallust. */
 
 @import '../../.config/waybar/wallust/colors-waybar.css';
 
@@ -11,41 +12,38 @@
 	border-radius: 0;
 }
 
-window#waybar {
-	background: transparent;
+/* One frosted strip: faint tint, hairline highlight on top edge. */
+window {
+	background: alpha(#ffffff, 0.06);
+	border: 1px solid alpha(#ffffff, 0.14);
+	border-top-color: alpha(#ffffff, 0.24);
+	border-radius: 14px;
 	color: @foreground;
 }
 
 tooltip {
-	background: alpha(@background, 0.92);
-	border: 1px solid alpha(@foreground, 0.12);
+	background: alpha(@background, 0.75);
+	border: 1px solid alpha(#ffffff, 0.14);
 	border-radius: 10px;
 }
 tooltip label { color: @foreground; }
 
-/* Each side is one small floating pill. */
-.modules-left,
-.modules-center,
-.modules-right {
-	background: alpha(@background, 0.88);
-	border: 1px solid alpha(@foreground, 0.15);
-	border-radius: 13px;
-	padding: 0 8px;
-}
+.modules-left  { padding-left: 8px; }
+.modules-right { padding-right: 8px; }
 
 #workspaces button {
 	padding: 0 5px;
 	margin: 0;
-	color: alpha(@foreground, 0.35);
+	color: alpha(@foreground, 0.4);
 	background: transparent;
 	box-shadow: none;
-	transition: color 150ms ease;
+	text-shadow: none;
 }
-#workspaces button:hover { color: alpha(@foreground, 0.7); background: transparent; }
+#workspaces button:hover { color: alpha(@foreground, 0.8); background: transparent; }
 #workspaces button.active { color: @foreground; font-weight: bold; }
 #workspaces button.urgent { color: @color13; }
 
-#clock { padding: 0 4px; font-weight: bold; }
+#clock { font-weight: bold; }
 
 #network,
 #pulseaudio,
@@ -55,7 +53,7 @@ tooltip label { color: @foreground; }
 	padding: 0 5px;
 }
 
-#custom-peek-dot { color: alpha(@foreground, 0.45); }
+#custom-peek-dot { color: alpha(@foreground, 0.5); }
 #custom-peek-dot:hover { color: @foreground; }
 
 /* Alerts */
@@ -65,4 +63,4 @@ tooltip label { color: @foreground; }
 #battery.critical:not(.charging),
 #temperature.critical { color: #E67E80; }
 
-.peek-child { color: alpha(@foreground, 0.8); }
+.peek-child { color: alpha(@foreground, 0.85); }

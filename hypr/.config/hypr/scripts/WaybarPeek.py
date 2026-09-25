@@ -1,47 +1,41 @@
 #!/usr/bin/env python3
-"""Auto-hide driver for the "[TOP] Peek" waybar layout.
+"""Hold-SUPER driver for the "[TOP] Peek" waybar layout.
 
-Shows the bar when:
-  * the workspace changes      -> brief flash (FLASH_SECS)
-  * SUPER is held              -> after HOLD_DELAY, until release (capped at HOLD_MAX)
-  * the pointer hits the top   -> edge reveal, then stays while the pointer is over the bar
+The bar is visible exactly while a SUPER key is physically held. Key state is
+read straight from evdev (user is in the `input` group) instead of Hyprland
+binds, which drop ~9% of release events and would strand the bar on screen.
+keyd grabs the physical keyboards, so its virtual keyboard carries the events;
+every keyboard-like device is watched, so this also works without keyd.
 
-Inert unless ~/.config/waybar/config points at the Peek layout, so it is safe to
-leave autostarted with any other layout.
+Inert unless ~/.config/waybar/config points at the Peek layout.
 
-Signals: USR1 = SUPER pressed, USR2 = SUPER released (sent by WaybarPeek.sh).
-
-Waybar only offers a *toggle* (SIGUSR1). Rather than trusting a remembered
-state, the real state is read from Hyprland: a hidden waybar is moved to the
-bottom layer (level < 2), a shown one sits on top/overlay (level >= 2).
+Waybar only offers a *toggle* (SIGUSR1). The real state is read from Hyprland:
+a hidden waybar is moved to the bottom layer (level < 2), a shown one sits on
+top/overlay (level >= 2).
 """
+import glob
 import json
 import os
+import select
 import signal
 import socket
+import struct
 import sys
-import threading
 import time
 
-FLASH_SECS = 1.2     # workspace-change flash
-HOLD_DELAY = 0.35    # SUPER must be held this long (skips quick SUPER+key chords)
-HOLD_MAX = 6.0       # safety cap: Hyprland drops some release events
-EDGE_PX = 2          # pointer this close to the top edge reveals the bar
-EDGE_DWELL = 0.25    # ...after resting there this long
-BAR_ZONE_PX = 40     # pointer above this y keeps a shown bar open (margin+height)
-TICK = 0.1
-RESYNC_SECS = 1.0
+KEY_LEFTMETA, KEY_RIGHTMETA = 125, 126
+EV_KEY = 1
+EVENT = struct.Struct("llHHi")      # struct input_event
+RESYNC_SECS = 1.0                   # re-check real bar state (manual toggles, waybar restarts)
+RESCAN_SECS = 5.0                   # pick up hotplugged keyboards
 
 HOME = os.path.expanduser("~")
 WAYBAR_CONFIG = os.path.join(HOME, ".config/waybar/config")
 PEEK_NAME = "[TOP] Peek"
+NAMESPACE = "peek"                  # from "name" in the Peek config
 RUNTIME = os.environ.get("XDG_RUNTIME_DIR", "/tmp")
 PID_FILE = os.path.join(RUNTIME, "waybar-peek.pid")
 HYPR_DIR = os.path.join(RUNTIME, "hypr", os.environ.get("HYPRLAND_INSTANCE_SIGNATURE", ""))
-
-# Events that mean "SUPER was part of a chord", which cancels a pending hold.
-CHORD_EVENTS = {"openwindow", "closewindow", "openlayer", "movewindowv2",
-                "changefloatingmode", "fullscreen", "togglegroup", "submap"}
 
 
 def enabled():
@@ -66,105 +60,84 @@ def hypr(cmd):
     return b"".join(chunks)
 
 
-def waybar_state():
-    """-> (pid, visible) of the running waybar, or (None, None)."""
-    layers = json.loads(hypr("j/layers"))
-    for mon in layers.values():
+def set_visible(want):
+    for mon in json.loads(hypr("j/layers")).values():
         for level, surfaces in mon["levels"].items():
             for l in surfaces:
-                if l["namespace"] == "waybar":
-                    return l["pid"], int(level) >= 2
-    return None, None
+                if l["namespace"] == NAMESPACE:
+                    if (int(level) >= 2) != want:
+                        os.kill(l["pid"], signal.SIGUSR1)
+                    return
 
 
-def cursor_y():
-    return json.loads(hypr("j/cursorpos"))["y"]
+def keyboards():
+    """event device paths whose name looks like a keyboard."""
+    out = []
+    for name_file in glob.glob("/sys/class/input/event*/device/name"):
+        with open(name_file) as f:
+            if "keyboard" in f.read().lower():
+                out.append("/dev/input/" + name_file.split("/")[4])
+    return out
 
 
 class Peek:
     def __init__(self):
-        self.lock = threading.Lock()
-        self.flash_until = 0.0
-        self.hold_since = None      # SUPER press time, None when released
-        self.edge_since = None
-        self.hovering = False
-        self.want = False
-        self.last_sync = 0.0
+        self.fds = {}        # path -> fd
+        self.down = set()    # (fd, keycode) of held SUPER keys
+        self.last_scan = 0.0
 
-    # --- inputs -----------------------------------------------------------
-    def on_press(self, *_):
-        with self.lock:
-            if self.hold_since is None:
-                self.hold_since = time.monotonic()
+    def rescan(self):
+        paths = set(keyboards())
+        for p in list(self.fds):
+            if p not in paths:
+                self.close(p)
+        for p in paths - set(self.fds):
+            try:
+                self.fds[p] = os.open(p, os.O_RDONLY | os.O_NONBLOCK)
+            except OSError:
+                pass
+        self.last_scan = time.monotonic()
 
-    def on_release(self, *_):
-        with self.lock:
-            self.hold_since = None
+    def close(self, path):
+        fd = self.fds.pop(path)
+        self.down = {k for k in self.down if k[0] != fd}
+        os.close(fd)
 
-    def on_event(self, name):
-        with self.lock:
-            # focusedmonv2 covers jumping to a workspace already shown on another monitor
-            if name in ("workspacev2", "focusedmonv2"):
-                self.flash_until = time.monotonic() + FLASH_SECS
-            elif name in CHORD_EVENTS and self.hold_since is not None \
-                    and time.monotonic() - self.hold_since < HOLD_DELAY:
-                self.hold_since = None
-
-    # --- loop -------------------------------------------------------------
-    def compute(self, now):
-        with self.lock:
-            held = self.hold_since is not None and HOLD_DELAY <= now - self.hold_since < HOLD_MAX
-            if self.hold_since is not None and now - self.hold_since >= HOLD_MAX:
-                self.hold_since = None
-            flashing = now < self.flash_until
-        y = cursor_y()
-        if y <= EDGE_PX:
-            self.edge_since = self.edge_since or now
-        else:
-            self.edge_since = None
-        edge = self.edge_since is not None and now - self.edge_since >= EDGE_DWELL
-        # Hover only holds a bar that is already up; it never opens one.
-        self.hovering = self.want and y < BAR_ZONE_PX
-        return held or flashing or edge or self.hovering
-
-    def apply(self, want, now):
-        if want == self.want and now - self.last_sync < RESYNC_SECS:
+    def read(self, fd):
+        try:
+            data = os.read(fd, EVENT.size * 64)
+        except BlockingIOError:
             return
-        self.want, self.last_sync = want, now
-        pid, visible = waybar_state()
-        if pid is not None and visible != want:
-            os.kill(pid, signal.SIGUSR1)
+        except OSError:          # unplugged
+            path = next(p for p, f in self.fds.items() if f == fd)
+            self.close(path)
+            return
+        for i in range(0, len(data) - EVENT.size + 1, EVENT.size):
+            _, _, typ, code, value = EVENT.unpack_from(data, i)
+            if typ == EV_KEY and code in (KEY_LEFTMETA, KEY_RIGHTMETA):
+                if value == 0:
+                    self.down.discard((fd, code))
+                elif value == 1:
+                    self.down.add((fd, code))
 
     def run(self):
+        shown, last_sync = None, 0.0
         while True:
             now = time.monotonic()
-            try:
-                if enabled():
-                    self.apply(self.compute(now), now)
-                else:
-                    self.want = False
-            except (OSError, ValueError, KeyError):
-                pass  # Hyprland/waybar restarting; retry next tick
-            time.sleep(TICK)
-
-
-def listen_events(peek):
-    while True:
-        try:
-            with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
-                s.connect(os.path.join(HYPR_DIR, ".socket2.sock"))
-                buf = b""
-                while True:
-                    data = s.recv(4096)
-                    if not data:
-                        break
-                    buf += data
-                    *lines, buf = buf.split(b"\n")
-                    for line in lines:
-                        peek.on_event(line.split(b">>", 1)[0].decode(errors="replace"))
-        except OSError:
-            pass
-        time.sleep(1)
+            if now - self.last_scan > RESCAN_SECS:
+                self.rescan()
+            ready, _, _ = select.select(list(self.fds.values()), [], [], RESYNC_SECS)
+            for fd in ready:
+                self.read(fd)
+            want = bool(self.down)
+            now = time.monotonic()
+            if want != shown or now - last_sync > RESYNC_SECS:
+                try:
+                    if enabled():
+                        set_visible(want)
+                    shown, last_sync = want, now
+                except (OSError, ValueError, KeyError):
+                    pass  # Hyprland/waybar restarting; retry next pass
 
 
 def single_instance():
@@ -181,14 +154,6 @@ def single_instance():
         f.write(str(os.getpid()))
 
 
-def main():
-    single_instance()
-    peek = Peek()
-    signal.signal(signal.SIGUSR1, peek.on_press)
-    signal.signal(signal.SIGUSR2, peek.on_release)
-    threading.Thread(target=listen_events, args=(peek,), daemon=True).start()
-    peek.run()
-
-
 if __name__ == "__main__":
-    main()
+    single_instance()
+    Peek().run()
