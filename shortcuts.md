@@ -129,8 +129,8 @@ Legend: `SUPER` = mainMod (Windows key).
 | `SUPER + CTRL + ALT + B` | Toggle waybar on/off |
 | `SUPER + CTRL + B` | Waybar styles menu |
 | `SUPER + ALT + B` | Waybar layout menu |
-| `SUPER + SHIFT + B` | Toggle **Peek** liquid-glass bar (Quickshell) ↔ waybar |
-| `SUPER` (hold) | Peek mode: glass islands + sliding droplet, visible only while SUPER is held |
+| `SUPER + SHIFT + B` | Cycle top bar: waybar → **Peek** glass bar → **Dynamic Island** |
+| `SUPER` (hold) | Peek / Island modes: show the full glass bar while held |
 
 ## Hyprland — Zoom / Magnifier
 

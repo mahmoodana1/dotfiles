@@ -2,6 +2,11 @@
 # /* ---- 💫 https://github.com/JaKooLit 💫 ---- */  ##
 # Script for Monitor backlights (if supported) using brightnessctl
 
+# Dynamic Island mode (PeekBar.sh) shows levels natively: skip the OSD popups
+if grep -qx island "${XDG_STATE_HOME:-$HOME/.local/state}/peek-bar/mode" 2>/dev/null; then
+  notify-send() { :; }
+fi
+
 iDIR="$HOME/.config/swaync/icons"
 notification_timeout=1000
 step=10  # INCREASE/DECREASE BY THIS VALUE

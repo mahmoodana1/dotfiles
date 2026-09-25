@@ -1,0 +1,151 @@
+// Dynamic Island — a liquid-glass pill that pops out of the top edge on
+// events (workspace switch, volume/mic/brightness, notifications) and shows
+// everything while SUPER is held. Hidden otherwise.
+// Run:    qs -c island         (managed by ~/.config/hypr/scripts/PeekBar.sh)
+// Shares glass/text/stats with the Peek bar through the `shared` -> ../peek link.
+// Test:   qs ipc -c island call island down|up|ws|notify <summary> <body>
+import QtQuick
+import Quickshell
+import Quickshell.Io
+import Quickshell.Hyprland
+import Quickshell.Services.Pipewire
+import "shared"
+
+ShellRoot {
+    id: root
+
+    // ---- state ------------------------------------------------------------
+    property bool held: false
+    property real now: Date.now()
+    property real wsUntil: 0
+    property real levelUntil: 0
+    property real notifUntil: 0
+
+    property string levelKind: "volume"      // volume | mic | brightness
+    property real levelValue: 0              // 0..1
+    property bool levelMuted: false
+    property var notif: ({ app: "", summary: "", body: "", icon: "", urgency: 1 })
+
+    // what the island shows, by priority
+    readonly property string mode: held ? "full"
+        : now < notifUntil ? "notif"
+        : now < levelUntil ? "level"
+        : now < wsUntil ? "ws"
+        : "hidden"
+
+    // ignore the burst of property changes while services start up
+    property bool armed: false
+    Timer { interval: 1500; running: true; onTriggered: root.armed = true }
+
+    Timer {
+        interval: 50
+        repeat: true
+        running: root.now < Math.max(root.wsUntil, root.levelUntil, root.notifUntil)
+        onTriggered: root.now = Date.now()
+    }
+
+    function pulse(which, ms) {
+        if (!armed) return
+        const t = Date.now()
+        if (which === "ws") wsUntil = t + ms
+        else if (which === "level") levelUntil = t + ms
+        else if (which === "notif") notifUntil = t + ms
+        now = t
+    }
+    function showLevel(kind, value, muted) {
+        levelKind = kind; levelValue = value; levelMuted = muted
+        pulse("level", 1500)
+    }
+
+    // ---- SUPER held (evdev) -----------------------------------------------
+    Process {
+        id: superwatch
+        running: true
+        command: ["python3", Qt.resolvedUrl("shared/superwatch.py").toString().replace("file://", "")]
+        stdout: SplitParser { onRead: line => root.held = line.trim() === "down" }
+        onExited: { root.held = false; superRestart.start() }
+    }
+    Timer { id: superRestart; interval: 1000; onTriggered: superwatch.running = true }
+    Binding { target: Stats; property: "active"; value: root.held }
+
+    // ---- workspace switches -----------------------------------------------
+    readonly property int focusedWs: Hyprland.focusedWorkspace ? Hyprland.focusedWorkspace.id : -1
+    onFocusedWsChanged: pulse("ws", 1300)
+
+    // ---- volume / mic -----------------------------------------------------
+    readonly property var sink: Pipewire.defaultAudioSink
+    readonly property var source: Pipewire.defaultAudioSource
+    PwObjectTracker { objects: [root.sink, root.source] }
+    Connections {
+        target: root.sink ? root.sink.audio : null
+        function onVolumeChanged() { root.showLevel("volume", root.sink.audio.volume, root.sink.audio.muted) }
+        function onMutedChanged() { root.showLevel("volume", root.sink.audio.volume, root.sink.audio.muted) }
+    }
+    Connections {
+        target: root.source ? root.source.audio : null
+        function onVolumeChanged() { root.showLevel("mic", root.source.audio.volume, root.source.audio.muted) }
+        function onMutedChanged() { root.showLevel("mic", root.source.audio.volume, root.source.audio.muted) }
+    }
+
+    // ---- brightness (sysfs has no change events; a tiny poll) -------------
+    property string backlight: ""
+    property int blMax: 1
+    property int blLast: -1
+    Process {
+        running: true
+        command: ["sh", "-c", "d=$(ls -d /sys/class/backlight/* 2>/dev/null | head -1); [ -n \"$d\" ] && echo \"$d $(cat $d/max_brightness)\""]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const parts = this.text.trim().split(" ")
+                if (parts.length === 2) { root.backlight = parts[0]; root.blMax = Number(parts[1]) || 1 }
+            }
+        }
+    }
+    FileView { id: blFile; path: root.backlight ? root.backlight + "/brightness" : "" }
+    Timer {
+        interval: 200; repeat: true
+        running: root.backlight !== ""
+        onTriggered: {
+            blFile.reload()
+            const v = Number(blFile.text().trim())
+            if (isNaN(v)) return
+            if (root.blLast >= 0 && v !== root.blLast) root.showLevel("brightness", v / root.blMax, false)
+            root.blLast = v
+        }
+    }
+
+    // ---- notifications (swaync stays the daemon; we eavesdrop) ------------
+    Process {
+        id: notifwatch
+        running: true
+        command: ["python3", Qt.resolvedUrl("notifwatch.py").toString().replace("file://", "")]
+        stdout: SplitParser {
+            onRead: line => {
+                let n
+                try { n = JSON.parse(line) } catch (e) { return }
+                if (n.osd) return
+                root.notif = n
+                root.pulse("notif", n.urgency >= 2 ? 6000 : 4000)
+            }
+        }
+        onExited: notifRestart.start()
+    }
+    Timer { id: notifRestart; interval: 1000; onTriggered: notifwatch.running = true }
+
+    // ---- manual control / testing -----------------------------------------
+    IpcHandler {
+        target: "island"
+        function down(): void { root.held = true }
+        function up(): void { root.held = false }
+        function ws(): void { root.pulse("ws", 1300) }
+        function notify(summary: string, body: string): void {
+            root.notif = { app: "Test", summary: summary, body: body, icon: "", urgency: 1 }
+            root.pulse("notif", 4000)
+        }
+    }
+
+    Variants {
+        model: Quickshell.screens
+        DynIsland { ctl: root }
+    }
+}
