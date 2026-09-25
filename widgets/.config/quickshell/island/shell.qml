@@ -1,14 +1,16 @@
 // Dynamic Island — a liquid-glass pill that pops out of the top edge on
-// events (workspace switch, volume/mic/brightness, notifications) and shows
+// events (workspace switch, volume/mic/brightness, notifications, media,
+// charger) and shows
 // everything while SUPER is held. Hidden otherwise.
 // Run:    qs -c island         (managed by ~/.config/hypr/scripts/PeekBar.sh)
 // Shares glass/text/stats with the Peek bar through the `shared` -> ../peek link.
-// Test:   qs ipc -c island call island down|up|ws|notify <summary> <body>
+// Test:   qs ipc -c island call island down|up|ws|media|charger|notify <summary> <body>
 import QtQuick
 import Quickshell
 import Quickshell.Io
 import Quickshell.Hyprland
 import Quickshell.Services.Pipewire
+import Quickshell.Services.Mpris
 import "shared"
 
 ShellRoot {
@@ -20,16 +22,23 @@ ShellRoot {
     property real wsUntil: 0
     property real levelUntil: 0
     property real notifUntil: 0
+    property real mediaUntil: 0
+    property real toastUntil: 0
+    property bool hoverHold: false           // pointer on the island: don't time out
 
     property string levelKind: "volume"      // volume | mic | brightness
     property real levelValue: 0              // 0..1
     property bool levelMuted: false
     property var notif: ({ app: "", summary: "", body: "", icon: "", urgency: 1 })
+    property string toastIcon: ""
+    property string toastText: ""
 
     // what the island shows, by priority
     readonly property string mode: held ? "full"
         : now < notifUntil ? "notif"
+        : now < toastUntil ? "toast"
         : now < levelUntil ? "level"
+        : now < mediaUntil ? "media"
         : now < wsUntil ? "ws"
         : "hidden"
 
@@ -40,8 +49,21 @@ ShellRoot {
     Timer {
         interval: 50
         repeat: true
-        running: root.now < Math.max(root.wsUntil, root.levelUntil, root.notifUntil)
-        onTriggered: root.now = Date.now()
+        running: root.now < Math.max(root.wsUntil, root.levelUntil, root.notifUntil,
+                                     root.mediaUntil, root.toastUntil)
+        onTriggered: {
+            const t = Date.now()
+            // hovering keeps whatever is showing open
+            if (root.hoverHold && root.mode !== "hidden" && root.mode !== "full") {
+                const keep = t + 400
+                if (root.mode === "notif") root.notifUntil = Math.max(root.notifUntil, keep)
+                else if (root.mode === "toast") root.toastUntil = Math.max(root.toastUntil, keep)
+                else if (root.mode === "level") root.levelUntil = Math.max(root.levelUntil, keep)
+                else if (root.mode === "media") root.mediaUntil = Math.max(root.mediaUntil, keep)
+                else if (root.mode === "ws") root.wsUntil = Math.max(root.wsUntil, keep)
+            }
+            root.now = t
+        }
     }
 
     function pulse(which, ms) {
@@ -50,7 +72,22 @@ ShellRoot {
         if (which === "ws") wsUntil = t + ms
         else if (which === "level") levelUntil = t + ms
         else if (which === "notif") notifUntil = t + ms
+        else if (which === "media") mediaUntil = t + ms
+        else if (which === "toast") toastUntil = t + ms
         now = t
+    }
+    function dismiss() {
+        // click: close the current event
+        if (mode === "notif") notifUntil = 0
+        else if (mode === "toast") toastUntil = 0
+        else if (mode === "level") levelUntil = 0
+        else if (mode === "media") mediaUntil = 0
+        else if (mode === "ws") wsUntil = 0
+        now = Date.now()
+    }
+    function toast(icon, text, ms) {
+        toastIcon = icon; toastText = text
+        pulse("toast", ms)
     }
     function showLevel(kind, value, muted) {
         levelKind = kind; levelValue = value; levelMuted = muted
@@ -70,7 +107,7 @@ ShellRoot {
 
     // ---- workspace switches -----------------------------------------------
     readonly property int focusedWs: Hyprland.focusedWorkspace ? Hyprland.focusedWorkspace.id : -1
-    onFocusedWsChanged: pulse("ws", 1300)
+    onFocusedWsChanged: pulse("ws", 700)
 
     // ---- volume / mic -----------------------------------------------------
     readonly property var sink: Pipewire.defaultAudioSink
@@ -114,6 +151,24 @@ ShellRoot {
         }
     }
 
+    // ---- media (MPRIS): track changes and play/pause ----------------------
+    readonly property var player: {
+        const ps = Mpris.players.values
+        return ps.find(p => p.isPlaying) || ps[0] || null
+    }
+    readonly property string trackKey: player ? (player.trackTitle || "") + "\u0001" + (player.trackArtist || "") : ""
+    onTrackKeyChanged: if (player && player.isPlaying && (player.trackTitle || "") !== "") pulse("media", 2500)
+    Connections {
+        target: root.player
+        function onIsPlayingChanged() { if ((root.player.trackTitle || "") !== "") root.pulse("media", 1400) }
+    }
+
+    // ---- charger plugged / unplugged --------------------------------------
+    readonly property bool charging: Stats.charging
+    onChargingChanged: if (Stats.hasBattery)
+        toast(charging ? "\u{f0084}" : "\u{f0079}",
+              (charging ? "Charging  " : "On battery  ") + Stats.batteryPct + "%", 1600)
+
     // ---- notifications (swaync stays the daemon; we eavesdrop) ------------
     Process {
         id: notifwatch
@@ -137,7 +192,9 @@ ShellRoot {
         target: "island"
         function down(): void { root.held = true }
         function up(): void { root.held = false }
-        function ws(): void { root.pulse("ws", 1300) }
+        function ws(): void { root.pulse("ws", 700) }
+        function media(): void { root.pulse("media", 2500) }
+        function charger(): void { root.toast("\u{f0084}", "Charging  " + Stats.batteryPct + "%", 1600) }
         function notify(summary: string, body: string): void {
             root.notif = { app: "Test", summary: summary, body: body, icon: "", urgency: 1 }
             root.pulse("notif", 4000)
