@@ -27,8 +27,12 @@ PanelWindow {
     readonly property bool fullscreenHere: monitor !== null && monitor.activeWorkspace !== null
                                            && monitor.activeWorkspace.hasFullscreen
                                            && !(ctl && ctl.ignoreFullscreen)
-    readonly property string mode: !isFocused || !ctl ? "hidden"
-        : !fullscreenHere ? ctl.mode
+    // on an empty workspace the island rests on screen (workspaces · clock · …)
+    readonly property bool emptyHere: monitor !== null && monitor.activeWorkspace !== null
+                                      && monitor.activeWorkspace.toplevels.values.length === 0
+    readonly property string mode: !ctl ? "hidden"
+        : !isFocused ? (emptyHere ? "full" : "hidden")
+        : !fullscreenHere ? (ctl.mode === "hidden" && emptyHere ? "full" : ctl.mode)
         : ctl.panel !== "" ? ctl.panel
         : ctl.infoOpen ? "info"                      // stays while hovered
         : ctl.held && ctl.shiftHeld ? "full"
@@ -167,7 +171,15 @@ PanelWindow {
 
         HoverHandler { id: pillHover }
         Binding { target: win.ctl; property: "hoverHold"; value: pillHover.hovered; when: win.isFocused }
-        TapHandler { onTapped: if (win.ctl && win.viewMode !== "info") win.ctl.dismiss() }
+        // Click-to-dismiss for event popups only. Decide from the mode at
+        // press time: a chip tap in the same click may already have switched
+        // the view (info → wifi), which must not be dismissed.
+        TapHandler {
+            property string pressMode: ""
+            onPressedChanged: if (pressed) pressMode = win.viewMode
+            onTapped: if (win.ctl && ["notif", "level", "toast", "ws", "full"].indexOf(pressMode) >= 0)
+                win.ctl.dismiss()
+        }
 
         // glass + content, grouped so the droplet can lens both
         Item {
@@ -206,6 +218,7 @@ PanelWindow {
                 // -- workspaces (ws + full) --
                 WorkspaceStrip {
                     id: wsStrip
+                    visible: opacity > 0.01
                     monitor: win.monitor
                     height: pill.height
                     x: win.viewMode === "full" ? 16 : (pill.width - width) / 2
@@ -217,6 +230,7 @@ PanelWindow {
                 // -- full: clock + battery/volume --
                 Row {
                     id: fullExtra
+                    visible: opacity > 0.01
                     x: wsStrip.x + wsStrip.width + 18
                     anchors.verticalCenter: parent.verticalCenter
                     spacing: 14
@@ -240,6 +254,7 @@ PanelWindow {
                 // -- level --
                 Row {
                     id: levelRow
+                    visible: opacity > 0.01
                     anchors.centerIn: parent
                     spacing: 12
                     opacity: win.viewMode === "level" ? 1 : 0
@@ -281,6 +296,7 @@ PanelWindow {
                 // -- toast (charger) --
                 Row {
                     id: toastRow
+                    visible: opacity > 0.01
                     anchors.centerIn: parent
                     spacing: 10
                     opacity: win.viewMode === "toast" ? 1 : 0
@@ -300,6 +316,7 @@ PanelWindow {
                 // -- info (hover) --
                 Column {
                     id: infoCol
+                    visible: opacity > 0.01
                     anchors.centerIn: parent
                     spacing: 7
                     opacity: win.viewMode === "info" ? 1 : 0
@@ -416,6 +433,7 @@ PanelWindow {
                 // -- notification --
                 Row {
                     id: notifRow
+                    visible: opacity > 0.01
                     anchors.verticalCenter: parent.verticalCenter
                     x: 18
                     spacing: 12
