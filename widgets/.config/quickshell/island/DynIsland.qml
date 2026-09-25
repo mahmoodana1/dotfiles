@@ -249,9 +249,8 @@ PanelWindow {
                 transform: Scale { origin.x: glass.width / 2; origin.y: glass.pad; xScale: pill.pop; yScale: pill.pop }
             }
 
-            // Content sits at its FINAL place on whole pixels while the glass
-            // springs around it (clipped to the glass), so text never creeps
-            // through the spring's settle.
+            // Content pops in without overshoot (the glass keeps its bounce),
+            // so text never shrinks back at the end of the pop.
             Item {
                 id: contentClip
                 anchors.fill: parent
@@ -259,17 +258,15 @@ PanelWindow {
                 transform: Scale { origin.x: pill.width / 2; origin.y: 0; xScale: pill.popC; yScale: pill.popC }
             Item {
                 id: content
-                x: Math.round((win.winW - win.targetW) / 2) - pill.x
-                width: win.targetW
-                height: win.targetH
+                anchors.fill: parent
 
                 // -- workspaces (ws + full) --
                 WorkspaceStrip {
                     id: wsStrip
                     visible: opacity > 0.01
                     monitor: win.monitor
-                    height: content.height
-                    x: win.viewMode === "full" ? 16 : Math.round((content.width - width) / 2)
+                    height: pill.height
+                    x: win.viewMode === "full" ? 16 : (pill.width - width) / 2
                     opacity: win.viewMode === "ws" || win.viewMode === "full" ? 1 : 0
                     Behavior on opacity { enabled: win.morphReady; NumberAnimation { duration: 100 } }
                     // no Behavior on x: it must track the springing pill width exactly
@@ -560,12 +557,12 @@ PanelWindow {
             id: droplet
             readonly property real restW: 24
             readonly property real w: Math.max(restW, wsStrip.dropR - wsStrip.dropL)
-            readonly property real h: (content.height - 6) * Math.pow(restW / w, 0.25)
+            readonly property real h: (pill.height - 6) * Math.pow(restW / w, 0.25)
             visible: wsStrip.hasActive && wsStrip.opacity > 0.01
             opacity: wsStrip.opacity
             pad: 6
-            x: content.x + wsStrip.x + wsStrip.dropL - pad     // strip lives in the pinned content
-            y: content.y + (content.height - h) / 2 - pad
+            x: wsStrip.x + wsStrip.dropL - pad
+            y: (pill.height - h) / 2 - pad
             width: w + pad * 2
             height: h + pad * 2
             source: lensSrc
