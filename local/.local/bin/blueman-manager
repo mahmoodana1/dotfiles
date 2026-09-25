@@ -1,0 +1,6 @@
+#!/bin/sh
+# Shadows /usr/bin/blueman-manager (~/.local/bin is first on PATH, see
+# hypr/lua/env.lua) so every launcher — waybar, the tray applet — opens the
+# island's Bluetooth panel instead. Falls back to blueman when the island
+# isn't running (waybar / peek mode).
+qs ipc -c island call island panel bt >/dev/null 2>&1 || exec /usr/bin/blueman-manager "$@"

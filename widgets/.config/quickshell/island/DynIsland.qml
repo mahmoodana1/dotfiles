@@ -117,7 +117,7 @@ PanelWindow {
     readonly property bool pointerIn: (zoneHover.hovered || pillHover.hovered)
                                       && (shown || !fullscreenHere)
     onPointerInChanged: {
-        if (pointerIn) { closeInfo.stop(); openInfo.restart() }
+        if (pointerIn) { closeInfo.stop(); idleClose.stop(); openInfo.restart() }
         else { openInfo.stop(); closeInfo.restart() }
     }
     Timer {
@@ -139,6 +139,15 @@ PanelWindow {
             win.ctl.infoOpen = false
             win.ctl.panel = ""
         }
+    }
+    // A panel opened from outside (tray / waybar / IPC) closes by itself if
+    // the pointer never comes over; once it does, leaving closes it as usual.
+    readonly property string ctlPanel: ctl ? ctl.panel : ""
+    onCtlPanelChanged: if (ctlPanel !== "" && !pointerIn) idleClose.restart()
+    Timer {
+        id: idleClose
+        interval: 4000
+        onTriggered: if (win.ctl && !win.pointerIn && win.isFocused && !wifiPanel.typing) win.ctl.panel = ""
     }
 
     // ---- live capture of what's behind (includes us; glass samples outside) --
