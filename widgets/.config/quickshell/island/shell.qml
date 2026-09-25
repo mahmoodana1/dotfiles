@@ -4,7 +4,7 @@
 // everything while SUPER is held. Hidden otherwise.
 // Run:    qs -c island         (managed by ~/.config/hypr/scripts/PeekBar.sh)
 // Shares glass/text/stats with the Peek bar through the `shared` -> ../peek link.
-// Test:   qs ipc -c island call island down|up|ws|charger|notify <summary> <body>
+// Test:   qs ipc -c island call island down|up|shiftdown|ws|charger|notify <summary> <body>
 import QtQuick
 import Quickshell
 import Quickshell.Io
@@ -17,6 +17,7 @@ ShellRoot {
 
     // ---- state ------------------------------------------------------------
     property bool held: false
+    property bool shiftHeld: false           // SUPER+SHIFT shows the island over fullscreen
     property real now: Date.now()
     property real wsUntil: 0
     property real levelUntil: 0
@@ -91,9 +92,15 @@ ShellRoot {
     Process {
         id: superwatch
         running: true
-        command: ["python3", Qt.resolvedUrl("shared/superwatch.py").toString().replace("file://", "")]
-        stdout: SplitParser { onRead: line => root.held = line.trim() === "down" }
-        onExited: { root.held = false; superRestart.start() }
+        command: ["python3", Qt.resolvedUrl("shared/superwatch.py").toString().replace("file://", ""), "--shift"]
+        stdout: SplitParser {
+            onRead: line => {
+                const l = line.trim()
+                if (l === "down" || l === "up") root.held = l === "down"
+                else if (l === "shift down" || l === "shift up") root.shiftHeld = l === "shift down"
+            }
+        }
+        onExited: { root.held = false; root.shiftHeld = false; superRestart.start() }
     }
     Timer { id: superRestart; interval: 1000; onTriggered: superwatch.running = true }
     Binding { target: Stats; property: "active"; value: root.held }
@@ -172,7 +179,8 @@ ShellRoot {
     IpcHandler {
         target: "island"
         function down(): void { root.held = true }
-        function up(): void { root.held = false }
+        function up(): void { root.held = false; root.shiftHeld = false }
+        function shiftdown(): void { root.held = true; root.shiftHeld = true }
         function ws(): void { root.pulse("ws", 350) }
         function charger(): void { root.toast("\u{f0084}", "Charging  " + Stats.batteryPct + "%", 1600) }
         function notify(summary: string, body: string): void {

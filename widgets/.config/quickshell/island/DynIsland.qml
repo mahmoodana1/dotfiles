@@ -21,10 +21,13 @@ PanelWindow {
     readonly property var monitor: Hyprland.monitorFor(modelData)
     readonly property bool isFocused: Hyprland.focusedMonitor !== null && monitor !== null
                                       && Hyprland.focusedMonitor.name === monitor.name
-    // never over a fullscreen window
+    // over a fullscreen window only SUPER+SHIFT (held) shows it, as the full view
     readonly property bool fullscreenHere: monitor !== null && monitor.activeWorkspace !== null
                                            && monitor.activeWorkspace.hasFullscreen
-    readonly property string mode: isFocused && ctl && !fullscreenHere ? ctl.mode : "hidden"
+    readonly property string mode: !isFocused || !ctl ? "hidden"
+        : !fullscreenHere ? ctl.mode
+        : ctl.held && ctl.shiftHeld ? "full"
+        : "hidden"
     readonly property bool shown: mode !== "hidden"
 
     // Keep drawing the last mode while fading out (no shrink on the way out).

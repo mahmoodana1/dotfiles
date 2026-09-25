@@ -26,7 +26,7 @@ stop_qs() {
     /^Instance/ { pid = "" }
     /Process ID:/ { pid = $3 }
     /Config path:/ && index($0, cfg) { print pid }' | xargs -r kill -9
-  pkill -f "quickshell/(peek|island)/[s]uperwatch.py"
+  pkill -f "quickshell/(peek|island)/(shared/)?[s]uperwatch.py"
   pkill -f "quickshell/island/[n]otifwatch.py"
 }
 

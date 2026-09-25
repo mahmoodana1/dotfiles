@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Print "down" / "up" as SUPER is physically pressed / released.
+With --shift, also print "shift down" / "shift up" for the Shift keys.
 
 Read straight from evdev (user is in the `input` group) instead of Hyprland
 binds, which drop ~9% of release events and would strand the bar on screen.
@@ -15,6 +16,8 @@ import sys
 import time
 
 KEY_LEFTMETA, KEY_RIGHTMETA = 125, 126
+KEY_LEFTSHIFT, KEY_RIGHTSHIFT = 42, 54
+WATCH_SHIFT = "--shift" in sys.argv[1:]
 EV_KEY = 1
 EVENT = struct.Struct("llHHi")      # struct input_event
 RESCAN_SECS = 5.0                   # pick up hotplugged keyboards
@@ -31,6 +34,7 @@ def keyboards():
 
 def main():
     fds, down, held, last_scan = {}, set(), False, 0.0
+    shift_down, shift_held = set(), False
     while True:
         if time.monotonic() - last_scan > RESCAN_SECS:
             paths = set(keyboards())
@@ -38,6 +42,7 @@ def main():
                 if p not in paths:
                     fd = fds.pop(p)
                     down = {k for k in down if k[0] != fd}
+                    shift_down = {k for k in shift_down if k[0] != fd}
                     os.close(fd)
             for p in paths - set(fds):
                 try:
@@ -62,13 +67,21 @@ def main():
                         down.discard((fd, code))
                     elif value == 1:
                         down.add((fd, code))
+                elif WATCH_SHIFT and typ == EV_KEY and code in (KEY_LEFTSHIFT, KEY_RIGHTSHIFT):
+                    if value == 0:
+                        shift_down.discard((fd, code))
+                    elif value == 1:
+                        shift_down.add((fd, code))
 
-        if bool(down) != held:
-            held = bool(down)
-            try:
+        try:
+            if WATCH_SHIFT and bool(shift_down) != shift_held:
+                shift_held = bool(shift_down)
+                print("shift down" if shift_held else "shift up", flush=True)
+            if bool(down) != held:
+                held = bool(down)
                 print("down" if held else "up", flush=True)
-            except BrokenPipeError:
-                sys.exit(0)
+        except BrokenPipeError:
+            sys.exit(0)
 
 
 if __name__ == "__main__":
