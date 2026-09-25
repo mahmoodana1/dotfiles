@@ -1,13 +1,12 @@
 import QtQuick
 import Quickshell
-import Quickshell.Io
 import Quickshell.Wayland
 import Quickshell.Hyprland
 import "shared"
 
-// Floating Bluetooth panel: the island's BtPanel detached (⤢) into the middle
-// of the screen, with battery/signal bars. Springs out of the island's rect
-// (ctl.floatFrom) to the center and back into it on close.
+// Floating panel: the island's Bluetooth or Wi-Fi panel detached (⤢) into the
+// middle of the screen, in its larger, barred `floating` form. Springs out of
+// the island's rect (ctl.floatFrom) to the center and back into it on close.
 // Close: ✕, Esc, or a click outside. One per screen; shows on ctl.floatScreen.
 // Always mapped (screencopy needs a live window); closed = empty input mask.
 PanelWindow {
@@ -18,13 +17,18 @@ PanelWindow {
 
     screen: modelData
     readonly property var monitor: Hyprland.monitorFor(modelData)
-    readonly property bool wanted: ctl !== null && ctl.floating === "bt"
+    readonly property bool wanted: ctl !== null && ctl.floating !== ""
                                    && monitor !== null && ctl.floatScreen === monitor.name
-    // `open` drives the content; the card animates on `t` (0 island … 1 center)
+    // `open` + `kind` outlive `wanted` through the close animation
     property bool open: false
+    property string kind: ""             // "bt" | "wifi"
     onWantedChanged: {
-        if (wanted) { open = true; closeAnim.stop(); openAnim.restart(); keys.forceActiveFocus() }
-        else if (open) { openAnim.stop(); closeAnim.restart() }
+        if (wanted) {
+            kind = ctl.floating
+            open = true
+            closeAnim.stop(); openAnim.restart()
+            keys.forceActiveFocus()
+        } else if (open) { openAnim.stop(); closeAnim.restart() }
     }
     function close() { if (ctl) ctl.floating = "" }
 
@@ -39,9 +43,10 @@ PanelWindow {
     mask: open ? fullMask : noMask
 
     // ---- geometry ----------------------------------------------------------
+    readonly property var panel: kind === "wifi" ? wifi : bt
     readonly property rect from: ctl && ctl.floatFrom.width > 0 ? ctl.floatFrom
         : Qt.rect((width - 380) / 2, 6, 380, 60)
-    readonly property real toW: 460
+    readonly property real toW: 500
     readonly property real toH: panel.implicitHeight
     readonly property real toX: (width - toW) / 2
     readonly property real toY: Math.max(40, (height - toH) / 2 - 40)
@@ -56,17 +61,7 @@ PanelWindow {
     SequentialAnimation {
         id: closeAnim
         NumberAnimation { target: win; property: "t"; to: 0; duration: 240; easing.type: Easing.InCubic }
-        ScriptAction { script: win.open = false }
-    }
-
-    // ---- signal strength (only while open) ---------------------------------
-    property var signals: ({})
-    Process {
-        running: win.open
-        command: ["python3", Qt.resolvedUrl("btsignal.py").toString().replace("file://", "")]
-        stdout: SplitParser {
-            onRead: line => { try { win.signals = JSON.parse(line) } catch (e) { } }
-        }
+        ScriptAction { script: { win.open = false; win.kind = "" } }
     }
 
     // ---- live capture of what's behind (includes us; glass samples outside) --
@@ -118,7 +113,7 @@ PanelWindow {
             lumTex: lum.texture
             useLum: 1
             radius: 26
-            smoke: 0.85
+            smoke: 0.93          // text-heavy: darker than the island panels
             x: -card.pad; y: -card.pad
             width: card.width + card.pad * 2
             height: card.height + card.pad * 2
@@ -126,16 +121,32 @@ PanelWindow {
             sourceOrigin: Qt.point(card.x - card.pad, card.y - card.pad)
             sourceSize: Qt.size(win.width, win.height)
         }
+        // dark backing so text reads over busy screens (glass rim stays visible)
+        Rectangle {
+            anchors.fill: parent
+            anchors.margins: 3
+            radius: 23
+            color: Qt.rgba(0.02, 0.03, 0.06, 0.62)
+            opacity: Math.min(1, win.t * 1.6)
+        }
         Item {
             anchors.fill: parent
             clip: true
+            opacity: Math.min(1, win.t * 1.6)
             BtPanel {
-                id: panel
-                active: win.open
+                id: bt
+                visible: win.kind === "bt"
+                active: win.open && win.kind === "bt"
                 floating: true
-                signals: win.signals
                 width: card.width
-                opacity: Math.min(1, win.t * 1.6)
+                onCloseRequested: win.close()
+            }
+            WifiPanel {
+                id: wifi
+                visible: win.kind === "wifi"
+                active: win.open && win.kind === "wifi"
+                floating: true
+                width: card.width
                 onCloseRequested: win.close()
             }
         }

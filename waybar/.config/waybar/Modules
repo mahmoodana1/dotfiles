@@ -281,7 +281,8 @@
 	"format-icons": [
 		"󰤯", "󰤟", "󰤢", "󰤥", "󰤨"
 	],
-	"on-click-right": "$HOME/.config/hypr/scripts/WaybarScripts.sh --nmtui"
+	"on-click": "island-panel wifi alacritty --class alacritty-float -e nmtui connect",
+	"on-click-right": "island-panel wifi alacritty --class alacritty-float -e nmtui connect"
 },
 
 "network#speed": {

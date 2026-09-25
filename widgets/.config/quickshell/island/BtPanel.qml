@@ -1,14 +1,15 @@
 import QtQuick
 import Quickshell
+import Quickshell.Io
 import Quickshell.Bluetooth
 import "shared"
 
-// Bluetooth manager inside the island (Quickshell.Bluetooth → BlueZ).
+// Bluetooth manager (Quickshell.Bluetooth → BlueZ), in the island and, detached
+// with ⤢, in the floating panel (FloatPanel.qml sets `floating`).
 // Tap a device: disconnect if connected, connect if paired, pair otherwise.
-// ⋯ on a known device opens its actions (trust / forget) inline.
-// The adapter scans while the panel is open; the ↻ button pauses/resumes.
-// ⤢ detaches it into the floating panel (BtFloat.qml), which sets
-// `floating` and adds battery/signal bars to connected devices.
+// ⋯ on a known device opens its actions (connect / trust / forget) inline.
+// The adapter scans while the panel is open; ↻ pauses/resumes.
+// Floating adds bigger text, sections, battery/signal bars and adapter traffic.
 // No HoverHandlers here: they would steal `hovered` from the pill.
 Item {
     id: panel
@@ -16,14 +17,13 @@ Item {
     property var host                    // DynIsland window (launch / close)
     property bool active: false
     property bool floating: false
-    property var signals: ({})           // address -> RSSI dBm or null (btsignal.py)
     signal detach()
     signal closeRequested()
 
     property bool scanning: true
     property bool showAll: false
     property string openAddr: ""         // device whose actions are shown
-    onActiveChanged: if (active) { scanning = true; showAll = false; openAddr = "" }
+    onActiveChanged: if (active) { scanning = true; showAll = false; openAddr = ""; traffic.reset() }
 
     readonly property var adapter: Bluetooth.defaultAdapter
     readonly property bool on: adapter !== null && adapter.enabled
@@ -33,17 +33,38 @@ Item {
                         || a.deviceName.localeCompare(b.deviceName))
     readonly property int limit: 7
     readonly property var devs: showAll ? allDevs : allDevs.slice(0, limit)
+    readonly property var connectedDevs: devs.filter(d => d.connected)
+    readonly property var otherDevs: devs.filter(d => !d.connected)
 
     // set on change only (no Binding): the island and floating copies would
     // otherwise fight over the one adapter
     readonly property bool wantScan: active && on && scanning
     onWantScanChanged: if (adapter) adapter.discovering = wantScan
 
+    // ---- signal + traffic (floating only): btsignal.py, once a second ------
+    property var signals: ({})           // address -> RSSI dBm or null
+    Process {
+        running: panel.active && panel.floating
+        command: ["python3", Qt.resolvedUrl("btsignal.py").toString().replace("file://", "")]
+        stdout: SplitParser {
+            onRead: line => {
+                let j
+                try { j = JSON.parse(line) } catch (e) { return }
+                panel.signals = j.rssi
+                traffic.rx = j.rx; traffic.tx = j.tx
+                traffic.sample()
+            }
+        }
+    }
+
+    // text sizes: island / floating
+    function fs(n) { return floating ? Math.round(n * 1.2) : n }
     // the island window is 380 tall; past this the list scrolls
-    readonly property int listMax: floating ? 460 : 280
+    readonly property int listMax: floating ? 520 : 280
 
     implicitWidth: 380
-    implicitHeight: header.height + 4 + list.height + 24
+    implicitHeight: header.y + header.height + 6 + list.height
+                    + (traffic.visible ? traffic.height + 18 : 0) + 16
 
     function kindIcon(icon) {
         if (icon.indexOf("headset") >= 0 || icon.indexOf("headphone") >= 0) return "\u{f02cb}"
@@ -55,6 +76,9 @@ Item {
     }
     // RSSI dBm -> 0..1  (-90 weak … -40 excellent)
     function signalLevel(dbm) { return Math.max(0, Math.min(1, (dbm + 90) / 50)) }
+    function signalWord(dbm) {
+        return dbm >= -55 ? "excellent" : dbm >= -67 ? "good" : dbm >= -78 ? "fair" : "weak"
+    }
     function activate(d) {
         if (d.connected) d.disconnect()
         else if (d.paired) d.connect()
@@ -70,71 +94,137 @@ Item {
         }
     }
 
-    // small glass pill button (row actions, "show all")
-    component Action: Item {
-        id: act
-        property alias text: lbl.text
-        property bool danger: false
-        signal clicked()
-        implicitWidth: lbl.implicitWidth + 20
-        implicitHeight: 22
+    component SectionLabel: GlassText {
+        size: 11; weight: Font.Bold
+        color: Qt.rgba(1, 1, 1, 0.55)
+    }
+
+    component DeviceRow: Item {
+        id: row
+        required property var modelData
+        readonly property var d: modelData
+        readonly property bool busy: d.pairing || d.state === BluetoothDeviceState.Connecting
+                                      || d.state === BluetoothDeviceState.Disconnecting
+        readonly property bool known: d.paired || d.trusted
+        readonly property bool open: panel.openAddr === d.address
+        readonly property bool bars: panel.floating && d.connected
+        readonly property int lineH: panel.floating ? 40 : 32
+        readonly property int baseH: lineH + (bars ? meters.height + 8 : 0)
+        width: col.width
+        height: baseH + (open ? actions.height + 8 : 0)
+        Behavior on height { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
+
         Rectangle {
             anchors.fill: parent
-            radius: height / 2
-            color: actTap.pressed ? Qt.rgba(1, 1, 1, 0.26) : Qt.rgba(1, 1, 1, 0.09)
-            border.width: 1
-            border.color: act.danger ? Qt.rgba(1, 0.55, 0.5, 0.45) : Qt.rgba(1, 1, 1, 0.12)
+            radius: 12
+            color: tap.pressed ? Qt.rgba(1, 1, 1, 0.22)
+                 : d.connected || row.open ? Qt.rgba(1, 1, 1, 0.12) : "transparent"
         }
-        GlassText {
-            id: lbl
-            anchors.centerIn: parent
-            size: 10
-            color: act.danger ? Qt.rgba(1, 0.75, 0.72, 1) : "white"
-        }
-        TapHandler { id: actTap; onTapped: act.clicked() }
-    }
 
-    // icon + thin glass bar + value, for the floating view
-    component Meter: Row {
-        id: meter
-        property string icon
-        property real level: 0           // 0..1, or -1 for "unavailable"
-        property string label
-        spacing: 5
-        GlassText {
-            anchors.verticalCenter: parent.verticalCenter
-            text: meter.icon
-            size: 10
-            color: Qt.rgba(1, 1, 1, meter.level < 0 ? 0.35 : 0.7)
+        // main line; tap area stops short of ⋯ so the two never both fire
+        Item {
+            width: parent.width - (more.visible ? more.width + 4 : 0)
+            height: row.lineH
+            GlassText {
+                x: 10
+                anchors.verticalCenter: parent.verticalCenter
+                text: panel.kindIcon(d.icon || "")
+                size: panel.fs(14)
+            }
+            GlassText {
+                x: panel.floating ? 40 : 36
+                anchors.verticalCenter: parent.verticalCenter
+                width: parent.width - x - status.width - 16
+                text: d.deviceName
+                elide: Text.ElideRight
+                size: panel.fs(12)
+                weight: d.connected ? Font.Bold : Font.Medium
+            }
+            GlassText {
+                id: status
+                anchors.right: parent.right
+                anchors.rightMargin: more.visible ? 2 : 10
+                anchors.verticalCenter: parent.verticalCenter
+                size: panel.fs(10)
+                color: Qt.rgba(1, 1, 1, d.connected ? 0.85 : 0.6)
+                text: row.busy ? "…"
+                    : d.connected ? (d.batteryAvailable && !panel.floating ? Math.round(d.battery * 100) + "%  connected" : "connected")
+                    : d.paired ? "paired" : "pair"
+            }
+            TapHandler { id: tap; onTapped: panel.activate(d) }
         }
-        Rectangle {
-            anchors.verticalCenter: parent.verticalCenter
-            width: 54; height: 4; radius: 2
-            color: Qt.rgba(1, 1, 1, 0.14)
-            Rectangle {
-                width: parent.width * Math.max(meter.level, 0)
-                height: parent.height; radius: 2
-                color: Qt.rgba(1, 1, 1, 0.8)
-                Behavior on width { NumberAnimation { duration: 400; easing.type: Easing.OutCubic } }
+
+        Item {
+            id: more
+            visible: row.known
+            anchors.right: parent.right
+            width: 32; height: row.lineH
+            GlassText {
+                anchors.centerIn: parent
+                text: "\u{f01d8}"
+                size: panel.fs(14)
+                color: row.open ? "white" : Qt.rgba(1, 1, 1, 0.6)
+            }
+            TapHandler { onTapped: panel.openAddr = row.open ? "" : d.address }
+        }
+
+        Column {             // floating only: battery + signal
+            id: meters
+            x: 40; y: row.lineH - 4
+            spacing: 6
+            visible: row.bars
+            Meter {
+                icon: "\u{f0079}"
+                title: "Battery"
+                level: d.batteryAvailable ? d.battery : -1
+                value: d.batteryAvailable ? Math.round(d.battery * 100) + "%" : "not reported"
+            }
+            Meter {
+                readonly property var dbm: panel.signals[d.address]
+                readonly property bool has: dbm !== undefined && dbm !== null
+                icon: "\u{f08bf}"
+                title: "Signal"
+                level: has ? panel.signalLevel(dbm) : -1
+                value: has ? dbm + " dBm  ·  " + panel.signalWord(dbm) : "n/a for LE devices"
             }
         }
-        GlassText {
-            anchors.verticalCenter: parent.verticalCenter
-            text: meter.label
-            size: 9
-            color: Qt.rgba(1, 1, 1, meter.level < 0 ? 0.35 : 0.6)
+
+        Row {
+            id: actions
+            x: panel.floating ? 40 : 36; y: row.baseH + 2
+            spacing: 6
+            visible: row.open
+            opacity: row.open ? 1 : 0
+            Behavior on opacity { NumberAnimation { duration: 120 } }
+            PillButton {
+                size: panel.fs(10)
+                text: d.connected ? "Disconnect" : "Connect"
+                onClicked: d.connected ? d.disconnect() : d.connect()
+            }
+            PillButton {
+                size: panel.fs(10)
+                text: d.trusted ? "Untrust" : "Trust"
+                onClicked: d.trusted = !d.trusted
+            }
+            PillButton {
+                size: panel.fs(10)
+                text: "Forget"
+                danger: true
+                onClicked: { panel.openAddr = ""; d.forget() }
+            }
         }
     }
 
+    // ---- header -----------------------------------------------------------------
     Item {
         id: header
-        x: 16; y: 12
+        x: 16; y: panel.floating ? 16 : 12
         width: panel.width - 32
-        height: 30
+        height: panel.floating ? 34 : 30
         GlassText {
             anchors.verticalCenter: parent.verticalCenter
             text: "\u{f00af}  Bluetooth"
-            size: 13; weight: Font.Bold
+            size: panel.fs(13); weight: Font.Bold
         }
         Row {
             anchors.right: parent.right
@@ -145,7 +235,7 @@ Item {
                 visible: panel.on
                 anchors.verticalCenter: parent.verticalCenter
                 text: "\u{f0450}"
-                size: 14
+                size: panel.fs(14)
                 color: panel.scanning ? "white" : Qt.rgba(1, 1, 1, 0.45)
                 transformOrigin: Item.Center
                 RotationAnimation on rotation {
@@ -164,17 +254,18 @@ Item {
             GlassText {          // ⤢ detach to the floating panel / ✕ close it
                 anchors.verticalCenter: parent.verticalCenter
                 text: panel.floating ? "\u{f0156}" : "\u{f03cc}"
-                size: 14
+                size: panel.fs(14)
                 color: Qt.rgba(1, 1, 1, 0.7)
                 TapHandler { onTapped: panel.floating ? panel.closeRequested() : panel.detach() }
             }
         }
     }
 
+    // ---- devices ------------------------------------------------------------------
     Flickable {
         id: list
         x: 16
-        y: header.y + header.height + 4
+        y: header.y + header.height + 6
         width: panel.width - 32
         height: Math.min(col.implicitHeight, panel.listMax)
         contentHeight: col.implicitHeight
@@ -185,132 +276,48 @@ Item {
         Column {
             id: col
             width: list.width
-            spacing: 4
+            spacing: panel.floating ? 6 : 4
+            topPadding: panel.floating ? 4 : 0
 
             GlassText {
                 visible: !panel.on || panel.allDevs.length === 0
                 text: !panel.on ? "Bluetooth is off" : "Searching…"
-                size: 11
+                size: panel.fs(11)
                 color: Qt.rgba(1, 1, 1, 0.6)
             }
 
+            SectionLabel {
+                visible: panel.floating && panel.on && panel.connectedDevs.length > 0
+                text: "Connected"
+            }
             Repeater {
-                model: panel.on ? panel.devs : []
-                delegate: Item {
-                    id: row
-                    required property var modelData
-                    readonly property var d: modelData
-                    readonly property bool busy: d.pairing || d.state === BluetoothDeviceState.Connecting
-                                                  || d.state === BluetoothDeviceState.Disconnecting
-                    readonly property bool known: d.paired || d.trusted
-                    readonly property bool open: panel.openAddr === d.address
-                    readonly property bool bars: panel.floating && d.connected
-                    readonly property int baseH: bars ? 50 : 32
-                    width: col.width
-                    height: baseH + (open ? actions.height + 6 : 0)
-                    Behavior on height { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
-
-                    Rectangle {
-                        anchors.fill: parent
-                        radius: 10
-                        color: tap.pressed ? Qt.rgba(1, 1, 1, 0.22)
-                             : d.connected || row.open ? Qt.rgba(1, 1, 1, 0.12) : "transparent"
-                    }
-
-                    // main line; tap area stops short of ⋯ so the two never both fire
-                    Item {
-                        width: parent.width - (more.visible ? more.width + 4 : 0)
-                        height: 32
-                        GlassText {
-                            x: 10
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: panel.kindIcon(d.icon || "")
-                            size: 14
-                        }
-                        GlassText {
-                            x: 36
-                            anchors.verticalCenter: parent.verticalCenter
-                            width: parent.width - 36 - status.width - 16
-                            text: d.deviceName
-                            elide: Text.ElideRight
-                            size: 12
-                            weight: d.connected ? Font.Bold : Font.Medium
-                        }
-                        GlassText {
-                            id: status
-                            anchors.right: parent.right
-                            anchors.rightMargin: more.visible ? 2 : 10
-                            anchors.verticalCenter: parent.verticalCenter
-                            size: 10
-                            color: Qt.rgba(1, 1, 1, 0.65)
-                            text: row.busy ? "…"
-                                : d.connected ? (d.batteryAvailable && !panel.floating ? Math.round(d.battery * 100) + "%  connected" : "connected")
-                                : d.paired ? "paired" : "pair"
-                        }
-                        TapHandler { id: tap; onTapped: panel.activate(d) }
-                    }
-
-                    Item {
-                        id: more
-                        visible: row.known
-                        anchors.right: parent.right
-                        width: 30; height: 32
-                        GlassText {
-                            anchors.centerIn: parent
-                            text: "\u{f01d8}"
-                            size: 14
-                            color: row.open ? "white" : Qt.rgba(1, 1, 1, 0.6)
-                        }
-                        TapHandler { onTapped: panel.openAddr = row.open ? "" : d.address }
-                    }
-
-                    Row {        // floating view only: battery + signal
-                        x: 36; y: 31
-                        spacing: 16
-                        visible: row.bars
-                        Meter {
-                            icon: "\u{f0079}"
-                            level: d.batteryAvailable ? d.battery : -1
-                            label: d.batteryAvailable ? Math.round(d.battery * 100) + "%" : "—"
-                        }
-                        Meter {
-                            readonly property var dbm: panel.signals[d.address]
-                            icon: "\u{f08bf}"
-                            level: dbm === undefined || dbm === null ? -1 : panel.signalLevel(dbm)
-                            label: dbm === undefined || dbm === null ? "—" : dbm + " dBm"
-                        }
-                    }
-
-                    Row {
-                        id: actions
-                        x: 36; y: row.baseH + 2
-                        spacing: 6
-                        visible: row.open
-                        opacity: row.open ? 1 : 0
-                        Behavior on opacity { NumberAnimation { duration: 120 } }
-                        Action {
-                            text: d.connected ? "Disconnect" : "Connect"
-                            onClicked: d.connected ? d.disconnect() : d.connect()
-                        }
-                        Action {
-                            text: d.trusted ? "Untrust" : "Trust"
-                            onClicked: d.trusted = !d.trusted
-                        }
-                        Action {
-                            text: "Forget"
-                            danger: true
-                            onClicked: { panel.openAddr = ""; d.forget() }
-                        }
-                    }
-                }
+                model: panel.on ? panel.connectedDevs : []
+                delegate: DeviceRow { }
+            }
+            SectionLabel {
+                visible: panel.floating && panel.on && panel.otherDevs.length > 0
+                text: "Other devices"
+            }
+            Repeater {
+                model: panel.on ? panel.otherDevs : []
+                delegate: DeviceRow { }
             }
 
-            Action {
+            PillButton {
                 visible: panel.on && !panel.showAll && panel.allDevs.length > panel.limit
                 anchors.horizontalCenter: parent.horizontalCenter
+                size: panel.fs(10)
                 text: "Show all (" + panel.allDevs.length + ")"
                 onClicked: panel.showAll = true
             }
         }
+    }
+
+    Traffic {
+        id: traffic
+        visible: panel.floating && panel.on
+        x: 26
+        y: list.y + list.height + 12
+        note: "all Bluetooth devices"
     }
 }

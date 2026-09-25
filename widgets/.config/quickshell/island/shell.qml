@@ -4,7 +4,7 @@
 // everything while SUPER is held. Hidden otherwise.
 // Run:    qs -c island         (managed by ~/.config/hypr/scripts/bar.sh)
 // Shares glass/text/stats with the Peek bar through the `shared` -> ../peek link.
-// Test:   qs ipc -c island call island down|up|shiftdown|info <true|false>|panel <wifi|bt|>|float <bt|none>|ws|charger|notify <summary> <body>
+// Test:   qs ipc -c island call island down|up|shiftdown|info <true|false>|panel <wifi|bt|>|float <bt|wifi|none>|ws|charger|notify <summary> <body>
 import QtQuick
 import Quickshell
 import Quickshell.Io
@@ -29,7 +29,7 @@ ShellRoot {
     property bool ignoreFullscreen: false    // testing: show even over fullscreen
     property bool infoOpen: false            // hover panel (cpu/mem/wifi/bluetooth...)
     property string panel: ""                // "wifi" | "bt": list panel opened from the info chips
-    property string floating: ""             // "bt": panel detached to the middle (BtFloat.qml)
+    property string floating: ""             // "bt" | "wifi": panel detached to the middle (FloatPanel.qml)
     property rect floatFrom: Qt.rect(0, 0, 0, 0)   // island rect it springs out of / back into
     property string floatScreen: ""          // monitor name it shows on
 
@@ -198,7 +198,7 @@ ShellRoot {
         function up(): void { root.held = false; root.shiftHeld = false }
         function info(open: bool): void { root.infoOpen = open }
         function panel(name: string): void { root.panel = name === "none" ? "" : name }   // wifi | bt | none
-        function float(name: string): void {                                                // bt | none
+        function float(name: string): void {                                                // bt | wifi | none
             if (name !== "none" && Hyprland.focusedMonitor) {
                 root.floatFrom = Qt.rect(0, 0, 0, 0)
                 root.floatScreen = Hyprland.focusedMonitor.name
@@ -221,6 +221,6 @@ ShellRoot {
     }
     Variants {                               // after the islands: stacks above them
         model: Quickshell.screens
-        BtFloat { ctl: root }
+        FloatPanel { ctl: root }
     }
 }

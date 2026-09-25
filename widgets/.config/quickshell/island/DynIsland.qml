@@ -449,6 +449,7 @@ PanelWindow {
                 WifiPanel {
                     id: wifiPanel
                     host: win
+                    onDetach: win.detachPanel("wifi")
                     active: win.viewMode === "wifi" && win.shown
                     width: implicitWidth
                     opacity: win.viewMode === "wifi" ? 1 : 0
@@ -458,13 +459,7 @@ PanelWindow {
                 BtPanel {
                     id: btPanel
                     host: win
-                    onDetach: {
-                        win.ctl.floatFrom = Qt.rect(win.winX + pill.x, pill.y, pill.width, pill.height)
-                        win.ctl.floatScreen = win.monitor.name
-                        win.ctl.panel = ""
-                        win.ctl.infoOpen = false
-                        win.ctl.floating = "bt"
-                    }
+                    onDetach: win.detachPanel("bt")
                     active: win.viewMode === "bt" && win.shown
                     width: implicitWidth
                     opacity: win.viewMode === "bt" ? 1 : 0
@@ -577,6 +572,14 @@ PanelWindow {
 
     // info-panel chip actions; the panel closes after launching
     readonly property string floatTerm: "alacritty --class alacritty-float -e "
+    // ⤢ in a panel: hand it to FloatPanel, which springs out of our rect
+    function detachPanel(kind) {
+        ctl.floatFrom = Qt.rect(winX + pill.x, pill.y, pill.width, pill.height)
+        ctl.floatScreen = monitor.name
+        ctl.panel = ""
+        ctl.infoOpen = false
+        ctl.floating = kind
+    }
     function launch(cmd) {
         Quickshell.execDetached(["sh", "-c", cmd])
         if (ctl) ctl.infoOpen = false

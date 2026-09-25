@@ -1,0 +1,7 @@
+#!/bin/sh
+# island-panel <wifi|bt> [fallback command...]
+# Open the island's Wi-Fi / Bluetooth panel; without the island (waybar or
+# peek mode) run the fallback instead. Used by waybar's network click.
+kind=$1; shift
+qs ipc -c island call island panel "$kind" >/dev/null 2>&1 && exit 0
+[ $# -gt 0 ] && exec "$@"
