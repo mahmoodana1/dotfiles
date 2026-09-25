@@ -39,9 +39,9 @@ for pid in $(pidof waybar rofi swaync ags swaybg); do
   sleep 0.1
 done
 
-#Restart waybar
+#Restart waybar (or the Peek glass bar, if selected with SUPER+SHIFT+B)
 sleep 0.1
-waybar &
+"$HOME/.config/hypr/scripts/PeekBar.sh" boot &
 
 # relaunch swaync
 sleep 0.3

@@ -35,7 +35,7 @@ hl.on("hyprland.start", function()
     hl.exec_cmd("nm-applet --indicator")
     hl.exec_cmd("nm-tray")
     hl.exec_cmd("swaync")
-    hl.exec_cmd("waybar")
+    hl.exec_cmd(scripts .. "/PeekBar.sh boot") -- waybar, or the Peek glass bar if selected (SUPER+SHIFT+B)
     hl.exec_cmd("qs") -- quickshell, the AGS desktop-overview alternative
     hl.exec_cmd("ags")
     hl.exec_cmd("blueman-applet")
@@ -43,9 +43,6 @@ hl.on("hyprland.start", function()
 
     -- Hold-to-show HUD panel daemon (SUPER+SHIFT+P)
     hl.exec_cmd(d.home .. "/.config/hypr/panel/panel.py")
-
-    -- Auto-hide driver for the Peek waybar (inert unless that layout is active)
-    hl.exec_cmd(scripts .. "/WaybarPeek.py")
 
     -- Clipboard manager
     hl.exec_cmd("wl-paste --type text --watch cliphist store")

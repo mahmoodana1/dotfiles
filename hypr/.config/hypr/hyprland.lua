@@ -21,4 +21,4 @@ require("monitors")     -- was monitors.conf
 require("workspaces")   -- was workspaces.conf
 require("dojo")         -- SUPER+L → dojo TUI on workspace 7 (~/projects/dojo)
 require("panel")        -- SUPER+SHIFT+P → hold-to-show HUD panel
-require("peek")         -- hold SUPER / workspace flash → auto-hiding Peek waybar
+require("peek")         -- SUPER+SHIFT+B → Peek glass bar (hold SUPER) / waybar
