@@ -67,7 +67,12 @@ PanelWindow {
     // One hover area that changes shape: a thin top-center strip while hidden
     // (off over fullscreen), the island from the top edge down while shown.
     // (Two stacked hover items don't work: only the topmost one gets hovered.)
-    readonly property Region zoneMask: Region { item: hoverZone }
+    // explicit geometry bindings: Region { item: } didn't follow the zone
+    // growing from the strip to the island, so the pointer never reached it
+    readonly property Region zoneMask: Region {
+        x: hoverZone.x; y: hoverZone.y
+        width: hoverZone.width; height: hoverZone.height
+    }
     readonly property Region noMask: Region {}
     mask: shown || !fullscreenHere ? zoneMask : noMask
 
@@ -82,15 +87,20 @@ PanelWindow {
         height: win.shown ? pill.y + pill.height : 3
         HoverHandler { id: zoneHover }
     }
-    readonly property bool pointerIn: zoneHover.hovered && (shown || !fullscreenHere)
+    // the pill sits above hoverZone and takes the hover while shown, so
+    // count either handler
+    readonly property bool pointerIn: (zoneHover.hovered || pillHover.hovered)
+                                      && (shown || !fullscreenHere)
     onPointerInChanged: {
         if (pointerIn) { closeInfo.stop(); openInfo.restart() }
         else { openInfo.stop(); closeInfo.restart() }
     }
     Timer {
         id: openInfo; interval: 200
-        onTriggered: if (win.pointerIn && win.isFocused && win.ctl && win.viewMode !== "notif")
-            win.ctl.infoOpen = true
+        onTriggered: {
+            if (win.pointerIn && win.isFocused && win.ctl && win.viewMode !== "notif")
+                win.ctl.infoOpen = true
+        }
     }
     Timer { id: closeInfo; interval: 350; onTriggered: if (win.ctl && !win.pointerIn) win.ctl.infoOpen = false }
 
