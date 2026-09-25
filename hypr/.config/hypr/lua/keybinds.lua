@@ -244,11 +244,11 @@ hl.bind(mod .. " + ALT + A", sh(scripts .. "/OverviewToggle.sh"), { description 
 hl.bind(mod .. " + Return", sh(term), { description = "open terminal" })
 hl.bind(mod .. " + E", sh(files), { description = "file manager" })
 hl.bind(mod .. " + F", sh(term .. " -e bash -lc " .. os.getenv("HOME") .. "/.local/bin/tmux-sessionizer"), { description = "tmux sessionizer (pick project)" })
+-- Size/float/center come from the alacritty-float window rules (windowrules.lua),
+-- applied as the window maps. A post-launch resize raced the window opening.
 hl.bind(
     mod .. " + SHIFT + Return",
-    sh(
-        term .. " --class alacritty-float & sleep 0.1 && hyprctl dispatch 'hl.dsp.window.resize({x=1344,y=756,absolute=true})' >/dev/null && hyprctl dispatch 'hl.dsp.window.center()' >/dev/null"
-    ),
+    sh(term .. " --class alacritty-float"),
     { description = "floating terminal (focused)" }
 )
 

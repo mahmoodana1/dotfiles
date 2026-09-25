@@ -145,7 +145,7 @@ hl.window_rule({ match = { class = "^([Qq]alculate-gtk)$" }, float = true })
 hl.window_rule({ match = { class = "^([Ff]erdium)$" }, float = true })
 hl.window_rule({ match = { title = "^(Picture-in-Picture)$" }, float = true })
 hl.window_rule({ match = { class = "^(alacritty-float)$" }, float = true })
-hl.window_rule({ match = { class = "^(alacritty-float)$" }, size = "75% 65%" })
+hl.window_rule({ match = { class = "^(alacritty-float)$" }, size = "monitor_w*0.7 monitor_h*0.7" }) -- 1344x756 on 1080p
 hl.window_rule({ match = { class = "^(alacritty-float)$" }, center = true })
 
 -- float popups and dialogues
