@@ -7,12 +7,18 @@ import "shared"
 // Tap a device: disconnect if connected, connect if paired, pair otherwise.
 // ⋯ on a known device opens its actions (trust / forget) inline.
 // The adapter scans while the panel is open; the ↻ button pauses/resumes.
+// ⤢ detaches it into the floating panel (BtFloat.qml), which sets
+// `floating` and adds battery/signal bars to connected devices.
 // No HoverHandlers here: they would steal `hovered` from the pill.
 Item {
     id: panel
 
     property var host                    // DynIsland window (launch / close)
     property bool active: false
+    property bool floating: false
+    property var signals: ({})           // address -> RSSI dBm or null (btsignal.py)
+    signal detach()
+    signal closeRequested()
 
     property bool scanning: true
     property bool showAll: false
@@ -28,14 +34,13 @@ Item {
     readonly property int limit: 7
     readonly property var devs: showAll ? allDevs : allDevs.slice(0, limit)
 
-    Binding {
-        target: panel.adapter; property: "discovering"
-        value: panel.active && panel.on && panel.scanning
-        when: panel.adapter !== null
-    }
+    // set on change only (no Binding): the island and floating copies would
+    // otherwise fight over the one adapter
+    readonly property bool wantScan: active && on && scanning
+    onWantScanChanged: if (adapter) adapter.discovering = wantScan
 
     // the island window is 380 tall; past this the list scrolls
-    readonly property int listMax: 280
+    readonly property int listMax: floating ? 460 : 280
 
     implicitWidth: 380
     implicitHeight: header.height + 4 + list.height + 24
@@ -48,6 +53,8 @@ Item {
         if (icon.indexOf("audio") >= 0) return "\u{f04c3}"
         return "\u{f00af}"
     }
+    // RSSI dBm -> 0..1  (-90 weak … -40 excellent)
+    function signalLevel(dbm) { return Math.max(0, Math.min(1, (dbm + 90) / 50)) }
     function activate(d) {
         if (d.connected) d.disconnect()
         else if (d.paired) d.connect()
@@ -87,6 +94,38 @@ Item {
         TapHandler { id: actTap; onTapped: act.clicked() }
     }
 
+    // icon + thin glass bar + value, for the floating view
+    component Meter: Row {
+        id: meter
+        property string icon
+        property real level: 0           // 0..1, or -1 for "unavailable"
+        property string label
+        spacing: 5
+        GlassText {
+            anchors.verticalCenter: parent.verticalCenter
+            text: meter.icon
+            size: 10
+            color: Qt.rgba(1, 1, 1, meter.level < 0 ? 0.35 : 0.7)
+        }
+        Rectangle {
+            anchors.verticalCenter: parent.verticalCenter
+            width: 54; height: 4; radius: 2
+            color: Qt.rgba(1, 1, 1, 0.14)
+            Rectangle {
+                width: parent.width * Math.max(meter.level, 0)
+                height: parent.height; radius: 2
+                color: Qt.rgba(1, 1, 1, 0.8)
+                Behavior on width { NumberAnimation { duration: 400; easing.type: Easing.OutCubic } }
+            }
+        }
+        GlassText {
+            anchors.verticalCenter: parent.verticalCenter
+            text: meter.label
+            size: 9
+            color: Qt.rgba(1, 1, 1, meter.level < 0 ? 0.35 : 0.6)
+        }
+    }
+
     Item {
         id: header
         x: 16; y: 12
@@ -121,6 +160,13 @@ Item {
                 anchors.verticalCenter: parent.verticalCenter
                 checked: panel.on
                 onToggled: on => { if (panel.adapter) panel.adapter.enabled = on }
+            }
+            GlassText {          // ⤢ detach to the floating panel / ✕ close it
+                anchors.verticalCenter: parent.verticalCenter
+                text: panel.floating ? "\u{f0156}" : "\u{f03cc}"
+                size: 14
+                color: Qt.rgba(1, 1, 1, 0.7)
+                TapHandler { onTapped: panel.floating ? panel.closeRequested() : panel.detach() }
             }
         }
     }
@@ -158,8 +204,10 @@ Item {
                                                   || d.state === BluetoothDeviceState.Disconnecting
                     readonly property bool known: d.paired || d.trusted
                     readonly property bool open: panel.openAddr === d.address
+                    readonly property bool bars: panel.floating && d.connected
+                    readonly property int baseH: bars ? 50 : 32
                     width: col.width
-                    height: 32 + (open ? actions.height + 6 : 0)
+                    height: baseH + (open ? actions.height + 6 : 0)
                     Behavior on height { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
 
                     Rectangle {
@@ -196,7 +244,7 @@ Item {
                             size: 10
                             color: Qt.rgba(1, 1, 1, 0.65)
                             text: row.busy ? "…"
-                                : d.connected ? (d.batteryAvailable ? Math.round(d.battery * 100) + "%  connected" : "connected")
+                                : d.connected ? (d.batteryAvailable && !panel.floating ? Math.round(d.battery * 100) + "%  connected" : "connected")
                                 : d.paired ? "paired" : "pair"
                         }
                         TapHandler { id: tap; onTapped: panel.activate(d) }
@@ -216,9 +264,26 @@ Item {
                         TapHandler { onTapped: panel.openAddr = row.open ? "" : d.address }
                     }
 
+                    Row {        // floating view only: battery + signal
+                        x: 36; y: 31
+                        spacing: 16
+                        visible: row.bars
+                        Meter {
+                            icon: "\u{f0079}"
+                            level: d.batteryAvailable ? d.battery : -1
+                            label: d.batteryAvailable ? Math.round(d.battery * 100) + "%" : "—"
+                        }
+                        Meter {
+                            readonly property var dbm: panel.signals[d.address]
+                            icon: "\u{f08bf}"
+                            level: dbm === undefined || dbm === null ? -1 : panel.signalLevel(dbm)
+                            label: dbm === undefined || dbm === null ? "—" : dbm + " dBm"
+                        }
+                    }
+
                     Row {
                         id: actions
-                        x: 36; y: 34
+                        x: 36; y: row.baseH + 2
                         spacing: 6
                         visible: row.open
                         opacity: row.open ? 1 : 0

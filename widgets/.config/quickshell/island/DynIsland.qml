@@ -458,6 +458,13 @@ PanelWindow {
                 BtPanel {
                     id: btPanel
                     host: win
+                    onDetach: {
+                        win.ctl.floatFrom = Qt.rect(win.winX + pill.x, pill.y, pill.width, pill.height)
+                        win.ctl.floatScreen = win.monitor.name
+                        win.ctl.panel = ""
+                        win.ctl.infoOpen = false
+                        win.ctl.floating = "bt"
+                    }
                     active: win.viewMode === "bt" && win.shown
                     width: implicitWidth
                     opacity: win.viewMode === "bt" ? 1 : 0
