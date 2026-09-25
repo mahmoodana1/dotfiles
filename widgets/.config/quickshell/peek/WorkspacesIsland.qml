@@ -12,7 +12,8 @@ Island {
     readonly property int activeId: monitor && monitor.activeWorkspace ? monitor.activeWorkspace.id : -1
 
     readonly property var workspaces: Hyprland.workspaces.values
-        .filter(w => w.id > 0 && w.monitor && monitor && w.monitor.name === monitor.name)
+        .filter(w => w.id > 0 && (w.id === activeId
+                    || (w.monitor && monitor && w.monitor.name === monitor.name)))
         .sort((a, b) => a.id - b.id)
 
     Repeater {
@@ -23,6 +24,11 @@ Island {
             readonly property bool isActive: modelData.id === island.activeId
             width: 26
             height: island.height
+            // A fresh (empty) workspace's button appears after the switch;
+            // it moves the droplet to itself once active and positioned.
+            onIsActiveChanged: if (isActive) Qt.callLater(island.moveTo, this)
+            onXChanged: if (isActive) Qt.callLater(island.moveTo, this)
+            Component.onCompleted: if (isActive) Qt.callLater(island.moveTo, this)
 
             GlassText {
                 anchors.centerIn: parent
@@ -40,23 +46,19 @@ Island {
     // target edges, in island coordinates
     property real targetL: 0
     property real targetR: 0
-    function retarget() {
-        for (let i = 0; i < rep.count; i++) {
-            const it = rep.itemAt(i)
-            if (it && it.isActive) {
-                const p = it.mapToItem(island, 0, 0)
-                const movingRight = p.x > dropL
-                lAnim.duration = movingRight ? 380 : 230
-                rAnim.duration = movingRight ? 230 : 380
-                targetL = p.x + 1
-                targetR = p.x + it.width - 1
-                return
-            }
-        }
+    function moveTo(it) {
+        if (!it || !it.isActive) return
+        const p = it.mapToItem(island, 0, 0)
+        const movingRight = p.x > dropL
+        lAnim.duration = movingRight ? 380 : 230
+        rAnim.duration = movingRight ? 230 : 380
+        targetL = p.x + 1
+        targetR = p.x + it.width - 1
     }
-    onActiveIdChanged: Qt.callLater(retarget)
-    onWorkspacesChanged: Qt.callLater(retarget)
-    onWidthChanged: Qt.callLater(retarget)
+    onWidthChanged: {
+        for (let i = 0; i < rep.count; i++)
+            if (rep.itemAt(i) && rep.itemAt(i).isActive) Qt.callLater(moveTo, rep.itemAt(i))
+    }
 
     property real dropL: targetL
     property real dropR: targetR
@@ -88,12 +90,13 @@ Island {
         source: lensSrc
         sourceOrigin: Qt.point(x, y)
         sourceSize: Qt.size(island.width, island.height)
+        mode: 1
         bezel: 7
-        refraction: 5
+        refraction: 3
         magnify: 1.25
         blurPx: 0
-        tint: 0.06
-        shadow: 0.25
+        tint: 0.12
+        shadow: 0.22
     }
     ]
 }

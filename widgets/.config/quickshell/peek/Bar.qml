@@ -31,7 +31,6 @@ PanelWindow {
     // Always mapped (screencopy needs a live window); hidden = transparent
     // and click-through. Content shows only while SUPER is held.
     property bool shown: false
-    property bool capturing: false
     readonly property Region islandsMask: Region {
         Region { item: leftIsland }
         Region { item: centerIsland }
@@ -41,38 +40,16 @@ PanelWindow {
     mask: shown ? islandsMask : noMask
 
     // ---- show / hide ----------------------------------------------------
-    // Snapshot first (content is invisible then), show once it has landed.
-    onHeldChanged: {
-        if (held) {
-            recapture.stop()
-            snap.captureFrame()
-            showDelay.restart()
-        } else {
-            showDelay.stop()
-            recapture.stop()
-            shown = false
-        }
-    }
-    Timer { id: showDelay; interval: 40; onTriggered: bar.shown = bar.held }
+    // The capture runs live only while shown, so the glass tracks whatever
+    // is behind it (workspace switches, video) frame by frame.
+    onHeldChanged: shown = held
 
-    // A workspace switch while held changes what's behind; refresh after
-    // the slide animation (~400ms) with the content hidden for a moment.
-    Connections {
-        target: bar.monitor
-        function onActiveWorkspaceChanged() { if (bar.shown) recapture.restart() }
-    }
-    Timer {
-        id: recapture; interval: 420
-        onTriggered: { bar.capturing = true; snapAgain.restart() }
-    }
-    Timer { id: snapAgain; interval: 34; onTriggered: { snap.captureFrame(); unfade.restart() } }
-    Timer { id: unfade; interval: 40; onTriggered: bar.capturing = false }
-
-    // ---- snapshot of the screen behind the bar --------------------------
+    // ---- live capture of the screen behind the bar ----------------------
+    // It includes the bar itself; glass.frag only samples outside the islands.
     ScreencopyView {
         id: snap
         captureSource: bar.modelData
-        live: false
+        live: bar.shown
         paintCursor: false
         width: bar.modelData.width
         height: bar.modelData.height
@@ -92,7 +69,7 @@ PanelWindow {
     Item {
         id: content
         anchors.fill: parent
-        opacity: bar.shown && !bar.capturing ? 1 : 0
+        opacity: bar.shown ? 1 : 0
         visible: opacity > 0
 
         WorkspacesIsland {

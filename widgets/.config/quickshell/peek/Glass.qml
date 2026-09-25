@@ -15,11 +15,12 @@ ShaderEffect {
     property real pad: 10
     property real radius: 999
     property real bezel: 10
-    property real refraction: 9
+    property real refraction: 8
     property real magnify: 1.0
-    property real blurPx: 4
-    property real tint: 0.10
-    property real shadow: 0.30
+    property real blurPx: 1.5
+    property real tint: 0.22       // island: interior opacity; lens: whitening
+    property real shadow: 0.14
+    property real mode: 0          // 0 island (live rim over compositor blur), 1 lens
 
     // uniforms (names must match the shader's buffer)
     readonly property size itemSize: Qt.size(width, height)
