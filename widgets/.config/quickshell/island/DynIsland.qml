@@ -2,7 +2,6 @@ import QtQuick
 import Quickshell
 import Quickshell.Wayland
 import Quickshell.Hyprland
-import Quickshell.Widgets
 import "shared"
 
 // One per screen; only the focused monitor's island shows. A single glass
@@ -10,9 +9,8 @@ import "shared"
 //   ws     workspace numbers + sliding droplet
 //   level  volume / mic / brightness with a level bar
 //   notif  app icon, summary, body (hover keeps it, click dismisses)
-//   media  album art, title, artist
 //   toast  one icon + line (charger plugged/unplugged)
-//   full   (SUPER held) workspaces · clock · now playing · battery/volume
+//   full   (SUPER held) workspaces · clock · battery/volume
 PanelWindow {
     id: win
 
@@ -67,12 +65,10 @@ PanelWindow {
     readonly property real targetW: mode === "ws" ? wsStrip.width + 28
         : mode === "level" ? 300
         : mode === "notif" ? Math.min(560, Math.max(340, notifRow.implicitWidth + 40))
-        : mode === "media" ? Math.min(460, Math.max(260, mediaRow.implicitWidth + 36))
         : mode === "toast" ? toastRow.implicitWidth + 40
         : mode === "full" ? fullW
         : 120
-    readonly property real targetH: mode === "notif" ? 64 : mode === "media" ? 52
-                                  : mode === "hidden" ? 26 : 36
+    readonly property real targetH: mode === "notif" ? 64 : mode === "hidden" ? 26 : 36
 
     component Spring: SpringAnimation { spring: 5.0; damping: 0.36; epsilon: 0.25 }
 
@@ -137,14 +133,6 @@ PanelWindow {
                         size: 13; weight: Font.Bold
                     }
                     GlassText {
-                        readonly property var pl: win.ctl ? win.ctl.player : null
-                        visible: pl !== null && pl.isPlaying && (pl.trackTitle || "") !== ""
-                        text: "\u{f075a} " + (pl ? pl.trackTitle || "" : "")
-                        width: Math.min(implicitWidth, 190)
-                        elide: Text.ElideRight
-                        color: Qt.rgba(1, 1, 1, 0.85)
-                    }
-                    GlassText {
                         visible: Stats.hasBattery
                         text: (Stats.charging ? "\u{f0084} " : "\u{f0079} ") + Stats.batteryPct + "%"
                         color: Qt.rgba(1, 1, 1, 0.85)
@@ -193,61 +181,6 @@ PanelWindow {
                         anchors.verticalCenter: parent.verticalCenter
                         width: 34
                         text: levelRow.muted ? "off" : Math.round(levelRow.value * 100) + "%"
-                    }
-                }
-
-                // -- media --
-                Row {
-                    id: mediaRow
-                    anchors.verticalCenter: parent.verticalCenter
-                    x: 10
-                    spacing: 12
-                    opacity: win.mode === "media" ? 1 : 0
-                    Behavior on opacity { NumberAnimation { duration: 110 } }
-                    readonly property var pl: win.ctl ? win.ctl.player : null
-
-                    ClippingRectangle {
-                        width: 36; height: 36
-                        radius: 9
-                        anchors.verticalCenter: parent.verticalCenter
-                        color: Qt.rgba(1, 1, 1, 0.14)
-                        Image {
-                            id: art
-                            anchors.fill: parent
-                            source: mediaRow.pl ? mediaRow.pl.trackArtUrl || "" : ""
-                            sourceSize: Qt.size(72, 72)
-                            fillMode: Image.PreserveAspectCrop
-                        }
-                        GlassText {
-                            anchors.centerIn: parent
-                            visible: art.status !== Image.Ready
-                            text: "\u{f075a}"
-                            size: 16
-                        }
-                    }
-                    Column {
-                        anchors.verticalCenter: parent.verticalCenter
-                        spacing: 1
-                        GlassText {
-                            text: mediaRow.pl ? mediaRow.pl.trackTitle || "" : ""
-                            size: 13; weight: Font.Bold
-                            width: Math.min(implicitWidth, 330)
-                            elide: Text.ElideRight
-                        }
-                        GlassText {
-                            visible: text !== ""
-                            text: mediaRow.pl ? mediaRow.pl.trackArtist || mediaRow.pl.identity || "" : ""
-                            size: 11
-                            color: Qt.rgba(1, 1, 1, 0.7)
-                            width: Math.min(implicitWidth, 330)
-                            elide: Text.ElideRight
-                        }
-                    }
-                    GlassText {
-                        anchors.verticalCenter: parent.verticalCenter
-                        size: 14
-                        text: mediaRow.pl && mediaRow.pl.isPlaying ? "\u{f03e4}" : "\u{f040a}"
-                        color: Qt.rgba(1, 1, 1, 0.8)
                     }
                 }
 

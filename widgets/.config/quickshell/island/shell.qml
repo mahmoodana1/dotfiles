@@ -1,16 +1,15 @@
 // Dynamic Island — a liquid-glass pill that pops out of the top edge on
-// events (workspace switch, volume/mic/brightness, notifications, media,
+// events (workspace switch, volume/mic/brightness, notifications,
 // charger) and shows
 // everything while SUPER is held. Hidden otherwise.
 // Run:    qs -c island         (managed by ~/.config/hypr/scripts/PeekBar.sh)
 // Shares glass/text/stats with the Peek bar through the `shared` -> ../peek link.
-// Test:   qs ipc -c island call island down|up|ws|media|charger|notify <summary> <body>
+// Test:   qs ipc -c island call island down|up|ws|charger|notify <summary> <body>
 import QtQuick
 import Quickshell
 import Quickshell.Io
 import Quickshell.Hyprland
 import Quickshell.Services.Pipewire
-import Quickshell.Services.Mpris
 import "shared"
 
 ShellRoot {
@@ -22,7 +21,6 @@ ShellRoot {
     property real wsUntil: 0
     property real levelUntil: 0
     property real notifUntil: 0
-    property real mediaUntil: 0
     property real toastUntil: 0
     property bool hoverHold: false           // pointer on the island: don't time out
 
@@ -38,7 +36,6 @@ ShellRoot {
         : now < notifUntil ? "notif"
         : now < toastUntil ? "toast"
         : now < levelUntil ? "level"
-        : now < mediaUntil ? "media"
         : now < wsUntil ? "ws"
         : "hidden"
 
@@ -49,8 +46,7 @@ ShellRoot {
     Timer {
         interval: 50
         repeat: true
-        running: root.now < Math.max(root.wsUntil, root.levelUntil, root.notifUntil,
-                                     root.mediaUntil, root.toastUntil)
+        running: root.now < Math.max(root.wsUntil, root.levelUntil, root.notifUntil, root.toastUntil)
         onTriggered: {
             const t = Date.now()
             // hovering keeps whatever is showing open
@@ -59,7 +55,6 @@ ShellRoot {
                 if (root.mode === "notif") root.notifUntil = Math.max(root.notifUntil, keep)
                 else if (root.mode === "toast") root.toastUntil = Math.max(root.toastUntil, keep)
                 else if (root.mode === "level") root.levelUntil = Math.max(root.levelUntil, keep)
-                else if (root.mode === "media") root.mediaUntil = Math.max(root.mediaUntil, keep)
                 else if (root.mode === "ws") root.wsUntil = Math.max(root.wsUntil, keep)
             }
             root.now = t
@@ -72,7 +67,6 @@ ShellRoot {
         if (which === "ws") wsUntil = t + ms
         else if (which === "level") levelUntil = t + ms
         else if (which === "notif") notifUntil = t + ms
-        else if (which === "media") mediaUntil = t + ms
         else if (which === "toast") toastUntil = t + ms
         now = t
     }
@@ -81,7 +75,6 @@ ShellRoot {
         if (mode === "notif") notifUntil = 0
         else if (mode === "toast") toastUntil = 0
         else if (mode === "level") levelUntil = 0
-        else if (mode === "media") mediaUntil = 0
         else if (mode === "ws") wsUntil = 0
         now = Date.now()
     }
@@ -151,18 +144,6 @@ ShellRoot {
         }
     }
 
-    // ---- media (MPRIS): track changes and play/pause ----------------------
-    readonly property var player: {
-        const ps = Mpris.players.values
-        return ps.find(p => p.isPlaying) || ps[0] || null
-    }
-    readonly property string trackKey: player ? (player.trackTitle || "") + "\u0001" + (player.trackArtist || "") : ""
-    onTrackKeyChanged: if (player && player.isPlaying && (player.trackTitle || "") !== "") pulse("media", 2500)
-    Connections {
-        target: root.player
-        function onIsPlayingChanged() { if ((root.player.trackTitle || "") !== "") root.pulse("media", 1400) }
-    }
-
     // ---- charger plugged / unplugged --------------------------------------
     readonly property bool charging: Stats.charging
     onChargingChanged: if (Stats.hasBattery)
@@ -193,7 +174,6 @@ ShellRoot {
         function down(): void { root.held = true }
         function up(): void { root.held = false }
         function ws(): void { root.pulse("ws", 700) }
-        function media(): void { root.pulse("media", 2500) }
         function charger(): void { root.toast("\u{f0084}", "Charging  " + Stats.batteryPct + "%", 1600) }
         function notify(summary: string, body: string): void {
             root.notif = { app: "Test", summary: summary, body: body, icon: "", urgency: 1 }
