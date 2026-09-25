@@ -29,7 +29,7 @@ PanelWindow {
                                            && !(ctl && ctl.ignoreFullscreen)
     readonly property string mode: !isFocused || !ctl ? "hidden"
         : !fullscreenHere ? ctl.mode
-        : ctl.held && ctl.shiftHeld ? "full"
+        : ctl.held && ctl.shiftHeld ? (ctl.infoOpen ? "info" : "full")
         : "hidden"
     readonly property bool shown: mode !== "hidden"
 
@@ -64,29 +64,25 @@ PanelWindow {
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.namespace: "island"
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+    // One hover area that changes shape: a thin top-center strip while hidden
+    // (off over fullscreen), the island from the top edge down while shown.
+    // (Two stacked hover items don't work: only the topmost one gets hovered.)
     readonly property Region zoneMask: Region { item: hoverZone }
-    readonly property Region hotMask: Region { item: hotStrip }
     readonly property Region noMask: Region {}
-    mask: shown ? zoneMask : fullscreenHere ? noMask : hotMask
+    mask: shown || !fullscreenHere ? zoneMask : noMask
 
     // ---- hover → info panel -------------------------------------------------
-    // Pointer resting on the island (or on the top-center edge while hidden)
-    // for a moment opens the info panel; leaving closes it. An open
-    // notification stays as-is so it can be read.
+    // Pointer resting there for a moment opens the info panel; leaving
+    // closes it. An open notification stays as-is so it can be read.
     Item {
-        id: hotStrip
-        x: (win.winW - width) / 2
-        width: 260; height: 2
-        HoverHandler { id: hotHover }
-    }
-    Item {
-        id: hoverZone                        // from the top edge down to the pill's bottom
-        x: pill.x; y: 0
-        width: pill.width
-        height: pill.y + pill.height
+        id: hoverZone
+        x: win.shown ? pill.x : (win.winW - 260) / 2
+        y: 0
+        width: win.shown ? pill.width : 260
+        height: win.shown ? pill.y + pill.height : 3
         HoverHandler { id: zoneHover }
     }
-    readonly property bool pointerIn: (hotHover.hovered && !fullscreenHere) || (shown && zoneHover.hovered)
+    readonly property bool pointerIn: zoneHover.hovered && (shown || !fullscreenHere)
     onPointerInChanged: {
         if (pointerIn) { closeInfo.stop(); openInfo.restart() }
         else { openInfo.stop(); closeInfo.restart() }
