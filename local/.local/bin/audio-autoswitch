@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Make the most recently connected Bluetooth/USB sink the default output.
+# Built-in (pci) sinks are ignored so monitor wake/DPMS never steals audio.
+# When the hotplug device disconnects, WirePlumber falls back to HDMI.
+
+hotplug='^(bluez_output\.|alsa_output\.usb-)'
+fallback='alsa_output.pci-0000_00_1f.3.hdmi-stereo'
+
+switch_to() {
+    pactl set-default-sink "$1" && echo "default sink -> $1"
+}
+
+# Startup: prefer an already-connected hotplug sink, else HDMI.
+initial=$(pactl list short sinks | awk '{print $2}' | grep -E "$hotplug" | tail -n1)
+switch_to "${initial:-$fallback}"
+
+pactl subscribe | while read -r _ event _ kind id; do
+    [[ $event == "'new'" && $kind == sink ]] || continue
+    id=${id#\#}
+    name=$(pactl list short sinks | awk -v id="$id" '$1 == id {print $2}')
+    [[ $name =~ $hotplug ]] && switch_to "$name"
+done

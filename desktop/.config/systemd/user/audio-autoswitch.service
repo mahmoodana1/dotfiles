@@ -1,0 +1,12 @@
+[Unit]
+Description=Auto-switch default audio sink to newly connected Bluetooth/USB devices
+After=pipewire-pulse.service wireplumber.service
+Wants=pipewire-pulse.service
+
+[Service]
+ExecStart=%h/.local/bin/audio-autoswitch
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=default.target
