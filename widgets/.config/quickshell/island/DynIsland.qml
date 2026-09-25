@@ -68,11 +68,13 @@ PanelWindow {
         id: popIn
         NumberAnimation { target: pill; property: "pop"; from: 0.78; to: 1; duration: 280
                           easing.type: Easing.OutBack; easing.overshoot: 1.6 }
+        NumberAnimation { target: pill; property: "popC"; from: 0.9; to: 1; duration: 240; easing.type: Easing.OutCubic }
         NumberAnimation { target: pill; property: "fade"; to: 1; duration: 90; easing.type: Easing.OutQuad }
     }
     ParallelAnimation {
         id: popOut
         NumberAnimation { target: pill; property: "pop"; to: 0.86; duration: 140; easing.type: Easing.InCubic }
+        NumberAnimation { target: pill; property: "popC"; to: 0.92; duration: 140; easing.type: Easing.InCubic }
         NumberAnimation { target: pill; property: "fade"; to: 0; duration: 130; easing.type: Easing.InQuad }
     }
 
@@ -196,10 +198,9 @@ PanelWindow {
         x: (win.winW - width) / 2
         y: 6
         property real fade: 0
-        property real pop: 1
+        property real pop: 1                 // glass scale (springy overshoot)
+        property real popC: 1                // content scale (no overshoot: text never wobbles)
         opacity: fade
-        // scale from the top edge, like it grows out of the bezel
-        transform: Scale { origin.x: pill.width / 2; origin.y: 0; xScale: pill.pop; yScale: pill.pop }
         Behavior on width { enabled: win.morphReady; Spring { } }
         Behavior on height { enabled: win.morphReady; Spring { } }
         visible: opacity > 0
@@ -244,12 +245,23 @@ PanelWindow {
                 source: behind
                 sourceOrigin: Qt.point(pill.x - pad, pill.y - pad)
                 sourceSize: Qt.size(win.winW, win.winH)
+                // scale from the top edge, like it grows out of the bezel
+                transform: Scale { origin.x: glass.width / 2; origin.y: glass.pad; xScale: pill.pop; yScale: pill.pop }
             }
 
+            // Content sits at its FINAL place on whole pixels while the glass
+            // springs around it (clipped to the glass), so text never creeps
+            // through the spring's settle.
             Item {
-                id: content
+                id: contentClip
                 anchors.fill: parent
                 clip: true
+                transform: Scale { origin.x: pill.width / 2; origin.y: 0; xScale: pill.popC; yScale: pill.popC }
+            Item {
+                id: content
+                x: Math.round((win.winW - win.targetW) / 2) - pill.x
+                width: win.targetW
+                height: win.targetH
 
                 // -- workspaces (ws + full) --
                 WorkspaceStrip {
@@ -528,6 +540,7 @@ PanelWindow {
                         }
                     }
                 }
+            }
             }
         }
 
