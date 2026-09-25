@@ -29,7 +29,8 @@ PanelWindow {
                                            && !(ctl && ctl.ignoreFullscreen)
     readonly property string mode: !isFocused || !ctl ? "hidden"
         : !fullscreenHere ? ctl.mode
-        : ctl.held && ctl.shiftHeld ? (ctl.infoOpen ? "info" : "full")
+        : ctl.infoOpen ? "info"                      // stays while hovered
+        : ctl.held && ctl.shiftHeld ? "full"
         : "hidden"
     readonly property bool shown: mode !== "hidden"
 
@@ -102,7 +103,7 @@ PanelWindow {
                 win.ctl.infoOpen = true
         }
     }
-    Timer { id: closeInfo; interval: 350; onTriggered: if (win.ctl && !win.pointerIn) win.ctl.infoOpen = false }
+    Timer { id: closeInfo; interval: 900; onTriggered: if (win.ctl && !win.pointerIn) win.ctl.infoOpen = false }
 
     // ---- live capture of what's behind (includes us; glass samples outside) --
     ScreencopyView {
@@ -151,7 +152,7 @@ PanelWindow {
 
         HoverHandler { id: pillHover }
         Binding { target: win.ctl; property: "hoverHold"; value: pillHover.hovered; when: win.isFocused }
-        TapHandler { onTapped: if (win.ctl) win.ctl.dismiss() }
+        TapHandler { onTapped: if (win.ctl && win.viewMode !== "info") win.ctl.dismiss() }
 
         // glass + content, grouped so the droplet can lens both
         Item {
@@ -286,14 +287,35 @@ PanelWindow {
                     readonly property color dim: Qt.rgba(1, 1, 1, 0.62)
                     readonly property color warm: "#ffb38a"
 
-                    component Chip: Row {
+                    component Chip: Item {
+                        id: chip
                         property alias icon: ic.text
                         property alias label: lb.text
                         property color tone: "white"
-                        spacing: 6
-                        GlassText { id: ic; size: 13; color: parent.tone; anchors.verticalCenter: parent.verticalCenter }
-                        GlassText { id: lb; size: 11; color: parent.tone; anchors.verticalCenter: parent.verticalCenter
-                                    width: Math.min(implicitWidth, 170); elide: Text.ElideRight }
+                        property string action: ""        // shell command run on click
+                        implicitWidth: chipRow.implicitWidth + (action ? 14 : 0)
+                        implicitHeight: 22
+                        Rectangle {
+                            anchors.fill: parent
+                            radius: height / 2
+                            visible: chip.action !== ""
+                            color: tap.pressed ? Qt.rgba(1, 1, 1, 0.26) : Qt.rgba(1, 1, 1, 0.09)
+                            border.width: 1
+                            border.color: Qt.rgba(1, 1, 1, 0.12)
+                        }
+                        Row {
+                            id: chipRow
+                            anchors.centerIn: parent
+                            spacing: 6
+                            GlassText { id: ic; size: 13; color: chip.tone; anchors.verticalCenter: parent.verticalCenter }
+                            GlassText { id: lb; size: 11; color: chip.tone; anchors.verticalCenter: parent.verticalCenter
+                                        width: Math.min(implicitWidth, 170); elide: Text.ElideRight }
+                        }
+                        TapHandler {
+                            id: tap
+                            enabled: chip.action !== ""
+                            onTapped: win.launch(chip.action)
+                        }
                     }
 
                     Row {
@@ -305,11 +327,13 @@ PanelWindow {
                             label: Stats.wifiSsid !== "" ? Stats.wifiSsid + "  " + Stats.wifiSignal + "%"
                                  : Stats.online ? "wired" : "offline"
                             tone: Stats.online ? "white" : infoCol.warm
+                            action: win.floatTerm + "nmtui connect"
                         }
                         Chip {
                             icon: !Stats.btOn ? "\u{f00b2}" : Stats.btDevices !== "" ? "\u{f00b1}" : "\u{f00af}"
                             label: !Stats.btOn ? "off" : Stats.btDevices !== "" ? Stats.btDevices : "on"
                             tone: Stats.btOn ? "white" : infoCol.dim
+                            action: "blueman-manager"
                         }
                         Chip {
                             visible: Stats.hasBattery
@@ -320,19 +344,21 @@ PanelWindow {
                         Chip {
                             icon: Stats.muted ? "\u{f075f}" : "\u{f028}"
                             label: Stats.muted ? "muted" : Stats.volume + "%"
+                            action: "pavucontrol"
                         }
                     }
                     Row {
                         id: infoBottom
                         anchors.horizontalCenter: parent.horizontalCenter
                         spacing: 18
-                        Chip { icon: "\u{f4bc}"; label: "cpu " + Stats.cpu + "%"; tone: infoCol.dim }
-                        Chip { icon: "\u{f035b}"; label: "ram " + Stats.mem + "%"; tone: infoCol.dim }
+                        Chip { icon: "\u{f4bc}"; label: "cpu " + Stats.cpu + "%"; tone: infoCol.dim; action: win.floatTerm + "btop" }
+                        Chip { icon: "\u{f035b}"; label: "ram " + Stats.mem + "%"; tone: infoCol.dim; action: win.floatTerm + "btop" }
                         Chip {
                             icon: "\u{f2c9}"; label: Stats.temp + "°"
                             tone: Stats.temp >= 85 ? "#ff8a8a" : infoCol.dim
+                            action: win.floatTerm + "btop"
                         }
-                        Chip { icon: "\u{f0a0}"; label: "disk " + Stats.disk + "%"; tone: infoCol.dim }
+                        Chip { icon: "\u{f0a0}"; label: "disk " + Stats.disk + "%"; tone: infoCol.dim; action: win.floatTerm + "btop" }
                         Chip {
                             visible: win.ctl && win.ctl.backlight !== ""
                             icon: "\u{f00e0}"
@@ -443,4 +469,11 @@ PanelWindow {
     }
 
     SystemClock { id: clock; precision: SystemClock.Minutes }
+
+    // info-panel chip actions; the panel closes after launching
+    readonly property string floatTerm: "alacritty --class alacritty-float -e "
+    function launch(cmd) {
+        Quickshell.execDetached(["sh", "-c", cmd])
+        if (ctl) ctl.infoOpen = false
+    }
 }
