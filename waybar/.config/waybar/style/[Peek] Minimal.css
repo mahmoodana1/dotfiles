@@ -1,66 +1,87 @@
 /* Peek — minimal glass bar, visible while SUPER is held.
    Pairs with the "[TOP] Peek" layout. Blur comes from the Hyprland layer
-   rule for namespace "peek" (hypr/lua/peek.lua); colors follow wallust. */
+   rule for namespace "peek" (hypr/lua/peek.lua). Every color is a wallust
+   token, so the bar re-tints with each wallpaper. Geometry mirrors
+   hypr/lua/decorations.lua: 1px border, rounding 4, gaps_out 5. */
 
 @import '../../.config/waybar/wallust/colors-waybar.css';
 
 * {
 	font-family: "JetBrainsMono Nerd Font";
 	font-size: 12px;
+	font-weight: 600;
 	min-height: 0;
 	border: none;
 	border-radius: 0;
 }
 
-/* One frosted strip: faint tint, hairline highlight on top edge. */
+/* Frosted strip tinted with the wallpaper's deep tone, edged like a window. */
 window {
-	background: alpha(#ffffff, 0.06);
-	border: 1px solid alpha(#ffffff, 0.14);
-	border-top-color: alpha(#ffffff, 0.24);
-	border-radius: 14px;
+	background: alpha(@background, 0.45);
+	border: 1px solid alpha(@color13, 0.45);
+	border-radius: 4px;
 	color: @foreground;
+	transition: opacity 120ms ease-out;
 }
+
+/* Waybar's SIGUSR1 "hide" only sinks the bar to the bottom layer and adds
+   .hidden; without this it still shows behind windows and on empty workspaces. */
+window.hidden { opacity: 0; }
 
 tooltip {
-	background: alpha(@background, 0.75);
-	border: 1px solid alpha(#ffffff, 0.14);
-	border-radius: 10px;
+	background: alpha(@background, 0.85);
+	border: 1px solid alpha(@color13, 0.45);
+	border-radius: 4px;
 }
-tooltip label { color: @foreground; }
+tooltip label { color: @foreground; font-weight: 500; }
 
-.modules-left  { padding-left: 8px; }
-.modules-right { padding-right: 8px; }
+.modules-left  { padding-left: 4px; }
+.modules-right { padding-right: 6px; }
 
+/* Workspaces: dim numbers; the active one gets a steel-blue chip. */
+#workspaces { margin: 3px 0; }
 #workspaces button {
-	padding: 0 5px;
-	margin: 0;
-	color: alpha(@foreground, 0.4);
+	padding: 0 7px;
+	margin: 0 1px;
+	border-radius: 3px;
+	color: alpha(@foreground, 0.45);
 	background: transparent;
 	box-shadow: none;
 	text-shadow: none;
 }
-#workspaces button:hover { color: alpha(@foreground, 0.8); background: transparent; }
-#workspaces button.active { color: @foreground; font-weight: bold; }
-#workspaces button.urgent { color: @color13; }
+#workspaces button:hover {
+	color: @foreground;
+	background: alpha(@color13, 0.18);
+}
+#workspaces button.active {
+	color: @foreground;
+	background: alpha(@color13, 0.45);
+}
+#workspaces button.urgent { color: @background; background: @color12; }
 
-#clock { font-weight: bold; }
+#clock {
+	color: @foreground;
+	font-weight: 700;
+	letter-spacing: 1px;
+}
 
 #network,
 #pulseaudio,
 #battery,
 #custom-peek-dot,
 #cpu, #memory, #temperature, #disk {
-	padding: 0 5px;
+	padding: 0 6px;
 }
 
-#custom-peek-dot { color: alpha(@foreground, 0.5); }
+#custom-peek-dot { color: @color13; font-size: 10px; }
 #custom-peek-dot:hover { color: @foreground; }
 
-/* Alerts */
+/* Drawer: quiet text, icons carry the accent. */
+.peek-child { color: alpha(@foreground, 0.8); font-weight: 500; }
+
+/* Alerts use the warm rock tone; critical gets red. */
 #network.disconnected,
 #pulseaudio.muted,
-#battery.warning:not(.charging) { color: @color13; }
+#battery.warning:not(.charging) { color: @color12; }
 #battery.critical:not(.charging),
 #temperature.critical { color: #E67E80; }
-
-.peek-child { color: alpha(@foreground, 0.85); }
