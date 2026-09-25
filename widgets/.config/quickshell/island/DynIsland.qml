@@ -30,7 +30,12 @@ PanelWindow {
     // on an empty workspace the island rests on screen (workspaces · clock · …)
     readonly property bool emptyHere: monitor !== null && monitor.activeWorkspace !== null
                                       && monitor.activeWorkspace.toplevels.values.length === 0
-    readonly property string mode: !ctl ? "hidden"
+    // After the pointer leaves the info/panels with nothing else to show, the
+    // island first shrinks back to its compact bar, then pops away.
+    property bool reverting: false
+    Timer { id: revertTimer; interval: 220; onTriggered: win.reverting = false }
+    readonly property string mode: baseMode === "hidden" && reverting ? "full" : baseMode
+    readonly property string baseMode: !ctl ? "hidden"
         : !isFocused ? (emptyHere ? "full" : "hidden")
         : !fullscreenHere ? (ctl.mode === "hidden" && emptyHere ? "full" : ctl.mode)
         : ctl.panel !== "" ? ctl.panel
@@ -124,9 +129,13 @@ PanelWindow {
     }
     Timer {
         id: closeInfo
-        interval: win.viewMode === "wifi" || win.viewMode === "bt" ? 1500 : 900
+        interval: 40            // just debounce handler hand-offs; leaving is instant
         onTriggered: {
             if (!win.ctl || win.pointerIn || wifiPanel.typing) return
+            if (win.ctl.infoOpen || win.ctl.panel !== "") {
+                win.reverting = true      // shrink first; pops out if nothing remains
+                revertTimer.restart()
+            }
             win.ctl.infoOpen = false
             win.ctl.panel = ""
         }
