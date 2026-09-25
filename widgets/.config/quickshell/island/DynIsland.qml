@@ -29,6 +29,7 @@ PanelWindow {
                                            && !(ctl && ctl.ignoreFullscreen)
     readonly property string mode: !isFocused || !ctl ? "hidden"
         : !fullscreenHere ? ctl.mode
+        : ctl.panel !== "" ? ctl.panel
         : ctl.infoOpen ? "info"                      // stays while hovered
         : ctl.held && ctl.shiftHeld ? "full"
         : "hidden"
@@ -54,7 +55,7 @@ PanelWindow {
     NumberAnimation { id: fadeOut; target: pill; property: "fade"; to: 0; duration: 90 }
 
     readonly property int winW: 760
-    readonly property int winH: 110
+    readonly property int winH: 380          // room for the wifi/bluetooth panels
     readonly property real winX: (modelData.width - winW) / 2   // layer is centered
 
     anchors.top: true
@@ -64,7 +65,8 @@ PanelWindow {
     color: "transparent"
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.namespace: "island"
-    WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+    // keyboard only while typing a wifi password
+    WlrLayershell.keyboardFocus: wifiPanel.typing && viewMode === "wifi" ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
     // One hover area that changes shape: a thin top-center strip while hidden
     // (off over fullscreen), the island from the top edge down while shown.
     // (Two stacked hover items don't work: only the topmost one gets hovered.)
@@ -103,7 +105,15 @@ PanelWindow {
                 win.ctl.infoOpen = true
         }
     }
-    Timer { id: closeInfo; interval: 900; onTriggered: if (win.ctl && !win.pointerIn) win.ctl.infoOpen = false }
+    Timer {
+        id: closeInfo
+        interval: win.viewMode === "wifi" || win.viewMode === "bt" ? 1500 : 900
+        onTriggered: {
+            if (!win.ctl || win.pointerIn || wifiPanel.typing) return
+            win.ctl.infoOpen = false
+            win.ctl.panel = ""
+        }
+    }
 
     // ---- live capture of what's behind (includes us; glass samples outside) --
     ScreencopyView {
@@ -133,8 +143,13 @@ PanelWindow {
         : viewMode === "toast" ? toastRow.implicitWidth + 40
         : viewMode === "full" ? fullW
         : viewMode === "info" ? Math.max(infoTop.implicitWidth, infoBottom.implicitWidth) + 44
+        : viewMode === "wifi" ? wifiPanel.implicitWidth
+        : viewMode === "bt" ? btPanel.implicitWidth
         : 120
-    readonly property real targetH: viewMode === "notif" ? 64 : viewMode === "info" ? 72 : 36
+    readonly property real targetH: viewMode === "notif" ? 64 : viewMode === "info" ? 72
+        : viewMode === "wifi" ? wifiPanel.implicitHeight
+        : viewMode === "bt" ? btPanel.implicitHeight
+        : 36
 
     component Spring: SpringAnimation { spring: 5.0; damping: 0.36; epsilon: 0.25 }
 
@@ -169,6 +184,11 @@ PanelWindow {
             Glass {
                 id: glass
                 lumTex: lum.texture
+                // capsule for bars; rounded rect for the tall panels
+                radius: win.viewMode === "wifi" || win.viewMode === "bt" || win.viewMode === "notif" ? 26 : 999
+                // text-heavy views get smoked glass so they read over busy backdrops
+                smoke: win.viewMode === "wifi" || win.viewMode === "bt" ? 0.85
+                     : win.viewMode === "info" || win.viewMode === "notif" ? 0.4 : 0
                 useLum: 1
                 x: -pad; y: -pad
                 width: pill.width + pad * 2
@@ -293,12 +313,15 @@ PanelWindow {
                         property alias label: lb.text
                         property color tone: "white"
                         property string action: ""        // shell command run on click
-                        implicitWidth: chipRow.implicitWidth + (action ? 14 : 0)
+                        signal clicked()                  // or handle it in QML
+                        readonly property bool clickable: action !== "" || panelChip
+                        property bool panelChip: false
+                        implicitWidth: chipRow.implicitWidth + (clickable ? 14 : 0)
                         implicitHeight: 22
                         Rectangle {
                             anchors.fill: parent
                             radius: height / 2
-                            visible: chip.action !== ""
+                            visible: chip.clickable
                             color: tap.pressed ? Qt.rgba(1, 1, 1, 0.26) : Qt.rgba(1, 1, 1, 0.09)
                             border.width: 1
                             border.color: Qt.rgba(1, 1, 1, 0.12)
@@ -313,8 +336,8 @@ PanelWindow {
                         }
                         TapHandler {
                             id: tap
-                            enabled: chip.action !== ""
-                            onTapped: win.launch(chip.action)
+                            enabled: chip.clickable
+                            onTapped: chip.action !== "" ? win.launch(chip.action) : chip.clicked()
                         }
                     }
 
@@ -327,13 +350,15 @@ PanelWindow {
                             label: Stats.wifiSsid !== "" ? Stats.wifiSsid + "  " + Stats.wifiSignal + "%"
                                  : Stats.online ? "wired" : "offline"
                             tone: Stats.online ? "white" : infoCol.warm
-                            action: win.floatTerm + "nmtui connect"
+                            panelChip: true
+                            onClicked: if (win.ctl) win.ctl.panel = "wifi"
                         }
                         Chip {
                             icon: !Stats.btOn ? "\u{f00b2}" : Stats.btDevices !== "" ? "\u{f00b1}" : "\u{f00af}"
                             label: !Stats.btOn ? "off" : Stats.btDevices !== "" ? Stats.btDevices : "on"
                             tone: Stats.btOn ? "white" : infoCol.dim
-                            action: "blueman-manager"
+                            panelChip: true
+                            onClicked: if (win.ctl) win.ctl.panel = "bt"
                         }
                         Chip {
                             visible: Stats.hasBattery
@@ -366,6 +391,26 @@ PanelWindow {
                             tone: infoCol.dim
                         }
                     }
+                }
+
+                // -- wifi / bluetooth panels --
+                WifiPanel {
+                    id: wifiPanel
+                    host: win
+                    active: win.viewMode === "wifi" && win.shown
+                    width: implicitWidth
+                    opacity: win.viewMode === "wifi" ? 1 : 0
+                    visible: opacity > 0
+                    Behavior on opacity { enabled: win.morphReady; NumberAnimation { duration: 120 } }
+                }
+                BtPanel {
+                    id: btPanel
+                    host: win
+                    active: win.viewMode === "bt" && win.shown
+                    width: implicitWidth
+                    opacity: win.viewMode === "bt" ? 1 : 0
+                    visible: opacity > 0
+                    Behavior on opacity { enabled: win.morphReady; NumberAnimation { duration: 120 } }
                 }
 
                 // -- notification --

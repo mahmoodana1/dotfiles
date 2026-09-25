@@ -4,12 +4,14 @@
 // everything while SUPER is held. Hidden otherwise.
 // Run:    qs -c island         (managed by ~/.config/hypr/scripts/PeekBar.sh)
 // Shares glass/text/stats with the Peek bar through the `shared` -> ../peek link.
-// Test:   qs ipc -c island call island down|up|shiftdown|info <true|false>|ws|charger|notify <summary> <body>
+// Test:   qs ipc -c island call island down|up|shiftdown|info <true|false>|panel <wifi|bt|>|ws|charger|notify <summary> <body>
 import QtQuick
 import Quickshell
 import Quickshell.Io
 import Quickshell.Hyprland
 import Quickshell.Services.Pipewire
+import Quickshell.Networking
+import Quickshell.Bluetooth
 import "shared"
 
 ShellRoot {
@@ -26,6 +28,7 @@ ShellRoot {
     property bool hoverHold: false           // pointer on the island: don't time out
     property bool ignoreFullscreen: false    // testing: show even over fullscreen
     property bool infoOpen: false            // hover panel (cpu/mem/wifi/bluetooth...)
+    property string panel: ""                // "wifi" | "bt": list panel opened from the info chips
 
     property string levelKind: "volume"      // volume | mic | brightness
     property real levelValue: 0              // 0..1
@@ -35,13 +38,18 @@ ShellRoot {
     property string toastText: ""
 
     // what the island shows, by priority
-    readonly property string mode: infoOpen ? "info"
+    readonly property string mode: panel !== "" ? panel
+        : infoOpen ? "info"
         : held ? "full"
         : now < notifUntil ? "notif"
         : now < toastUntil ? "toast"
         : now < levelUntil ? "level"
         : now < wsUntil ? "ws"
         : "hidden"
+
+    // Networking/Bluetooth connect to D-Bus lazily on first access; touch them
+    // now so the panels have data when opened.
+    Component.onCompleted: { Networking.wifiEnabled; Bluetooth.defaultAdapter }
 
     // ignore the burst of property changes while services start up
     property bool armed: false
@@ -76,6 +84,7 @@ ShellRoot {
     }
     function dismiss() {
         // click: close the current event
+        if (panel !== "") { panel = ""; return }
         if (infoOpen) { infoOpen = false; return }
         if (mode === "notif") notifUntil = 0
         else if (mode === "toast") toastUntil = 0
@@ -185,6 +194,7 @@ ShellRoot {
         function down(): void { root.held = true }
         function up(): void { root.held = false; root.shiftHeld = false }
         function info(open: bool): void { root.infoOpen = open }
+        function panel(name: string): void { root.panel = name === "none" ? "" : name }   // wifi | bt | none
         function ignorefs(on: bool): void { root.ignoreFullscreen = on }   // testing only
         function shiftdown(): void { root.held = true; root.shiftHeld = true }
         function ws(): void { root.pulse("ws", 350) }

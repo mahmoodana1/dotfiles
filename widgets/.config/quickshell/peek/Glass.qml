@@ -23,6 +23,8 @@ ShaderEffect {
     property real mode: 0          // 0 island (clear, live refracted rim), 1 lens
     property var lumTex: source    // GlassLum.texture for smoothed tinting
     property real useLum: 0
+    property real smoke: 0         // minimum smoke, for text-heavy surfaces
+    Behavior on smoke { NumberAnimation { duration: 180 } }
 
     // uniforms (names must match the shader's buffer)
     readonly property size itemSize: Qt.size(width, height)

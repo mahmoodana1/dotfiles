@@ -30,6 +30,7 @@ layout(std140, binding = 0) uniform buf {
     float shadow;      // drop shadow strength
     float mode;        // 0 island, 1 lens
     float useLum;      // 1: take brightness from lumTex (smoothed, GlassLum.qml)
+    float smoke;       // 0..1 minimum smoke (reading-heavy surfaces: lists, notifications)
 };
 layout(binding = 1) uniform sampler2D source;
 layout(binding = 2) uniform sampler2D lumTex;
@@ -102,7 +103,7 @@ void main() {
 
         // mostly the island-wide brightness, a little local variation
         float lum = dot(ring, vec3(0.2126, 0.7152, 0.0722));
-        float bright = mix(smoothstep(0.35, 0.85, lum), avgBright, 0.8);
+        float bright = max(mix(smoothstep(0.35, 0.85, lum), avgBright, 0.8), smoke);
 
         // interior: near-clear over dark backdrops, smoked glass over bright
         // ones so white labels stay readable (iOS-style)
