@@ -44,19 +44,32 @@ PanelWindow {
     onModeChanged: if (mode !== "hidden") lastMode = mode
     readonly property string viewMode: shown ? mode : lastMode
 
-    // Appear instantly; animate only changes made while already visible.
+    // Pop in/out from the top edge: starts on the same frame as the event
+    // (no delay), springs slightly past full size and settles. The final
+    // size is set instantly; only changes made while visible morph.
     property bool morphReady: false
     onShownChanged: {
         morphReady = false
         if (shown) {
-            fadeOut.stop()
-            pill.fade = 1                       // in: instant
+            popOut.stop()
+            popIn.restart()
             Qt.callLater(() => win.morphReady = win.shown)
         } else {
-            fadeOut.restart()                   // out: a quick fade
+            popIn.stop()
+            popOut.restart()
         }
     }
-    NumberAnimation { id: fadeOut; target: pill; property: "fade"; to: 0; duration: 90 }
+    ParallelAnimation {
+        id: popIn
+        NumberAnimation { target: pill; property: "pop"; from: 0.78; to: 1; duration: 280
+                          easing.type: Easing.OutBack; easing.overshoot: 1.6 }
+        NumberAnimation { target: pill; property: "fade"; to: 1; duration: 90; easing.type: Easing.OutQuad }
+    }
+    ParallelAnimation {
+        id: popOut
+        NumberAnimation { target: pill; property: "pop"; to: 0.86; duration: 140; easing.type: Easing.InCubic }
+        NumberAnimation { target: pill; property: "fade"; to: 0; duration: 130; easing.type: Easing.InQuad }
+    }
 
     readonly property int winW: 760
     readonly property int winH: 380          // room for the wifi/bluetooth panels
@@ -103,7 +116,7 @@ PanelWindow {
         else { openInfo.stop(); closeInfo.restart() }
     }
     Timer {
-        id: openInfo; interval: 200
+        id: openInfo; interval: 60
         onTriggered: {
             if (win.pointerIn && win.isFocused && win.ctl && win.viewMode !== "notif")
                 win.ctl.infoOpen = true
@@ -155,7 +168,8 @@ PanelWindow {
         : viewMode === "bt" ? btPanel.implicitHeight
         : 36
 
-    component Spring: SpringAnimation { spring: 5.0; damping: 0.36; epsilon: 0.25 }
+    // stiff + well damped: responsive, one soft overshoot, settles in ~0.25 s
+    component Spring: SpringAnimation { spring: 7.5; damping: 0.48; epsilon: 0.2 }
 
     Item {
         id: pill
@@ -164,7 +178,10 @@ PanelWindow {
         x: (win.winW - width) / 2
         y: 6
         property real fade: 0
+        property real pop: 1
         opacity: fade
+        // scale from the top edge, like it grows out of the bezel
+        transform: Scale { origin.x: pill.width / 2; origin.y: 0; xScale: pill.pop; yScale: pill.pop }
         Behavior on width { enabled: win.morphReady; Spring { } }
         Behavior on height { enabled: win.morphReady; Spring { } }
         visible: opacity > 0
