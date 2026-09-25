@@ -117,8 +117,8 @@ Item {
         Rectangle {
             anchors.fill: parent
             radius: 12
-            color: tap.pressed ? Qt.rgba(1, 1, 1, 0.22)
-                 : d.connected || row.open ? Qt.rgba(1, 1, 1, 0.12) : "transparent"
+            color: tap.pressed ? Qt.rgba(1, 1, 1, 0.16)
+                 : d.connected || row.open ? Qt.rgba(1, 1, 1, 0.07) : "transparent"
         }
 
         // main line; tap area stops short of ⋯ so the two never both fire

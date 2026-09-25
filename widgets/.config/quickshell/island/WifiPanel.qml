@@ -138,8 +138,8 @@ Item {
         Rectangle {
             anchors.fill: parent
             radius: 12
-            color: tap.pressed ? Qt.rgba(1, 1, 1, 0.22)
-                 : n.connected || row.open ? Qt.rgba(1, 1, 1, 0.12)
+            color: tap.pressed ? Qt.rgba(1, 1, 1, 0.16)
+                 : n.connected || row.open ? Qt.rgba(1, 1, 1, 0.07)
                  : panel.pwdNet === n ? Qt.rgba(1, 1, 1, 0.10) : "transparent"
         }
 

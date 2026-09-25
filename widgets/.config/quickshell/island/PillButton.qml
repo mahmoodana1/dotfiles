@@ -15,9 +15,8 @@ Item {
     Rectangle {
         anchors.fill: parent
         radius: height / 2
-        color: tap.pressed ? Qt.rgba(1, 1, 1, 0.26) : Qt.rgba(1, 1, 1, 0.09)
-        border.width: 1
-        border.color: btn.danger ? Qt.rgba(1, 0.55, 0.5, 0.45) : Qt.rgba(1, 1, 1, 0.12)
+        color: tap.pressed ? Qt.rgba(1, 1, 1, 0.22)
+             : btn.danger ? Qt.rgba(1, 0.45, 0.4, 0.14) : Qt.rgba(1, 1, 1, 0.08)
     }
     GlassText {
         id: lbl

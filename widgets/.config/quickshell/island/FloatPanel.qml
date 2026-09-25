@@ -109,25 +109,17 @@ PanelWindow {
             shape: Qt.rect(card.x, card.y, card.width, card.height)
             srcSize: Qt.size(win.width, win.height)
         }
-        Glass {
+        WaterGlass {
             lumTex: lum.texture
             useLum: 1
             radius: 26
-            smoke: 0.93          // text-heavy: darker than the island panels
+            smoke: 1             // text-heavy: the most smoke the water glass gives
             x: -card.pad; y: -card.pad
             width: card.width + card.pad * 2
             height: card.height + card.pad * 2
             source: behind
             sourceOrigin: Qt.point(card.x - card.pad, card.y - card.pad)
             sourceSize: Qt.size(win.width, win.height)
-        }
-        // dark backing so text reads over busy screens (glass rim stays visible)
-        Rectangle {
-            anchors.fill: parent
-            anchors.margins: 3
-            radius: 23
-            color: Qt.rgba(0.02, 0.03, 0.06, 0.62)
-            opacity: Math.min(1, win.t * 1.6)
         }
         Item {
             anchors.fill: parent

@@ -228,14 +228,15 @@ PanelWindow {
                 srcSize: Qt.size(win.winW, win.winH)
             }
 
-            Glass {
+            WaterGlass {
                 id: glass
                 lumTex: lum.texture
                 // capsule for bars; rounded rect for the tall panels
                 radius: win.viewMode === "wifi" || win.viewMode === "bt" || win.viewMode === "notif" ? 26 : 999
                 // text-heavy views get smoked glass so they read over busy backdrops
+                // (a little everywhere there's text: clear water, still readable)
                 smoke: win.viewMode === "wifi" || win.viewMode === "bt" ? 0.85
-                     : win.viewMode === "info" || win.viewMode === "notif" ? 0.4 : 0
+                     : win.viewMode === "info" || win.viewMode === "notif" ? 0.55 : 0.35
                 useLum: 1
                 x: -pad; y: -pad
                 width: pill.width + pad * 2
@@ -374,9 +375,7 @@ PanelWindow {
                             anchors.fill: parent
                             radius: height / 2
                             visible: chip.clickable
-                            color: tap.pressed ? Qt.rgba(1, 1, 1, 0.26) : Qt.rgba(1, 1, 1, 0.09)
-                            border.width: 1
-                            border.color: Qt.rgba(1, 1, 1, 0.12)
+                            color: tap.pressed ? Qt.rgba(1, 1, 1, 0.22) : Qt.rgba(1, 1, 1, 0.06)
                         }
                         Row {
                             id: chipRow
