@@ -1,8 +1,8 @@
-/* Peek — minimal glass bar, visible while SUPER is held.
-   Pairs with the "[TOP] Peek" layout. Blur comes from the Hyprland layer
-   rule for namespace "peek" (hypr/lua/peek.lua). Every color is a wallust
-   token, so the bar re-tints with each wallpaper. Geometry mirrors
-   hypr/lua/decorations.lua: 1px border, rounding 4, gaps_out 5. */
+/* Peek — liquid-glass islands, visible while SUPER is held.
+   Pairs with the "[TOP] Peek" layout. The frost itself is Hyprland's blur
+   (layer rule for namespace "peek" in hypr/lua/peek.lua); this file only adds
+   a thin neutral sheen + specular edges, iOS style, so the wallpaper's own
+   colors come through. Accents use wallust tokens. */
 
 @import '../../.config/waybar/wallust/colors-waybar.css';
 
@@ -15,56 +15,79 @@
 	border-radius: 0;
 }
 
-/* Frosted strip tinted with the wallpaper's deep tone, edged like a window. */
 window {
-	background: alpha(@background, 0.45);
-	border: 1px solid alpha(@color13, 0.45);
-	border-radius: 4px;
-	color: @foreground;
-	transition: opacity 120ms ease-out;
+	background: transparent;
+	color: #ffffff;
+	transition: opacity 140ms ease-out;
 }
 
 /* Waybar's SIGUSR1 "hide" only sinks the bar to the bottom layer and adds
    .hidden; without this it still shows behind windows and on empty workspaces. */
 window.hidden { opacity: 0; }
 
-tooltip {
-	background: alpha(@background, 0.85);
-	border: 1px solid alpha(@color13, 0.45);
-	border-radius: 4px;
+/* ---- The islands ---------------------------------------------------- */
+.modules-left,
+.modules-center,
+.modules-right {
+	/* sheen: brighter at the top, like light hitting curved glass */
+	background-image: linear-gradient(to bottom,
+		alpha(#ffffff, 0.22),
+		alpha(#ffffff, 0.12) 55%,
+		alpha(#ffffff, 0.16));
+	border: 1px solid alpha(#ffffff, 0.20);
+	border-radius: 15px;
+	/* specular rim on top, soft glow on the bottom lip */
+	box-shadow:
+		inset 0 1px 0 alpha(#ffffff, 0.55),
+		inset 0 -1px 0 alpha(#ffffff, 0.12);
+	padding: 0 6px;
+	margin: 0;
 }
-tooltip label { color: @foreground; font-weight: 500; }
 
-.modules-left  { padding-left: 4px; }
-.modules-right { padding-right: 6px; }
+/* Text sits "in" the glass: white with a soft drop for any wallpaper. */
+label {
+	text-shadow: 0 1px 2px alpha(#000000, 0.35);
+}
 
-/* Workspaces: dim numbers; the active one gets a steel-blue chip. */
+tooltip {
+	background: alpha(@background, 0.80);
+	border: 1px solid alpha(#ffffff, 0.18);
+	border-radius: 12px;
+}
+tooltip label { color: #ffffff; font-weight: 500; text-shadow: none; }
+
+/* ---- Workspaces: the active one is a smaller glass bead ------------- */
 #workspaces { margin: 3px 0; }
 #workspaces button {
-	padding: 0 7px;
+	padding: 0 8px;
 	margin: 0 1px;
-	border-radius: 3px;
-	color: alpha(@foreground, 0.45);
+	border-radius: 11px;
+	color: alpha(#ffffff, 0.55);
 	background: transparent;
 	box-shadow: none;
-	text-shadow: none;
+	transition: all 150ms ease;
 }
 #workspaces button:hover {
-	color: @foreground;
-	background: alpha(@color13, 0.18);
+	color: #ffffff;
+	background: alpha(#ffffff, 0.12);
 }
 #workspaces button.active {
-	color: @foreground;
-	background: alpha(@color13, 0.45);
+	color: #ffffff;
+	background-image: linear-gradient(to bottom,
+		alpha(#ffffff, 0.38),
+		alpha(#ffffff, 0.20));
+	box-shadow: inset 0 1px 0 alpha(#ffffff, 0.6);
 }
-#workspaces button.urgent { color: @background; background: @color12; }
+#workspaces button.urgent { color: #ffffff; background: alpha(@color12, 0.8); }
 
+/* ---- Clock ---------------------------------------------------------- */
 #clock {
-	color: @foreground;
+	padding: 0 8px;
 	font-weight: 700;
 	letter-spacing: 1px;
 }
 
+/* ---- Right island --------------------------------------------------- */
 #network,
 #pulseaudio,
 #battery,
@@ -73,15 +96,14 @@ tooltip label { color: @foreground; font-weight: 500; }
 	padding: 0 6px;
 }
 
-#custom-peek-dot { color: @color13; font-size: 10px; }
-#custom-peek-dot:hover { color: @foreground; }
+#custom-peek-dot { color: alpha(#ffffff, 0.75); font-size: 10px; }
+#custom-peek-dot:hover { color: #ffffff; }
 
-/* Drawer: quiet text, icons carry the accent. */
-.peek-child { color: alpha(@foreground, 0.8); font-weight: 500; }
+.peek-child { color: alpha(#ffffff, 0.9); font-weight: 500; }
 
-/* Alerts use the warm rock tone; critical gets red. */
+/* Alerts: warm wallust tone; critical gets red. */
 #network.disconnected,
 #pulseaudio.muted,
 #battery.warning:not(.charging) { color: @color12; }
 #battery.critical:not(.charging),
-#temperature.critical { color: #E67E80; }
+#temperature.critical { color: #ff8a8a; }
