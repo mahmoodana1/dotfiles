@@ -8,3 +8,12 @@ for z in /sys/class/thermal/thermal_zone*; do
 done
 echo "disk=$(df --output=pcent / | tail -1 | tr -dc 0-9)"
 echo "net=$(nmcli -t -f STATE general 2>/dev/null)"
+# wifi: "SSID|signal" of the active network (cached scan; never triggers a rescan)
+w=$(nmcli -t -f ACTIVE,SSID,SIGNAL dev wifi list --rescan no 2>/dev/null | grep -m1 '^yes:')
+if [ -n "$w" ]; then w=${w#yes:}; echo "wifi=${w%:*}|${w##*:}"; else echo "wifi="; fi
+# bluetooth: "on|dev1, dev2" or "off"
+if timeout 1 bluetoothctl show 2>/dev/null | grep -q 'Powered: yes'; then
+  echo "bt=on|$(timeout 1 bluetoothctl devices Connected 2>/dev/null | cut -d' ' -f3- | paste -sd, | sed 's/,/, /g')"
+else
+  echo "bt=off"
+fi

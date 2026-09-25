@@ -4,7 +4,7 @@
 // everything while SUPER is held. Hidden otherwise.
 // Run:    qs -c island         (managed by ~/.config/hypr/scripts/PeekBar.sh)
 // Shares glass/text/stats with the Peek bar through the `shared` -> ../peek link.
-// Test:   qs ipc -c island call island down|up|shiftdown|ws|charger|notify <summary> <body>
+// Test:   qs ipc -c island call island down|up|shiftdown|info <true|false>|ws|charger|notify <summary> <body>
 import QtQuick
 import Quickshell
 import Quickshell.Io
@@ -24,6 +24,8 @@ ShellRoot {
     property real notifUntil: 0
     property real toastUntil: 0
     property bool hoverHold: false           // pointer on the island: don't time out
+    property bool ignoreFullscreen: false    // testing: show even over fullscreen
+    property bool infoOpen: false            // hover panel (cpu/mem/wifi/bluetooth...)
 
     property string levelKind: "volume"      // volume | mic | brightness
     property real levelValue: 0              // 0..1
@@ -33,7 +35,8 @@ ShellRoot {
     property string toastText: ""
 
     // what the island shows, by priority
-    readonly property string mode: held ? "full"
+    readonly property string mode: infoOpen ? "info"
+        : held ? "full"
         : now < notifUntil ? "notif"
         : now < toastUntil ? "toast"
         : now < levelUntil ? "level"
@@ -73,6 +76,7 @@ ShellRoot {
     }
     function dismiss() {
         // click: close the current event
+        if (infoOpen) { infoOpen = false; return }
         if (mode === "notif") notifUntil = 0
         else if (mode === "toast") toastUntil = 0
         else if (mode === "level") levelUntil = 0
@@ -103,7 +107,7 @@ ShellRoot {
         onExited: { root.held = false; root.shiftHeld = false; superRestart.start() }
     }
     Timer { id: superRestart; interval: 1000; onTriggered: superwatch.running = true }
-    Binding { target: Stats; property: "active"; value: root.held }
+    Binding { target: Stats; property: "active"; value: root.held || root.infoOpen }
 
     // ---- workspace switches -----------------------------------------------
     readonly property int focusedWs: Hyprland.focusedWorkspace ? Hyprland.focusedWorkspace.id : -1
@@ -180,6 +184,8 @@ ShellRoot {
         target: "island"
         function down(): void { root.held = true }
         function up(): void { root.held = false; root.shiftHeld = false }
+        function info(open: bool): void { root.infoOpen = open }
+        function ignorefs(on: bool): void { root.ignoreFullscreen = on }   // testing only
         function shiftdown(): void { root.held = true; root.shiftHeld = true }
         function ws(): void { root.pulse("ws", 350) }
         function charger(): void { root.toast("\u{f0084}", "Charging  " + Stats.batteryPct + "%", 1600) }

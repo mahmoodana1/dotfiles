@@ -11,6 +11,8 @@ import "shared"
 //   notif  app icon, summary, body (hover keeps it, click dismisses)
 //   toast  one icon + line (charger plugged/unplugged)
 //   full   (SUPER held) workspaces · clock · battery/volume
+//   info   (hover the island, or push the pointer to the top-center edge)
+//          wifi · bluetooth · battery · volume / cpu · ram · temp · disk · brightness
 PanelWindow {
     id: win
 
@@ -24,6 +26,7 @@ PanelWindow {
     // over a fullscreen window only SUPER+SHIFT (held) shows it, as the full view
     readonly property bool fullscreenHere: monitor !== null && monitor.activeWorkspace !== null
                                            && monitor.activeWorkspace.hasFullscreen
+                                           && !(ctl && ctl.ignoreFullscreen)
     readonly property string mode: !isFocused || !ctl ? "hidden"
         : !fullscreenHere ? ctl.mode
         : ctl.held && ctl.shiftHeld ? "full"
@@ -61,9 +64,39 @@ PanelWindow {
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.namespace: "island"
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
-    readonly property Region pillMask: Region { item: pill }
+    readonly property Region zoneMask: Region { item: hoverZone }
+    readonly property Region hotMask: Region { item: hotStrip }
     readonly property Region noMask: Region {}
-    mask: shown ? pillMask : noMask
+    mask: shown ? zoneMask : fullscreenHere ? noMask : hotMask
+
+    // ---- hover → info panel -------------------------------------------------
+    // Pointer resting on the island (or on the top-center edge while hidden)
+    // for a moment opens the info panel; leaving closes it. An open
+    // notification stays as-is so it can be read.
+    Item {
+        id: hotStrip
+        x: (win.winW - width) / 2
+        width: 260; height: 2
+        HoverHandler { id: hotHover }
+    }
+    Item {
+        id: hoverZone                        // from the top edge down to the pill's bottom
+        x: pill.x; y: 0
+        width: pill.width
+        height: pill.y + pill.height
+        HoverHandler { id: zoneHover }
+    }
+    readonly property bool pointerIn: (hotHover.hovered && !fullscreenHere) || (shown && zoneHover.hovered)
+    onPointerInChanged: {
+        if (pointerIn) { closeInfo.stop(); openInfo.restart() }
+        else { openInfo.stop(); closeInfo.restart() }
+    }
+    Timer {
+        id: openInfo; interval: 200
+        onTriggered: if (win.pointerIn && win.isFocused && win.ctl && win.viewMode !== "notif")
+            win.ctl.infoOpen = true
+    }
+    Timer { id: closeInfo; interval: 350; onTriggered: if (win.ctl && !win.pointerIn) win.ctl.infoOpen = false }
 
     // ---- live capture of what's behind (includes us; glass samples outside) --
     ScreencopyView {
@@ -92,8 +125,9 @@ PanelWindow {
         : viewMode === "notif" ? Math.min(560, Math.max(340, notifRow.implicitWidth + 40))
         : viewMode === "toast" ? toastRow.implicitWidth + 40
         : viewMode === "full" ? fullW
+        : viewMode === "info" ? Math.max(infoTop.implicitWidth, infoBottom.implicitWidth) + 44
         : 120
-    readonly property real targetH: viewMode === "notif" ? 64 : 36
+    readonly property real targetH: viewMode === "notif" ? 64 : viewMode === "info" ? 72 : 36
 
     component Spring: SpringAnimation { spring: 5.0; damping: 0.36; epsilon: 0.25 }
 
@@ -233,6 +267,72 @@ PanelWindow {
                         anchors.verticalCenter: parent.verticalCenter
                         text: win.ctl ? win.ctl.toastText : ""
                         size: 12; weight: Font.Bold
+                    }
+                }
+
+                // -- info (hover) --
+                Column {
+                    id: infoCol
+                    anchors.centerIn: parent
+                    spacing: 7
+                    opacity: win.viewMode === "info" ? 1 : 0
+                    Behavior on opacity { enabled: win.morphReady; NumberAnimation { duration: 110 } }
+                    readonly property color dim: Qt.rgba(1, 1, 1, 0.62)
+                    readonly property color warm: "#ffb38a"
+
+                    component Chip: Row {
+                        property alias icon: ic.text
+                        property alias label: lb.text
+                        property color tone: "white"
+                        spacing: 6
+                        GlassText { id: ic; size: 13; color: parent.tone; anchors.verticalCenter: parent.verticalCenter }
+                        GlassText { id: lb; size: 11; color: parent.tone; anchors.verticalCenter: parent.verticalCenter
+                                    width: Math.min(implicitWidth, 170); elide: Text.ElideRight }
+                    }
+
+                    Row {
+                        id: infoTop
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        spacing: 18
+                        Chip {
+                            icon: Stats.wifiSsid !== "" ? "\u{f05a9}" : "\u{f05aa}"
+                            label: Stats.wifiSsid !== "" ? Stats.wifiSsid + "  " + Stats.wifiSignal + "%"
+                                 : Stats.online ? "wired" : "offline"
+                            tone: Stats.online ? "white" : infoCol.warm
+                        }
+                        Chip {
+                            icon: !Stats.btOn ? "\u{f00b2}" : Stats.btDevices !== "" ? "\u{f00b1}" : "\u{f00af}"
+                            label: !Stats.btOn ? "off" : Stats.btDevices !== "" ? Stats.btDevices : "on"
+                            tone: Stats.btOn ? "white" : infoCol.dim
+                        }
+                        Chip {
+                            visible: Stats.hasBattery
+                            icon: Stats.charging ? "\u{f0084}" : "\u{f0079}"
+                            label: Stats.batteryPct + "%"
+                            tone: !Stats.charging && Stats.batteryPct <= 20 ? infoCol.warm : "white"
+                        }
+                        Chip {
+                            icon: Stats.muted ? "\u{f075f}" : "\u{f028}"
+                            label: Stats.muted ? "muted" : Stats.volume + "%"
+                        }
+                    }
+                    Row {
+                        id: infoBottom
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        spacing: 18
+                        Chip { icon: "\u{f4bc}"; label: "cpu " + Stats.cpu + "%"; tone: infoCol.dim }
+                        Chip { icon: "\u{f035b}"; label: "ram " + Stats.mem + "%"; tone: infoCol.dim }
+                        Chip {
+                            icon: "\u{f2c9}"; label: Stats.temp + "°"
+                            tone: Stats.temp >= 85 ? "#ff8a8a" : infoCol.dim
+                        }
+                        Chip { icon: "\u{f0a0}"; label: "disk " + Stats.disk + "%"; tone: infoCol.dim }
+                        Chip {
+                            visible: win.ctl && win.ctl.backlight !== ""
+                            icon: "\u{f00e0}"
+                            label: win.ctl && win.ctl.blLast >= 0 ? Math.round(100 * win.ctl.blLast / win.ctl.blMax) + "%" : ""
+                            tone: infoCol.dim
+                        }
                     }
                 }
 

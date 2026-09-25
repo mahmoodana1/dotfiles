@@ -16,6 +16,10 @@ Singleton {
     property int temp: 0
     property int disk: 0
     property bool online: true
+    property string wifiSsid: ""             // "" = not on wifi
+    property int wifiSignal: 0
+    property bool btOn: false
+    property string btDevices: ""            // connected device names, comma separated
 
     readonly property var battery: UPower.displayDevice
     readonly property bool hasBattery: battery && battery.isLaptopBattery
@@ -44,16 +48,29 @@ Singleton {
                         const [busy, total] = v.split(" ").map(Number)
                         if (stats._prevCpu && total > stats._prevCpu[1])
                             stats.cpu = Math.round(100 * (busy - stats._prevCpu[0]) / (total - stats._prevCpu[1]))
+                        else
+                            quickResample.restart()   // first sample: need a delta soon
                         stats._prevCpu = [busy, total]
                     }
                     else if (k === "mem") stats.mem = Number(v)
                     else if (k === "temp") stats.temp = Number(v)
                     else if (k === "disk") stats.disk = Number(v)
                     else if (k === "net") stats.online = v === "" || v.startsWith("connected")
+                    else if (k === "wifi") {
+                        const bar = v.lastIndexOf("|")
+                        stats.wifiSsid = bar < 0 ? "" : v.slice(0, bar).replace(/\\:/g, ":")
+                        stats.wifiSignal = bar < 0 ? 0 : Number(v.slice(bar + 1)) || 0
+                    }
+                    else if (k === "bt") {
+                        stats.btOn = v.startsWith("on")
+                        stats.btDevices = stats.btOn ? v.slice(3) : ""
+                    }
                 }
             }
         }
     }
+
+    Timer { id: quickResample; interval: 300; onTriggered: if (!proc.running) proc.running = true }
 
     Timer {
         interval: 2000
