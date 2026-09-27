@@ -137,7 +137,7 @@ PanelWindow {
         anchors.fill: parent
         active: win.open && win.item !== null && win.item.backdrop !== undefined
         sourceComponent: win.item ? win.item.backdrop : null
-        opacity: motion.contentOpacity
+        opacity: motion.cardOpacity
     }
 
     // click outside the card closes
@@ -149,6 +149,10 @@ PanelWindow {
 
     GlassCard {
         id: card
+        // pop in: fade + a slight scale up from the top edge (PourMotion)
+        transformOrigin: Item.Top
+        scale: motion.cardScale
+        opacity: motion.cardOpacity
         visible: win.open
         source: behind
         srcSize: Qt.size(win.sw, win.sh)

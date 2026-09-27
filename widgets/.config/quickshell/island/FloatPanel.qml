@@ -112,6 +112,10 @@ PanelWindow {
 
     Item {
         id: card
+        // pop in: fade + a slight scale up from the top edge (PourMotion)
+        transformOrigin: Item.Top
+        scale: motion.cardScale
+        opacity: motion.cardOpacity
         visible: win.open
         x: motion.rect.x; y: motion.rect.y
         width: motion.rect.width; height: motion.rect.height
