@@ -3,6 +3,7 @@ import Quickshell
 import Quickshell.Wayland
 import Quickshell.Hyprland
 import "common"
+import "common/keys.js" as K
 
 // One per monitor. Full-screen while a panel is open (or pouring out); idle
 // it shrinks to 1x1 px (see `margins`) with no input and no keyboard focus.
@@ -197,7 +198,8 @@ PanelWindow {
                         ignoreUnknownSignals: true
                         function onCloseRequested() { win.requestClose() }
                     }
-                    Keys.onEscapePressed: win.requestClose()
+                    // Escape or Ctrl+[ closes (keys the panel didn't use end up here)
+                    Keys.onPressed: event => { if (K.isEscape(event)) { win.requestClose(); event.accepted = true } }
                 }
             }
         }

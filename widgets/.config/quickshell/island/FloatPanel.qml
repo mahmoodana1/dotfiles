@@ -4,6 +4,7 @@ import Quickshell.Wayland
 import Quickshell.Hyprland
 import "shared"
 import "common"
+import "common/keys.js" as K
 
 // Floating panel: the island's Bluetooth or Wi-Fi panel detached (⤢) into the
 // middle of the screen, in its larger, barred `floating` form. Springs out of
@@ -107,7 +108,7 @@ PanelWindow {
     Item {
         id: keys
         focus: true
-        Keys.onEscapePressed: win.close()
+        Keys.onPressed: event => { if (K.isEscape(event)) { win.close(); event.accepted = true } }   // Escape or Ctrl+[
     }
 
     Item {

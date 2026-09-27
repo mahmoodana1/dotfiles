@@ -3,6 +3,7 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Networking
 import "shared"
+import "common/keys.js" as K
 
 // Wi-Fi manager (Quickshell.Networking → NetworkManager), in the island and,
 // detached with ⤢, in the floating panel (FloatPanel.qml sets `floating`).
@@ -373,7 +374,8 @@ Item {
                 if (panel.pwdNet && text.length > 0) panel.pwdNet.connectWithPsk(text)
                 panel.pwdNet = null
             }
-            Keys.onEscapePressed: panel.pwdNet = null
+            // Escape or Ctrl+[ cancels
+            Keys.onPressed: event => { if (K.isEscape(event)) { panel.pwdNet = null; event.accepted = true } }
         }
         GlassText {
             x: 12
