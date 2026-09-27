@@ -41,7 +41,19 @@ hl.bind(mod .. " + H", glass("shortcuts"), { description = "shortcut viewer" })
 -- SESSION
 ----------------------------------------------------------------------
 
-hl.bind(mod .. " + Q", hl.dsp.window.close(), { description = "close window" })
+-- SUPER+Q closes an open glass panel or floating island panel first (they
+-- hold the keyboard while open: interactivity ~= 0), otherwise the window.
+local function panel_open(ns)
+    for _, l in ipairs(hl.get_layers({ namespace = ns })) do
+        if l.mapped and l.interactivity ~= 0 then return true end
+    end
+    return false
+end
+hl.bind(mod .. " + Q", function()
+    if panel_open("glass") then hl.dispatch(hl.dsp.global("glass:close"))
+    elseif panel_open("island-float") then hl.dispatch(hl.dsp.global("island:close"))
+    else hl.dispatch(hl.dsp.window.close()) end
+end, { description = "close panel or window" })
 hl.bind(mod .. " + SHIFT + Q", hl.dsp.window.kill(), { description = "force-kill window" })
 hl.bind("CTRL + ALT + L", sh("loginctl lock-session"), { description = "lock screen" })
 hl.bind("CTRL + ALT + P", glass("power"), { description = "power menu" })

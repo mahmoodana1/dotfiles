@@ -59,6 +59,8 @@ ShellRoot {
         appid: "glass"
         onPressed: if (root.current === spec.split(":")[0]) root.close(); else root.open(spec)
     }
+    // SUPER+Q closes whichever panel is open (hypr/lua/keybinds.lua checks first)
+    GlobalShortcut { appid: "glass"; name: "close"; onPressed: root.close() }
     Toggle { name: "launcher";  spec: "launcher" }
     Toggle { name: "shortcuts"; spec: "shortcuts" }
     Toggle { name: "wallpaper"; spec: "wallpaper" }

@@ -30,6 +30,8 @@ ShellRoot {
     property bool infoOpen: false            // hover panel (cpu/mem/wifi/bluetooth...)
     property string panel: ""                // "wifi" | "bt": list panel opened from the info chips
     property string floating: ""             // "bt" | "wifi": panel detached to the middle (FloatPanel.qml)
+    // SUPER+Q closes the floating panel (hypr/lua/keybinds.lua checks first)
+    GlobalShortcut { appid: "island"; name: "close"; onPressed: root.floating = "" }
     property rect floatFrom: Qt.rect(0, 0, 0, 0)   // island rect it springs out of / back into
     property string floatScreen: ""          // monitor name it shows on
 
