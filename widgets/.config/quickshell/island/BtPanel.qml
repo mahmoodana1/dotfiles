@@ -3,11 +3,13 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Bluetooth
 import "shared"
+import "lib/btaudio.js" as BtAudio
 
 // Bluetooth manager (Quickshell.Bluetooth → BlueZ), in the island and, detached
 // with ⤢, in the floating panel (FloatPanel.qml sets `floating`).
-// Tap a device: disconnect if connected, connect if paired, pair otherwise.
-// ⋯ on a known device opens its actions (connect / trust / forget) inline.
+// Tap a device to open its actions inline: connect / trust / forget (pair for a
+// new one), plus, for a connected audio device, its profile: a Hi-Fi codec or
+// the headset (mic). Nothing connects until an action is picked.
 // The adapter scans while the panel is open; ↻ pauses/resumes.
 // Floating adds bigger text, sections, battery/signal bars and adapter traffic.
 // No HoverHandlers here: they would steal `hovered` from the pill.
@@ -57,6 +59,29 @@ Item {
         }
     }
 
+    // ---- audio profiles (pactl): read on open and on every card event ------
+    property var audio: ({})             // address -> { card, active, options }
+    Process {
+        id: cardsRead
+        command: ["pactl", "-f", "json", "list", "cards"]
+        stdout: StdioCollector { onStreamFinished: panel.audio = BtAudio.parse(this.text) }
+    }
+    Timer { id: cardsSoon; interval: 150; onTriggered: cardsRead.running = true }
+    Process {
+        running: panel.active && panel.on
+        command: ["pactl", "subscribe"]
+        onRunningChanged: if (running) cardsSoon.restart()
+        stdout: SplitParser { onRead: line => { if (line.indexOf(" on card ") >= 0) cardsSoon.restart() } }
+    }
+    function setProfile(addr, name) {
+        const c = audio[addr]
+        if (!c || c.active === name) return
+        Quickshell.execDetached(["pactl", "set-card-profile", c.card, name])
+        const m = Object.assign({}, audio)
+        m[addr] = Object.assign({}, c, { active: name })
+        audio = m
+    }
+
     // text sizes: island / floating
     function fs(n) { return floating ? Math.round(n * 1.2) : n }
     // the island window is 380 tall; past this the list scrolls
@@ -79,11 +104,7 @@ Item {
     function signalWord(dbm) {
         return dbm >= -55 ? "excellent" : dbm >= -67 ? "good" : dbm >= -78 ? "fair" : "weak"
     }
-    function activate(d) {
-        if (d.connected) d.disconnect()
-        else if (d.paired) d.connect()
-        else { d.trusted = true; d.pair() }
-    }
+    function pair(d) { d.trusted = true; d.pair() }
     // after pairing, connect right away
     Instantiator {
         model: Bluetooth.devices
@@ -108,6 +129,8 @@ Item {
         readonly property bool known: d.paired || d.trusted
         readonly property bool open: panel.openAddr === d.address
         readonly property bool bars: panel.floating && d.connected
+        readonly property var audio: d.connected ? panel.audio[d.address] : undefined
+        readonly property string profile: BtAudio.activeLabel(audio)
         readonly property int lineH: panel.floating ? 40 : 32
         readonly property int baseH: lineH + (bars ? meters.height + 8 : 0)
         width: col.width
@@ -121,9 +144,9 @@ Item {
                  : d.connected || row.open ? Qt.rgba(1, 1, 1, 0.07) : "transparent"
         }
 
-        // main line; tap area stops short of ⋯ so the two never both fire
+        // main line: tap opens / closes the actions
         Item {
-            width: parent.width - (more.visible ? more.width + 4 : 0)
+            width: parent.width
             height: row.lineH
             GlassText {
                 x: 10
@@ -134,7 +157,7 @@ Item {
             GlassText {
                 x: panel.floating ? 40 : 36
                 anchors.verticalCenter: parent.verticalCenter
-                width: parent.width - x - status.width - 16
+                width: parent.width - x - status.width - more.width - 8
                 text: d.deviceName
                 elide: Text.ElideRight
                 size: panel.fs(12)
@@ -142,30 +165,28 @@ Item {
             }
             GlassText {
                 id: status
-                anchors.right: parent.right
-                anchors.rightMargin: more.visible ? 2 : 10
+                anchors.right: more.left
+                anchors.rightMargin: 2
                 anchors.verticalCenter: parent.verticalCenter
                 size: panel.fs(10)
                 color: Qt.rgba(1, 1, 1, d.connected ? 0.85 : 0.6)
                 text: row.busy ? "…"
-                    : d.connected ? (d.batteryAvailable && !panel.floating ? Math.round(d.battery * 100) + "%  connected" : "connected")
-                    : d.paired ? "paired" : "pair"
+                    : d.connected ? (d.batteryAvailable && !panel.floating ? Math.round(d.battery * 100) + "%  " : "")
+                                    + "connected" + (row.profile ? "  ·  " + row.profile : "")
+                    : d.paired ? "paired" : "new"
             }
-            TapHandler { id: tap; onTapped: panel.activate(d) }
-        }
-
-        Item {
-            id: more
-            visible: row.known
-            anchors.right: parent.right
-            width: 32; height: row.lineH
-            GlassText {
-                anchors.centerIn: parent
-                text: "\u{f01d8}"
-                size: panel.fs(14)
-                color: row.open ? "white" : Qt.rgba(1, 1, 1, 0.6)
+            Item {
+                id: more
+                anchors.right: parent.right
+                width: 32; height: row.lineH
+                GlassText {
+                    anchors.centerIn: parent
+                    text: "\u{f01d8}"
+                    size: panel.fs(14)
+                    color: row.open ? "white" : Qt.rgba(1, 1, 1, 0.6)
+                }
             }
-            TapHandler { onTapped: panel.openAddr = row.open ? "" : d.address }
+            TapHandler { id: tap; onTapped: panel.openAddr = row.open ? "" : d.address }
         }
 
         Column {             // floating only: battery + signal
@@ -189,28 +210,56 @@ Item {
             }
         }
 
-        Row {
+        Column {
             id: actions
             x: panel.floating ? 40 : 36; y: row.baseH + 2
-            spacing: 6
+            width: row.width - x - 10
+            spacing: 8
             visible: row.open
             opacity: row.open ? 1 : 0
             Behavior on opacity { NumberAnimation { duration: 120 } }
-            PillButton {
-                size: panel.fs(10)
-                text: d.connected ? "Disconnect" : "Connect"
-                onClicked: d.connected ? d.disconnect() : d.connect()
+            Row {
+                spacing: 6
+                PillButton {
+                    visible: !row.known
+                    size: panel.fs(10)
+                    text: d.pairing ? "Pairing…" : "Pair"
+                    onClicked: if (!d.pairing) panel.pair(d)
+                }
+                PillButton {
+                    visible: row.known
+                    size: panel.fs(10)
+                    text: d.connected ? "Disconnect" : "Connect"
+                    onClicked: d.connected ? d.disconnect() : d.connect()
+                }
+                PillButton {
+                    visible: row.known
+                    size: panel.fs(10)
+                    text: d.trusted ? "Untrust" : "Trust"
+                    onClicked: d.trusted = !d.trusted
+                }
+                PillButton {
+                    visible: row.known
+                    size: panel.fs(10)
+                    text: "Forget"
+                    danger: true
+                    onClicked: { panel.openAddr = ""; d.forget() }
+                }
             }
-            PillButton {
-                size: panel.fs(10)
-                text: d.trusted ? "Untrust" : "Trust"
-                onClicked: d.trusted = !d.trusted
-            }
-            PillButton {
-                size: panel.fs(10)
-                text: "Forget"
-                danger: true
-                onClicked: { panel.openAddr = ""; d.forget() }
+            Flow {           // audio profile: Hi-Fi codecs, then headset (mic)
+                visible: row.audio !== undefined && row.audio.options.length > 1
+                width: parent.width
+                spacing: 6
+                Repeater {
+                    model: row.audio ? row.audio.options : []
+                    delegate: PillButton {
+                        required property var modelData
+                        size: panel.fs(10)
+                        text: (modelData.call ? "\u{f036c} " : "") + modelData.label
+                        selected: row.audio.active === modelData.name
+                        onClicked: panel.setProfile(d.address, modelData.name)
+                    }
+                }
             }
         }
     }
