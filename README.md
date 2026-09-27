@@ -66,17 +66,16 @@ everything back. No templating language, no daemon, no state directory.
 
 | Package | Deploys to | Contents |
 |---|---|---|
-| `hypr` | `~/.config/hypr` | Compositor config (Lua), ~60 scripts, hyprlock, hypridle, animation presets, wallpaper effects |
+| `hypr` | `~/.config/hypr` | Compositor config (Lua), a dozen small scripts, hyprlock, hypridle, HUD panel |
 | `nvim` | `~/.config/nvim` | Neovim, kickstart-derived, with `lazy-lock.json` pinning plugin versions |
-| `waybar` | `~/.config/waybar` | Status bar: layouts, styles, modules |
-| `rofi` | `~/.config/rofi` | Launcher themes and all the menu definitions the hypr scripts call |
-| `notify` | `~/.config/{swaync,wlogout}` | Notification centre, logout menu |
-| `wallust` | `~/.config/wallust` | Palette generation from wallpaper, including the templates that regenerate colours for hypr/waybar/rofi |
-| `widgets` | `~/.config/{ags,quickshell}` | Desktop widget shells |
+| `waybar` | `~/.config/waybar` | Fallback status bar (the Dynamic Island is the main one) |
+| `rofi` | `~/.config/rofi` | Fallback launcher (used only if the glass shell isn't running) |
+| `notify` | `~/.config/swaync` | Notification centre |
+| `widgets` | `~/.config/quickshell` | Dynamic Island, Peek bar, and the **glass panels** (launcher, shortcuts, wallpaper, windows, power, HUD) sharing one water-glass kit in `common/` |
 | `terminals` | `~/.config/{kitty,alacritty,ghostty,wezterm}` | All four terminals |
 | `shell` | `~/.zshrc`, `~/.tmux.conf`, `~/.tmux` | Zsh (custom prompt, lazy-loaded nvm, plugins) and tmux |
 | `cli` | `~/.config/…` | btop, cava, fastfetch, glow, lazygit, mpv, swappy, qutebrowser, matplotlib, procps, yay, psd, argos-translate, `starship.toml` |
-| `theming` | `~/.config/…`, `~/.themes` | GTK 2/3, Kvantum, qt5ct, qt6ct, GTK themes |
+| `theming` | `~/.config/…`, `~/.themes` | **The color palette** (`~/.config/palette`), GTK 2/3, Kvantum, qt5ct, qt6ct, GTK themes |
 | `desktop` | `~/.config/…` | Thunar, xfce4, xdg-desktop-portal, autostart, menus, wireplumber, systemd user units, mimeapps, user-dirs, dolphin/kwallet/pavucontrol rc files |
 | `gitcfg` | `~/.config/git` | Global gitignore (no identity — see `templates/gitconfig.example`) |
 | `claude` | *copied, not linked* | Claude Code `settings.json` |
@@ -130,7 +129,6 @@ These are gitignored and seeded from `templates/` by `install.sh`:
 |---|---|
 | `hypr/lua/monitors.lua` | Names outputs (`eDP-1`, `HDMI-A-1`) and modes that exist on one machine |
 | `hypr/lua/workspaces.lua` | Pins workspaces to those output names |
-| `hypr/Monitor_Profiles/` | Saved display arrangements |
 
 `hypr/lua/laptop.lua` **is** tracked — it is mostly portable brightness/lid
 binds. Its one hardware value, `TOUCHPAD_DEVICE`, is commented; find yours with
@@ -138,9 +136,8 @@ binds. Its one hardware value, `TOUCHPAD_DEVICE`, is commented; find yours with
 
 ### Generated — tracking them means permanent churn
 
-`hypr/lua/colors.lua` and the wallust outputs for waybar and rofi are rewritten
-every time you change wallpaper. `hypr/lua/animations.lua` is overwritten by the
-animation picker. All are gitignored and seeded with sane defaults on install.
+`hypr/lua/colors.lua` and `~/.config/palette/build/` are rendered from
+`palette.conf` by `palette-apply`. The palette is tracked; the renders are not.
 
 ### Backups and archives
 
@@ -164,12 +161,11 @@ never deleted. Re-running repairs drift.
 
 It then:
 
-1. seeds `monitors.lua`, `workspaces.lua`, `colors.lua`, `animations.lua` from
-   `templates/`, because `hyprland.lua` `require()`s all four and a fresh clone
-   has none of them;
+1. seeds `monitors.lua` and `workspaces.lua` from `templates/`, because
+   `hyprland.lua` `require()`s them and a fresh clone has neither;
 2. creates `~/.config/secrets.env` from its template, `chmod 600`;
 3. stows every package;
-4. clones tpm, copies in Claude settings, restores `+x` on the hypr scripts;
+4. renders the palette (`palette-apply`), clones tpm, copies in Claude settings;
 5. runs `Hyprland --verify-config` and `zsh -n ~/.zshrc` and reports.
 
 ### Then, by hand
@@ -194,10 +190,9 @@ in a git repo.
 
 ```sh
 # edit anything under ~/.config as normal — it is already in the repo
-$EDITOR ~/.config/hypr/lua/keybinds.lua
+$EDITOR ~/.config/hypr/lua/keybinds.lua   # Hyprland reloads on save
 
-Hyprland --verify-config                 # ALWAYS before reloading
-hyprctl reload
+hyprctl configerrors                     # empty = fine
 
 ~/dotfiles/update.sh -m "add SUPER+P screenshot bind"
 git -C ~/dotfiles push
@@ -216,10 +211,34 @@ before you commit.
 
 ---
 
+## Changing things
+
+| I want to… | Edit | Then |
+|---|---|---|
+| Add / change a keybind | `hypr/lua/keybinds.lua` — one `hl.bind(...)` line | saves reload automatically |
+| Start an app at login | `hypr/lua/startup.lua` — add a line to the `autostart` list | next login |
+| Change terminal / file manager / browser | `hypr/lua/defaults.lua` | — |
+| Make an app float / size / pin to a workspace | `hypr/lua/windowrules.lua` (or add its class to the `settings` tag) | — |
+| Change colors | `~/.config/palette/palette.conf` | `palette-apply` |
+| Theme a new app from the palette | drop a template in `~/.config/palette/templates/`, add a line to `targets` | `palette-apply` |
+| Gaps, borders, blur, rounding | `hypr/lua/decorations.lua` | — |
+| Keyboard layouts, touchpad, mouse | `hypr/lua/settings.lua` | — |
+| Add a script | put it in `hypr/scripts/`, `chmod +x`, bind it with `sh(s .. "/name.sh")` | — |
+| Glass strength (how tinted / clear) | `panelTint`, `islandTint` in `quickshell/common/Theme.qml` | restart `qs -c glass` / the island |
+| Pour speed / jelly amount | `openMs`, `closeMs`, `overshoot` in `quickshell/common/PourMotion.qml` | restart `qs -c glass` |
+| Add a glass panel | new `quickshell/glass/Name.qml` (a `FocusScope` with `implicitWidth/Height`, `signal closeRequested()`, `function opened(arg)`), add it to the `switch` in `glass/GlassWindow.qml`, bind `glass.sh toggle name` | restart `qs -c glass` |
+| Add a wallpaper effect | one line in the `FX` table in `hypr/scripts/wallpaper.sh` | — |
+
+Scripts in `hypr/scripts/`: `volume` `brightness` `media` `screenshot`
+`wallpaper` `zoom` `touchpad` `airplane` `bar` (top-bar mode) `glass` (open a
+glass panel) `taskvim` `openclaw-tui` `nwg-displays`. Each one prints its usage when run with no
+arguments.
+
+---
+
 ## The Hyprland config in detail
 
-The config was migrated from JaKooLit's `.conf` dotfiles to the **Lua format**
-that Hyprland 0.57 requires. `~/.config/hypr/hyprland.lua` is the entry point;
+The config uses the **Lua format** that Hyprland 0.57 requires. `~/.config/hypr/hyprland.lua` is the entry point;
 it extends `package.path` and `require()`s modules from `lua/` in a fixed order
 (later values win):
 
@@ -231,43 +250,43 @@ it extends `package.path` and `require()`s modules from `lua/` in a fixed order
 | `laptop.lua` | Lid switch, brightness keys, touchpad |
 | `windowrules.lua` | Window rules, including the TUI workspace pinning |
 | `decorations.lua` | Blur, shadows, rounding |
-| `animations.lua` | *Generated* — the chosen preset |
+| `animations.lua` | Animation curves and speeds |
 | `settings.lua` | Input, general, misc |
 | `monitors.lua` | *Machine-specific* |
 | `workspaces.lua` | *Machine-specific* |
 | `dojo.lua` | SUPER+L → the dojo practice TUI |
-| `colors.lua` | *Generated* — wallust palette |
+| `colors.lua` | *Generated* by `palette-apply` from `~/.config/palette/palette.conf` |
 | `defaults.lua` | Shared constants other modules `require` |
 
-Three tools write into this directory, which is why the repo tolerates
+Two tools write into this directory, which is why the repo tolerates
 symlinked directories rather than symlinked files:
 
-- **wallust** regenerates `lua/colors.lua` on every wallpaper change
+- **palette-apply** renders `lua/colors.lua` from the palette
 - **nwg-displays** can only emit `.conf`, so `scripts/nwg-displays.sh` wraps it
   and converts the output to Lua — always use the wrapper
-- **Animations.sh** copies a preset from `animations/` over `lua/animations.lua`
 
 There is one large trap in this Hyprland build, documented fully in
 [docs/hyprland-lua.md](docs/hyprland-lua.md): **`hyprctl dispatch` arguments are
 evaluated as Lua**, so the legacy `hyprctl dispatch workspace 8` form is a
 syntax error, not a command. Scripts written against the old syntax fail
-silently. Read that file before touching any script that calls `hyprctl`.
+silently. `hyprctl keyword` does not work at all — change options at runtime
+with `hyprctl eval 'hl.config({ ... })'` instead (see `scripts/zoom.sh`).
+Read that file before touching any script that calls `hyprctl`.
 
 ---
 
 ## Keybindings worth knowing
 
-`SUPER + SHIFT + K` opens a searchable list of every bind. A few that are
-custom rather than upstream:
+`SUPER + H` opens a searchable list of every bind (from `shortcuts.md`). A few
+worth knowing:
 
 | Bind | Action |
 |---|---|
 | `SUPER + T` | taskvim → workspace 8, fullscreen |
 | `SUPER + A` | OpenClaw TUI → workspace 5, fullscreen |
 | `SUPER + L` | dojo practice TUI → workspace 7, fullscreen |
-| `SUPER + W` | Wallpaper picker (triggers a full wallust re-theme) |
-| `SUPER + SHIFT + A` | Animation preset menu |
-| `SUPER + N` | Night light toggle |
+| `SUPER + W` | Wallpaper picker |
+| `SUPER + SHIFT + B` | Top bar: waybar → Peek → Dynamic Island |
 
 The three TUI launchers share a pattern worth reusing: a script focuses the
 target workspace and launches the app with a **unique `--class`**, while window
@@ -285,16 +304,15 @@ target path. `install.sh` moves those aside automatically; if you ran `stow`
 by hand, move the file yourself and retry.
 
 **Hyprland will not start after a pull** — run `Hyprland --verify-config` from a
-TTY. The usual cause is a missing gitignored file (`colors.lua`,
-`monitors.lua`); `./install.sh` reseeds them.
+TTY. The usual cause is a missing gitignored file: `colors.lua` (run
+`palette-apply`) or `monitors.lua` (`./install.sh` reseeds it).
 
 **A keybinding does nothing** — check whether its script uses legacy
 `hyprctl dispatch` syntax. See [docs/hyprland-lua.md](docs/hyprland-lua.md).
 `hyprctl` exits non-zero but most call sites discard it, so the failure is
 invisible.
 
-**Colours look wrong / everything is default** — wallust has not run. Pick a
-wallpaper with `SUPER + W`.
+**Colours look wrong / everything is default** — run `palette-apply`.
 
 **Edits do not show in `git status`** — the path is probably gitignored
 (generated or machine-specific). Confirm with
@@ -312,7 +330,7 @@ commit, and the day you forget is the day the repo silently stops matching
 reality. Symlinks make drift impossible.
 
 **Directory-level symlinks.** `~/.config/hypr` is one symlink rather than a
-symlink per file. Tools that write into that directory (wallust, nwg-displays)
+symlink per file. Tools that write into that directory (palette-apply, nwg-displays)
 work unchanged, and new files appear in the repo automatically instead of
 needing a re-stow.
 

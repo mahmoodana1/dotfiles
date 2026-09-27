@@ -1,13 +1,17 @@
 bibata-cursor-theme-bin
 brave-bin
 caffeine-ng
+forgit-git
 gpu-screen-recorder-gtk-git
 gtk-engine-murrine
 java8-openjfx
 java8-openjfx-debug
 java8-openjfx-doc
 java8-openjfx-src
+lib32-mpg123
 lib32-nvidia-580xx-utils
+lib32-openal
+lib32-v4l-utils
 mdr
 microchip-mplabx-bin
 onlyoffice-bin

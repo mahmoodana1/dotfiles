@@ -63,12 +63,8 @@
       "buttons-grid": {
           "actions": [
               {
-                  "label": "󰐥",
-                  "command": "bash -c $HOME/.config/hypr/scripts/Wlogout.sh"
-              },
-              {
                   "label": "󰌾",
-                  "command": "bash -c $HOME/.config/hypr/scripts/LockScreen.sh"
+                  "command": "loginctl lock-session"
               },
               {
                   "label": "󰍃",
@@ -76,7 +72,7 @@
               },
               {
                   "label": "󰀝",
-                  "command": "bash -c $HOME/.config/hypr/scripts/AirplaneMode.sh"
+                  "command": "bash -c $HOME/.config/hypr/scripts/airplane.sh"
               },
               {
                   "label": "󰝟",

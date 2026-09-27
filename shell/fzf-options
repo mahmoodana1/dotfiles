@@ -1,0 +1,6 @@
+--multi
+--prompt='> '
+--bind='ctrl-a:toggle'
+--bind='tab:transform:[ "$FZF_PROMPT" = "> " ] && echo "change-prompt(preview> )" || echo "change-prompt(> )"'
+--bind='ctrl-j:transform:[ "$FZF_PROMPT" = "preview> " ] && echo preview-down || echo down'
+--bind='ctrl-k:transform:[ "$FZF_PROMPT" = "preview> " ] && echo preview-up || echo up'

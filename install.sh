@@ -69,16 +69,6 @@ seed() {  # seed <template> <destination>
 HYPR_LUA="$DOTFILES/hypr/.config/hypr/lua"
 seed monitors.lua.example   "$HYPR_LUA/monitors.lua"
 seed workspaces.lua.example "$HYPR_LUA/workspaces.lua"
-seed colors.lua.example     "$HYPR_LUA/colors.lua"
-
-# animations.lua is whichever preset was last chosen in the Animations.sh
-# picker; ship the upstream default so the config parses on a clean machine.
-if [ ! -e "$HYPR_LUA/animations.lua" ]; then
-    run cp "$DOTFILES/hypr/.config/hypr/animations/00-default.lua" "$HYPR_LUA/animations.lua"
-    ok "created animations.lua (00-default preset)"
-else
-    ok "animations.lua already present — left alone"
-fi
 
 # ---------------------------------------------------------------------
 # 2. Secrets
@@ -153,6 +143,10 @@ done
 # 5. Things stow cannot express
 # ---------------------------------------------------------------------
 say "Post-link steps"
+
+# Colors: render every app's color file from ~/.config/palette/palette.conf.
+# hypr's lua/colors.lua comes from this, so it must run before Hyprland starts.
+run "$DOTFILES/local/.local/bin/palette-apply" >/dev/null && ok "palette rendered"
 
 # tmux plugin manager: upstream clone, deliberately not vendored.
 if [ ! -d "$HOME/.tmux/plugins/tpm" ]; then

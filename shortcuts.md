@@ -13,14 +13,12 @@ Legend: `SUPER` = mainMod (Windows key).
 |---|---|
 | `CTRL + ALT + Delete` | Exit Hyprland |
 | `CTRL + ALT + L` | Lock screen |
-| `CTRL + ALT + P` | Powermenu (wlogout) |
+| `CTRL + ALT + P` | Power menu (glass) — 1-5 or arrows; log out / reboot / power off need a 2nd press |
 | `SUPER + F` | tmux sessionizer — fuzzy-pick a project, jump to (or create) its tmux session |
 | `SUPER + Q` | Close active window |
 | `SUPER + SHIFT + Q` | Kill active process (force) |
 | `SUPER + SHIFT + N` | Notification panel toggle |
-| `SUPER + SHIFT + E` | Quick settings menu |
-| `SUPER + H` | Shortcut viewer — fuzzy-search this file via rofi, Enter for detail popup |
-| `SUPER + SHIFT + K` | Search keybinds (rofi) |
+| `SUPER + H` | Shortcut viewer (glass) — this file; ↑↓ sections, type to search everything |
 
 ## Hyprland — Windows
 
@@ -31,7 +29,6 @@ Legend: `SUPER` = mainMod (Windows key).
 | `SUPER + ALT + ←/→/↑/↓` | Swap window with neighbor |
 | `SUPER + SHIFT + ←/→/↑/↓` | Resize by 50px |
 | `SUPER + SPACE` | Toggle float |
-| `SUPER + ALT + SPACE` | Float all windows on workspace |
 | `SUPER + SHIFT + F` | Fullscreen |
 | `SUPER + CTRL + F` | Maximize |
 | `SUPER + CTRL + O` | Toggle active window opacity |
@@ -68,7 +65,6 @@ Legend: `SUPER` = mainMod (Windows key).
 | `SUPER + SHIFT + I` | Toggle split (dwindle) |
 | `SUPER + P` | Toggle pseudo (dwindle) |
 | `SUPER + M` | Set split ratio to 0.3 |
-| `SUPER + ALT + L` | Toggle master/dwindle layout |
 
 ## Hyprland — Launchers
 
@@ -76,13 +72,11 @@ Legend: `SUPER` = mainMod (Windows key).
 |---|---|
 | `SUPER + Return` | Open terminal |
 | `SUPER + SHIFT + Return` | Floating terminal (centered) |
-| `SUPER + D` | App launcher (rofi drun) |
+| `SUPER + D` | App launcher (glass grid) — most-used first, type to fuzzy-search, Enter launches |
 | `SUPER + E` | File manager |
 | `SUPER + B` | Default browser |
 | `SUPER + A` | OpenClaw TUI |
-| `SUPER + ALT + A` | Desktop overview |
-| `SUPER + S` | Web search (rofi) |
-| `SUPER + CTRL + S` | Window switcher (rofi) |
+| `SUPER + CTRL + S` | Window switcher (glass) — live previews of every window, type to filter |
 
 ## Hyprland — Apps (Custom)
 
@@ -90,11 +84,7 @@ Legend: `SUPER` = mainMod (Windows key).
 |---|---|
 | `SUPER + L` | Launch **dojo** (algo practice) on ws7 fullscreen |
 | `SUPER + T` | Launch **taskvim** on ws8 fullscreen |
-| `SUPER + SHIFT + P` (hold) | Show **HUD panel** (prayer times overlay); release to hide |
-| `SUPER + ALT + V` | Clipboard manager (cliphist via rofi) |
-| `SUPER + ALT + E` | Emoji picker |
-| `SUPER + ALT + C` | Calculator (rofi) |
-| `SUPER + ALT + R` | Refresh bar/menus |
+| `SUPER + SHIFT + P` (hold) | Show **HUD** (prayer times, glass + rain); release to hide |
 
 ## Hyprland — Screenshots
 
@@ -111,24 +101,15 @@ Legend: `SUPER` = mainMod (Windows key).
 
 | Keys | Action |
 |---|---|
-| `SUPER + W` | Wallpaper selector |
-| `SUPER + SHIFT + W` | Wallpaper effects |
+| `SUPER + W` | Wallpaper carousel (glass) — ←→ previews behind the glass, Enter applies, ↓ effects |
+| `SUPER + SHIFT + W` | Wallpaper effects — same panel, effect chips focused |
 | `CTRL + ALT + W` | Random wallpaper |
-| `SUPER + N` | Toggle night light (hyprsunset) |
-| `SUPER + ALT + O` | Toggle blur |
-| `SUPER + SHIFT + A` | Animations menu |
-| `SUPER + SHIFT + O` | Change zsh theme (rofi) |
-| `SUPER + CTRL + R` | Rofi theme selector |
-| `SUPER + CTRL + SHIFT + R` | Rofi theme selector (modified) |
-| `SUPER + SHIFT + G` | Toggle game mode |
 
 ## Hyprland — Waybar
 
 | Keys | Action |
 |---|---|
 | `SUPER + CTRL + ALT + B` | Toggle waybar on/off |
-| `SUPER + CTRL + B` | Waybar styles menu |
-| `SUPER + ALT + B` | Waybar layout menu |
 | `SUPER + SHIFT + B` | Cycle top bar: waybar → **Peek** glass bar → **Dynamic Island** |
 | `SUPER` (hold) | Peek / Island modes: show the full glass bar while held |
 | `SUPER + SHIFT` (hold) | Island mode over a fullscreen window: the only way to show the island |
@@ -153,14 +134,12 @@ Legend: `SUPER` = mainMod (Windows key).
 | `XF86AudioStop` | Stop |
 | `XF86Sleep` | Suspend |
 | `XF86Rfkill` | Airplane mode |
-| `ALT_L + SHIFT_L` | Switch keyboard layout (global) |
-| `SHIFT_L + ALT_L` | Switch keyboard layout (per-window) |
+| `ALT + SHIFT` | Switch keyboard layout (us ↔ ara) |
 
 ## Hyprland — Music (extras)
 
 | Keys | Action |
 |---|---|
-| `SUPER + SHIFT + M` | Online music (rofi beats) |
 
 ---
 

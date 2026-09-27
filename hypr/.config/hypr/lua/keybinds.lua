@@ -1,336 +1,165 @@
--- Keybinds (merged from configs/Keybinds.conf and UserConfigs/UserKeybinds.conf).
--- https://wiki.hypr.land/Configuring/Basics/Binds/
+-- Keybinds. https://wiki.hypr.land/Configuring/Basics/Binds/
+--
+-- Add a bind:   hl.bind(mod .. " + KEY", <action>, { description = "..." })
+--   run a command:        sh("some-command")
+--   run a hypr script:    sh(s .. "/name.sh arg")     (scripts live in ~/.config/hypr/scripts)
+-- The description shows up in SUPER+H (shortcut viewer).
+-- Check for mistakes after editing:  hyprctl configerrors
+--
+-- Also bound elsewhere: laptop.lua (brightness, F6 screenshots), dojo.lua (SUPER+L),
+-- panel.lua (SUPER+SHIFT+P), peek.lua (SUPER+SHIFT+B).
 
 local d = require("defaults")
 
-local mod = d.mainMod
-local scripts = d.scriptsDir
-local user = d.userScripts
+local mod  = d.mainMod
+local s    = d.scripts
 local term = d.terminal
-local files = d.fileManager
+-- Glass panels (~/.config/quickshell/glass) take their keys as global shortcuts:
+-- the keypress goes straight to the running shell, no process per press.
+local function glass(name) return hl.dsp.global("glass:" .. name) end
 
 local function sh(cmd)
     return hl.dsp.exec_cmd(cmd)
 end
 
 ----------------------------------------------------------------------
+-- APPS
+----------------------------------------------------------------------
+
+hl.bind(mod .. " + Return", sh(term), { description = "terminal" })
+hl.bind(mod .. " + SHIFT + Return", sh(term .. " --class alacritty-float"), { description = "floating terminal" })
+hl.bind(mod .. " + E", sh(d.fileManager), { description = "file manager" })
+hl.bind(mod .. " + B", sh(d.browser), { description = "browser" })
+hl.bind(mod .. " + D", glass("launcher"), { description = "app launcher" })
+hl.bind(mod .. " + CTRL + S", glass("windows"), { description = "window switcher" })
+hl.bind(mod .. " + F", sh(term .. " -e bash -lc " .. d.home .. "/.local/bin/tmux-sessionizer"), { description = "tmux sessionizer (pick project)" })
+hl.bind(mod .. " + A", sh(s .. "/openclaw-tui.sh"), { description = "OpenClaw TUI (ws 5)" })
+hl.bind(mod .. " + T", sh(s .. "/taskvim.sh"), { description = "taskvim (ws 8)" })
+hl.bind(mod .. " + H", glass("shortcuts"), { description = "shortcut viewer" })
+
+----------------------------------------------------------------------
 -- SESSION
 ----------------------------------------------------------------------
 
+hl.bind(mod .. " + Q", hl.dsp.window.close(), { description = "close window" })
+hl.bind(mod .. " + SHIFT + Q", hl.dsp.window.kill(), { description = "force-kill window" })
+hl.bind("CTRL + ALT + L", sh("loginctl lock-session"), { description = "lock screen" })
+hl.bind("CTRL + ALT + P", glass("power"), { description = "power menu" })
 hl.bind("CTRL + ALT + Delete", hl.dsp.exit(), { description = "exit Hyprland" })
-hl.bind(mod .. " + Q", hl.dsp.window.close(), { description = "close active window" })
-hl.bind(mod .. " + SHIFT + Q", sh(scripts .. "/KillActiveProcess.sh"), { description = "terminate active process" })
-hl.bind("CTRL + ALT + L", sh(scripts .. "/LockScreen.sh"), { description = "lock screen" })
-hl.bind("CTRL + ALT + P", sh(scripts .. "/Wlogout.sh"), { description = "powermenu" })
-hl.bind(mod .. " + SHIFT + N", sh("swaync-client -t -sw"), { description = "notification panel" })
-hl.bind(mod .. " + SHIFT + E", sh(scripts .. "/Kool_Quick_Settings.sh"), { description = "quick settings menu" })
+hl.bind(mod .. " + SHIFT + N", sh("swaync-client -t -sw"), { description = "notification center" })
 
 ----------------------------------------------------------------------
--- LAYOUTS
+-- WINDOWS
 ----------------------------------------------------------------------
 
--- Master layout
-hl.bind(mod .. " + CTRL + D", hl.dsp.layout("removemaster"), { description = "remove master" })
-hl.bind(mod .. " + I", hl.dsp.layout("addmaster"), { description = "add master" })
--- NOTE: J/K are bound dynamically by scripts/KeybindsLayoutInit.sh and
--- scripts/ChangeLayout.sh, so they are deliberately not bound statically here.
-hl.bind(mod .. " + CTRL + Return", hl.dsp.layout("swapwithmaster"), { description = "swap with master" })
-
--- Dwindle layout
-hl.bind(mod .. " + SHIFT + I", hl.dsp.layout("togglesplit"), { description = "toggle split (dwindle)" })
-hl.bind(mod .. " + P", hl.dsp.window.pseudo(), { description = "toggle pseudo (dwindle)" })
-
--- Either layout
-hl.bind(mod .. " + M", sh("hyprctl dispatch splitratio 0.3"), { description = "set split ratio 0.3" })
-
--- Groups
-hl.bind(mod .. " + G", hl.dsp.group.toggle(), { description = "toggle group" })
--- legacy `changegroupactive` with no argument cycled forward
-hl.bind(mod .. " + CTRL + tab", hl.dsp.group.next(), { description = "change active in group" })
-
--- Cycle windows; if floating, bring to top
-hl.bind("ALT + tab", hl.dsp.window.cycle_next(), { description = "cycle next window" })
+hl.bind(mod .. " + SPACE", hl.dsp.window.float({ action = "toggle" }), { description = "float / tile window" })
+hl.bind(mod .. " + SHIFT + F", hl.dsp.window.fullscreen(), { description = "fullscreen" })
+hl.bind(mod .. " + CTRL + F", hl.dsp.window.fullscreen(1), { description = "maximize" })
+hl.bind(mod .. " + CTRL + O", sh("hyprctl setprop active opaque toggle"), { description = "toggle window opacity" })
+hl.bind("ALT + tab", hl.dsp.window.cycle_next(), { description = "cycle windows" })
 hl.bind("ALT + tab", hl.dsp.window.bring_to_top(), { description = "bring active to top" })
 
-----------------------------------------------------------------------
--- HARDWARE KEYS
-----------------------------------------------------------------------
+-- Arrow keys: focus / move / swap / resize
+for _, dir in ipairs({ "left", "right", "up", "down" }) do
+    hl.bind(mod .. " + " .. dir, hl.dsp.focus({ direction = dir }), { description = "focus " .. dir })
+    hl.bind(mod .. " + CTRL + " .. dir, hl.dsp.window.move({ direction = dir }), { description = "move window " .. dir })
+    hl.bind(mod .. " + ALT + " .. dir, hl.dsp.window.swap({ direction = dir }), { description = "swap window " .. dir })
+end
 
-hl.bind(
-    "XF86AudioRaiseVolume",
-    sh(scripts .. "/Volume.sh --inc"),
-    { description = "volume up", locked = true, repeating = true }
-)
-hl.bind(
-    "XF86AudioLowerVolume",
-    sh(scripts .. "/Volume.sh --dec"),
-    { description = "volume down", locked = true, repeating = true }
-)
-hl.bind(
-    "XF86AudioMicMute",
-    sh(scripts .. "/Volume.sh --toggle-mic"),
-    { description = "toggle mic mute", locked = true }
-)
-hl.bind("XF86AudioMute", sh(scripts .. "/Volume.sh --toggle"), { description = "toggle mute", locked = true })
-hl.bind("XF86Sleep", sh("systemctl suspend"), { description = "sleep", locked = true })
-hl.bind("XF86Rfkill", sh(scripts .. "/AirplaneMode.sh"), { description = "airplane mode", locked = true })
+local resize = { left = { -50, 0 }, right = { 50, 0 }, up = { 0, -50 }, down = { 0, 50 } }
+for dir, xy in pairs(resize) do
+    hl.bind(mod .. " + SHIFT + " .. dir, hl.dsp.window.resize({ x = xy[1], y = xy[2], relative = true }),
+        { description = "resize " .. dir, repeating = true })
+end
 
--- Media controls
--- NOTE: the old config also bound XF86AudioPlayPause, but that keysym does not
--- exist in this xkb setup and Hyprland rejects it. XF86AudioPlay and
--- XF86AudioPause below cover the same hardware key.
-hl.bind("XF86AudioPause", sh(scripts .. "/MediaCtrl.sh --pause"), { description = "pause", locked = true })
-hl.bind("XF86AudioPlay", sh(scripts .. "/MediaCtrl.sh --pause"), { description = "play", locked = true })
-hl.bind("XF86AudioNext", sh(scripts .. "/MediaCtrl.sh --nxt"), { description = "next track", locked = true })
-hl.bind("XF86AudioPrev", sh(scripts .. "/MediaCtrl.sh --prv"), { description = "previous track", locked = true })
-hl.bind("XF86AudioStop", sh(scripts .. "/MediaCtrl.sh --stop"), { description = "stop", locked = true })
+-- Mouse: SUPER+drag moves, SUPER+right-drag resizes
+hl.bind(mod .. " + mouse:272", hl.dsp.window.drag(), { description = "move window", mouse = true })
+hl.bind(mod .. " + mouse:273", hl.dsp.window.resize(), { description = "resize window", mouse = true })
 
-----------------------------------------------------------------------
--- SCREENSHOTS
-----------------------------------------------------------------------
+-- Layout (dwindle; master binds work if you switch general.layout in settings.lua)
+hl.bind(mod .. " + SHIFT + I", hl.dsp.layout("togglesplit"), { description = "toggle split direction" })
+hl.bind(mod .. " + P", hl.dsp.window.pseudo(), { description = "pseudo-tile" })
+hl.bind(mod .. " + M", hl.dsp.layout("splitratio 0.3"), { description = "grow split by 0.3" })
+hl.bind(mod .. " + I", hl.dsp.layout("addmaster"), { description = "add master" })
+hl.bind(mod .. " + CTRL + D", hl.dsp.layout("removemaster"), { description = "remove master" })
+hl.bind(mod .. " + CTRL + Return", hl.dsp.layout("swapwithmaster"), { description = "swap with master" })
 
-hl.bind(mod .. " + Print", sh(scripts .. "/ScreenShot.sh --now"), { description = "screenshot now" })
-hl.bind(mod .. " + SHIFT + Print", sh(scripts .. "/ScreenShot.sh --area"), { description = "screenshot (area)" })
-hl.bind(mod .. " + CTRL + Print", sh(scripts .. "/ScreenShot.sh --in5"), { description = "screenshot in 5s" })
-hl.bind(mod .. " + CTRL + SHIFT + Print", sh(scripts .. "/ScreenShot.sh --in10"), { description = "screenshot in 10s" })
-hl.bind("ALT + Print", sh(scripts .. "/ScreenShot.sh --active"), { description = "screenshot active window" })
-hl.bind(mod .. " + SHIFT + S", sh(scripts .. "/ScreenShot.sh --swappy"), { description = "screenshot (swappy)" })
-
-----------------------------------------------------------------------
--- WINDOW MANAGEMENT
-----------------------------------------------------------------------
-
--- Resize
-hl.bind(
-    mod .. " + SHIFT + left",
-    hl.dsp.window.resize({ x = -50, y = 0, relative = true }),
-    { description = "resize left (-50)", repeating = true }
-)
-hl.bind(
-    mod .. " + SHIFT + right",
-    hl.dsp.window.resize({ x = 50, y = 0, relative = true }),
-    { description = "resize right (+50)", repeating = true }
-)
-hl.bind(
-    mod .. " + SHIFT + up",
-    hl.dsp.window.resize({ x = 0, y = -50, relative = true }),
-    { description = "resize up (-50)", repeating = true }
-)
-hl.bind(
-    mod .. " + SHIFT + down",
-    hl.dsp.window.resize({ x = 0, y = 50, relative = true }),
-    { description = "resize down (+50)", repeating = true }
-)
-
--- Move
-hl.bind(mod .. " + CTRL + left", hl.dsp.window.move({ direction = "left" }), { description = "move window left" })
-hl.bind(mod .. " + CTRL + right", hl.dsp.window.move({ direction = "right" }), { description = "move window right" })
-hl.bind(mod .. " + CTRL + up", hl.dsp.window.move({ direction = "up" }), { description = "move window up" })
-hl.bind(mod .. " + CTRL + down", hl.dsp.window.move({ direction = "down" }), { description = "move window down" })
-
--- Swap
-hl.bind(mod .. " + ALT + left", hl.dsp.window.swap({ direction = "left" }), { description = "swap window left" })
-hl.bind(mod .. " + ALT + right", hl.dsp.window.swap({ direction = "right" }), { description = "swap window right" })
-hl.bind(mod .. " + ALT + up", hl.dsp.window.swap({ direction = "up" }), { description = "swap window up" })
-hl.bind(mod .. " + ALT + down", hl.dsp.window.swap({ direction = "down" }), { description = "swap window down" })
-
--- Focus
-hl.bind(mod .. " + left", hl.dsp.focus({ direction = "left" }), { description = "focus left" })
-hl.bind(mod .. " + right", hl.dsp.focus({ direction = "right" }), { description = "focus right" })
-hl.bind(mod .. " + up", hl.dsp.focus({ direction = "up" }), { description = "focus up" })
-hl.bind(mod .. " + down", hl.dsp.focus({ direction = "down" }), { description = "focus down" })
+-- Groups (tabbed windows)
+hl.bind(mod .. " + G", hl.dsp.group.toggle(), { description = "toggle group" })
+hl.bind(mod .. " + CTRL + tab", hl.dsp.group.next(), { description = "next window in group" })
 
 ----------------------------------------------------------------------
 -- WORKSPACES
 ----------------------------------------------------------------------
 
-hl.bind(mod .. " + tab", hl.dsp.focus({ workspace = "m+1" }), { description = "next workspace" })
-hl.bind(mod .. " + SHIFT + tab", hl.dsp.focus({ workspace = "m-1" }), { description = "previous workspace" })
-
--- Special workspace
-hl.bind(
-    mod .. " + SHIFT + U",
-    hl.dsp.window.move({ workspace = "special" }),
-    { description = "move to special workspace" }
-)
-hl.bind(mod .. " + U", hl.dsp.workspace.toggle_special(), { description = "toggle special workspace" })
-
--- Key codes are used so the binds survive keyboard layout changes.
--- code:10 is key 1, code:11 is key 2, ... code:19 is key 0.
+-- SUPER+1..0 go to, SHIFT moves the window there, CTRL moves it silently.
+-- Key codes (code:10 = 1 ... code:19 = 0) so these survive layout switches (us/ara).
 for i = 1, 10 do
-    local code = "code:" .. (9 + i)
-    local ws = i
-
-    hl.bind(mod .. " + " .. code, hl.dsp.focus({ workspace = ws }), { description = "workspace " .. ws })
-
-    hl.bind(
-        mod .. " + SHIFT + " .. code,
-        hl.dsp.window.move({ workspace = ws }),
-        { description = "move to workspace " .. ws }
-    )
-
-    hl.bind(
-        mod .. " + CTRL + " .. code,
-        hl.dsp.window.move({ workspace = ws, silent = true }),
-        { description = "move silently to workspace " .. ws }
-    )
+    local key = "code:" .. (9 + i)
+    hl.bind(mod .. " + " .. key, hl.dsp.focus({ workspace = i }), { description = "workspace " .. i })
+    hl.bind(mod .. " + SHIFT + " .. key, hl.dsp.window.move({ workspace = i }), { description = "move to workspace " .. i })
+    hl.bind(mod .. " + CTRL + " .. key, hl.dsp.window.move({ workspace = i, silent = true }), { description = "move silently to workspace " .. i })
 end
 
-hl.bind(
-    mod .. " + SHIFT + bracketleft",
-    hl.dsp.window.move({ workspace = "-1" }),
-    { description = "move to previous workspace" }
-)
-hl.bind(
-    mod .. " + SHIFT + bracketright",
-    hl.dsp.window.move({ workspace = "+1" }),
-    { description = "move to next workspace" }
-)
-hl.bind(
-    mod .. " + CTRL + bracketleft",
-    hl.dsp.window.move({ workspace = "-1", silent = true }),
-    { description = "move silently to previous workspace" }
-)
-hl.bind(
-    mod .. " + CTRL + bracketright",
-    hl.dsp.window.move({ workspace = "+1", silent = true }),
-    { description = "move silently to next workspace" }
-)
-
--- Scroll / step through workspaces
-hl.bind(mod .. " + mouse_down", hl.dsp.focus({ workspace = "e+1" }), { description = "next workspace" })
-hl.bind(mod .. " + mouse_up", hl.dsp.focus({ workspace = "e-1" }), { description = "previous workspace" })
+hl.bind(mod .. " + tab", hl.dsp.focus({ workspace = "m+1" }), { description = "next workspace" })
+hl.bind(mod .. " + SHIFT + tab", hl.dsp.focus({ workspace = "m-1" }), { description = "previous workspace" })
 hl.bind(mod .. " + period", hl.dsp.focus({ workspace = "e+1" }), { description = "next workspace" })
 hl.bind(mod .. " + comma", hl.dsp.focus({ workspace = "e-1" }), { description = "previous workspace" })
+hl.bind(mod .. " + mouse_down", hl.dsp.focus({ workspace = "e+1" }), { description = "next workspace" })
+hl.bind(mod .. " + mouse_up", hl.dsp.focus({ workspace = "e-1" }), { description = "previous workspace" })
 
--- Move current workspace between monitors
-hl.bind(
-    mod .. " + CTRL + F9",
-    hl.dsp.workspace.move({ monitor = "left" }),
-    { description = "move workspace to left monitor" }
-)
-hl.bind(
-    mod .. " + CTRL + F10",
-    hl.dsp.workspace.move({ monitor = "right" }),
-    { description = "move workspace to right monitor" }
-)
-hl.bind(
-    mod .. " + CTRL + F11",
-    hl.dsp.workspace.move({ monitor = "up" }),
-    { description = "move workspace to up monitor" }
-)
-hl.bind(
-    mod .. " + CTRL + F12",
-    hl.dsp.workspace.move({ monitor = "down" }),
-    { description = "move workspace to down monitor" }
-)
+hl.bind(mod .. " + SHIFT + bracketleft", hl.dsp.window.move({ workspace = "-1" }), { description = "move to previous workspace" })
+hl.bind(mod .. " + SHIFT + bracketright", hl.dsp.window.move({ workspace = "+1" }), { description = "move to next workspace" })
+hl.bind(mod .. " + CTRL + bracketleft", hl.dsp.window.move({ workspace = "-1", silent = true }), { description = "move silently to previous workspace" })
+hl.bind(mod .. " + CTRL + bracketright", hl.dsp.window.move({ workspace = "+1", silent = true }), { description = "move silently to next workspace" })
 
--- Move/resize with mouse
-hl.bind(mod .. " + mouse:272", hl.dsp.window.drag(), { description = "move window", mouse = true })
-hl.bind(mod .. " + mouse:273", hl.dsp.window.resize(), { description = "resize window", mouse = true })
+-- Scratchpad
+hl.bind(mod .. " + U", hl.dsp.workspace.toggle_special(), { description = "toggle scratchpad" })
+hl.bind(mod .. " + SHIFT + U", hl.dsp.window.move({ workspace = "special" }), { description = "move to scratchpad" })
+
+-- Move the whole workspace to another monitor
+hl.bind(mod .. " + CTRL + F9", hl.dsp.workspace.move({ monitor = "left" }), { description = "workspace to left monitor" })
+hl.bind(mod .. " + CTRL + F10", hl.dsp.workspace.move({ monitor = "right" }), { description = "workspace to right monitor" })
+hl.bind(mod .. " + CTRL + F11", hl.dsp.workspace.move({ monitor = "up" }), { description = "workspace to upper monitor" })
+hl.bind(mod .. " + CTRL + F12", hl.dsp.workspace.move({ monitor = "down" }), { description = "workspace to lower monitor" })
 
 ----------------------------------------------------------------------
--- LAUNCHERS
+-- SCREENSHOTS  (laptop.lua has the same on F6, since there's no Print key)
 ----------------------------------------------------------------------
 
-hl.bind(
-    mod .. " + D",
-    sh("pkill rofi || true && rofi -show drun -modi drun,filebrowser,run,window"),
-    { description = "app launcher" }
-)
-hl.bind(mod .. " + B", sh('xdg-open "https://"'), { description = "open default browser" })
-hl.bind(mod .. " + A", sh(scripts .. "/OpenTui.sh"), { description = "open OpenClaw TUI" })
-hl.bind(mod .. " + ALT + A", sh(scripts .. "/OverviewToggle.sh"), { description = "desktop overview" })
-hl.bind(mod .. " + Return", sh(term), { description = "open terminal" })
-hl.bind(mod .. " + E", sh(files), { description = "file manager" })
-hl.bind(mod .. " + F", sh(term .. " -e bash -lc " .. os.getenv("HOME") .. "/.local/bin/tmux-sessionizer"), { description = "tmux sessionizer (pick project)" })
--- Size/float/center come from the alacritty-float window rules (windowrules.lua),
--- applied as the window maps. A post-launch resize raced the window opening.
-hl.bind(
-    mod .. " + SHIFT + Return",
-    sh(term .. " --class alacritty-float"),
-    { description = "floating terminal (focused)" }
-)
+hl.bind(mod .. " + Print", sh(s .. "/screenshot.sh now"), { description = "screenshot" })
+hl.bind(mod .. " + SHIFT + Print", sh(s .. "/screenshot.sh area"), { description = "screenshot area" })
+hl.bind("ALT + Print", sh(s .. "/screenshot.sh window"), { description = "screenshot window" })
+hl.bind(mod .. " + SHIFT + S", sh(s .. "/screenshot.sh edit"), { description = "screenshot area + annotate" })
+hl.bind(mod .. " + CTRL + Print", sh(s .. "/screenshot.sh in5"), { description = "screenshot in 5s" })
+hl.bind(mod .. " + CTRL + SHIFT + Print", sh(s .. "/screenshot.sh in10"), { description = "screenshot in 10s" })
 
 ----------------------------------------------------------------------
--- FEATURES / EXTRAS
+-- WALLPAPER / DESKTOP
 ----------------------------------------------------------------------
 
-hl.bind(mod .. " + H", sh(os.getenv("HOME") .. "/.local/bin/shortcut-viewer"), { description = "shortcut viewer (rofi, from shortcuts.md)" })
-hl.bind(mod .. " + ALT + R", sh(scripts .. "/Refresh.sh"), { description = "refresh bar and menus" })
-hl.bind(mod .. " + ALT + E", sh(scripts .. "/RofiEmoji.sh"), { description = "emoji menu" })
-hl.bind(mod .. " + S", sh(scripts .. "/RofiSearch.sh"), { description = "web search" })
-hl.bind(mod .. " + CTRL + S", sh("rofi -show window"), { description = "window switcher" })
-hl.bind(mod .. " + ALT + O", sh(scripts .. "/ChangeBlur.sh"), { description = "toggle blur" })
-hl.bind(mod .. " + SHIFT + G", sh(scripts .. "/GameMode.sh"), { description = "toggle game mode" })
-hl.bind(mod .. " + ALT + L", sh(scripts .. "/ChangeLayout.sh"), { description = "toggle master/dwindle layout" })
-hl.bind(mod .. " + ALT + V", sh(scripts .. "/ClipManager.sh"), { description = "clipboard manager" })
-hl.bind(mod .. " + CTRL + R", sh(scripts .. "/RofiThemeSelector.sh"), { description = "rofi theme selector" })
-hl.bind(
-    mod .. " + CTRL + SHIFT + R",
-    sh("pkill rofi || true && " .. scripts .. "/RofiThemeSelector-modified.sh"),
-    { description = "rofi theme selector (modified)" }
-)
+hl.bind(mod .. " + W", glass("wallpaper"), { description = "pick wallpaper" })
+hl.bind(mod .. " + SHIFT + W", glass("effects"), { description = "wallpaper effects" })
+hl.bind("CTRL + ALT + W", sh(s .. "/wallpaper.sh random"), { description = "random wallpaper" })
+hl.bind(mod .. " + CTRL + ALT + B", sh("pkill -SIGUSR1 waybar"), { description = "show/hide waybar" })
+hl.bind(mod .. " + ALT + mouse_down", sh(s .. "/zoom.sh in"), { description = "zoom in" })
+hl.bind(mod .. " + ALT + mouse_up", sh(s .. "/zoom.sh out"), { description = "zoom out" })
 
-hl.bind(mod .. " + SHIFT + F", hl.dsp.window.fullscreen(), { description = "fullscreen" })
-hl.bind(mod .. " + CTRL + F", hl.dsp.window.fullscreen(1), { description = "maximize window" })
-hl.bind(mod .. " + SPACE", hl.dsp.window.float({ action = "toggle" }), { description = "float current window" })
-hl.bind(mod .. " + ALT + SPACE", sh("hyprctl dispatch workspaceopt allfloat"), { description = "float all windows" })
+----------------------------------------------------------------------
+-- HARDWARE KEYS  (work on the lock screen too)
+----------------------------------------------------------------------
 
--- Desktop zoom / magnifier
-hl.bind(
-    mod .. " + ALT + mouse_down",
-    sh(
-        [[hyprctl keyword cursor:zoom_factor "$(hyprctl getoption cursor:zoom_factor | awk 'NR==1 {factor = $2; if (factor < 1) {factor = 1}; print factor * 2.0}')"]]
-    ),
-    { description = "zoom in" }
-)
-hl.bind(
-    mod .. " + ALT + mouse_up",
-    sh(
-        [[hyprctl keyword cursor:zoom_factor "$(hyprctl getoption cursor:zoom_factor | awk 'NR==1 {factor = $2; if (factor < 1) {factor = 1}; print factor / 2.0}')"]]
-    ),
-    { description = "zoom out" }
-)
+hl.bind("XF86AudioRaiseVolume", sh(s .. "/volume.sh up"), { description = "volume up", locked = true, repeating = true })
+hl.bind("XF86AudioLowerVolume", sh(s .. "/volume.sh down"), { description = "volume down", locked = true, repeating = true })
+hl.bind("XF86AudioMute", sh(s .. "/volume.sh mute"), { description = "mute", locked = true })
+hl.bind("XF86AudioMicMute", sh(s .. "/volume.sh mic-mute"), { description = "mute mic", locked = true })
+-- XF86AudioPlayPause doesn't exist in this xkb setup; Play and Pause cover that key.
+hl.bind("XF86AudioPlay", sh(s .. "/media.sh play-pause"), { description = "play / pause", locked = true })
+hl.bind("XF86AudioPause", sh(s .. "/media.sh play-pause"), { description = "play / pause", locked = true })
+hl.bind("XF86AudioNext", sh(s .. "/media.sh next"), { description = "next track", locked = true })
+hl.bind("XF86AudioPrev", sh(s .. "/media.sh prev"), { description = "previous track", locked = true })
+hl.bind("XF86AudioStop", sh(s .. "/media.sh stop"), { description = "stop", locked = true })
+hl.bind("XF86Sleep", sh("systemctl suspend"), { description = "sleep", locked = true })
+hl.bind("XF86Rfkill", sh(s .. "/airplane.sh"), { description = "airplane mode", locked = true })
 
--- Waybar
-hl.bind(mod .. " + CTRL + ALT + B", sh("pkill -SIGUSR1 waybar"), { description = "toggle waybar on/off" })
-hl.bind(mod .. " + CTRL + B", sh(scripts .. "/WaybarStyles.sh"), { description = "waybar styles menu" })
-hl.bind(mod .. " + ALT + B", sh(scripts .. "/WaybarLayout.sh"), { description = "waybar layout menu" })
-
--- Night light
-hl.bind(mod .. " + N", sh(scripts .. "/Hyprsunset.sh toggle"), { description = "toggle night light" })
-
--- UserScripts
-hl.bind(mod .. " + SHIFT + M", sh(user .. "/RofiBeats.sh"), { description = "online music" })
-hl.bind(mod .. " + W", sh(user .. "/WallpaperSelect.sh"), { description = "select wallpaper" })
-hl.bind(mod .. " + SHIFT + W", sh(user .. "/WallpaperEffects.sh"), { description = "wallpaper effects" })
-hl.bind("CTRL + ALT + W", sh(user .. "/WallpaperRandom.sh"), { description = "random wallpaper" })
-hl.bind(
-    mod .. " + CTRL + O",
-    sh("hyprctl setprop active opaque toggle"),
-    { description = "toggle active window opacity" }
-)
-hl.bind(mod .. " + SHIFT + K", sh(scripts .. "/KeyBinds.sh"), { description = "search keybinds" })
-hl.bind(mod .. " + SHIFT + A", sh(scripts .. "/Animations.sh"), { description = "animations menu" })
-hl.bind(mod .. " + SHIFT + O", sh(user .. "/ZshChangeTheme.sh"), { description = "change oh-my-zsh theme" })
-hl.bind(mod .. " + ALT + C", sh(user .. "/RofiCalc.sh"), { description = "calculator" })
-hl.bind(mod .. " + T", sh(user .. "/taskvim-launch.sh"), { description = "open taskvim (ws8 fullscreen)" })
-
--- Keyboard layout switching. Non-consuming so the modifiers still reach apps.
-hl.bind(
-    "ALT_L + SHIFT_L",
-    sh(scripts .. "/SwitchKeyboardLayout.sh"),
-    { description = "switch keyboard layout globally", locked = true, non_consuming = true }
-)
-hl.bind(
-    "SHIFT_L + ALT_L",
-    sh(scripts .. "/Tak0-Per-Window-Switch.sh"),
-    { description = "switch keyboard layout per-window", locked = true, non_consuming = true }
-)
-
--- Keyboard passthrough into a VM
--- hl.define_submap("passthru", "reset", function()
---     hl.bind(mod .. " + ALT + P", hl.dsp.submap("reset"))
--- end)
--- hl.bind(mod .. " + ALT + P", hl.dsp.submap("passthru"))
+-- Keyboard layout (us/ara) switches with ALT+SHIFT via kb_options in settings.lua.

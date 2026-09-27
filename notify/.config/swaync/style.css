@@ -1,7 +1,6 @@
-/* ----------- 💫 https://github.com/JaKooLit 💫 -------- */
-/* swaync colors - wallust from waybar.css */
+/* Notification center. Colors come from ~/.config/palette/palette.conf. */
 
-@import '../../.config/waybar/wallust/colors-waybar.css';
+@import '../palette/build/colors.css';
 
 @define-color noti-border-color @color12;
 @define-color noti-bg rgba(0, 0, 0, 0.8);

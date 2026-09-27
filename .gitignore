@@ -33,15 +33,10 @@ hypr/.config/hypr/Monitor_Profiles/
 # 3. GENERATED — rewritten by tools at runtime, so tracking them means
 #    permanent, meaningless git churn
 # ---------------------------------------------------------------------
-# wallust regenerates this from the current wallpaper on every change.
+# palette-apply renders these from theming/.config/palette/palette.conf
+# (the palette itself IS tracked — edit it, not these).
 hypr/.config/hypr/lua/colors.lua
-hypr/.config/hypr/wallust/
-wallust/.config/wallust/colors*
-waybar/.config/waybar/*-colors.css
-rofi/.config/rofi/*-colors.rasi
-
-# Animations.sh copies the chosen preset over this file.
-hypr/.config/hypr/lua/animations.lua
+theming/.config/palette/build/
 
 # Populated by tpm on first run; install.sh clones tpm itself.
 shell/.tmux/plugins/
@@ -79,3 +74,6 @@ theming/.config/QtProject.conf
 # Python bytecode (hypr panel daemon + tests)
 __pycache__/
 *.pyc
+
+# brainstorming companion mockups
+.superpowers/

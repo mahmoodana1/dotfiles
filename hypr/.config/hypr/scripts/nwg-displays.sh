@@ -10,7 +10,6 @@
 set -euo pipefail
 
 SCRIPTSDIR="$HOME/.config/hypr/scripts"
-iDIR="$HOME/.config/swaync/images"
 
 nwg-displays "$@"
 
@@ -19,5 +18,5 @@ python3 "$SCRIPTSDIR/nwg-displays-to-lua.py"
 hyprctl reload >/dev/null 2>&1 || true
 
 if command -v notify-send >/dev/null 2>&1; then
-    notify-send -u low -i "$iDIR/ja.png" "Displays" "Monitor layout converted to Lua and reloaded"
+    notify-send -u low -i video-display "Displays" "Monitor layout converted to Lua and reloaded"
 fi

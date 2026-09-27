@@ -1,0 +1,5 @@
+# template (in templates/)   where palette-apply writes it
+hypr-colors.lua              ~/.config/hypr/lua/colors.lua
+hyprlock.conf                ~/.config/palette/build/hyprlock.conf
+colors.css                   ~/.config/palette/build/colors.css
+palette.json                 ~/.config/palette/build/palette.json

@@ -1,12 +1,61 @@
 {
-  "model": "opus",
+  "model": "sonnet",
   "hooks": {
     "SessionStart": [
       {
         "hooks": [
           {
             "type": "command",
-            "command": "\"$HOME/.claude/hooks/context-mode-cache-heal.mjs\""
+            "command": "\"/home/mahmood/.claude/hooks/context-mode-cache-heal.mjs\""
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/mahmood/.local/bin/lens hook session-start"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/mahmood/.local/bin/lens hook post-tool-use"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/mahmood/.local/bin/lens hook prompt"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/mahmood/.local/bin/lens hook session-end"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/mahmood/.local/bin/lens hook stop"
           }
         ]
       }
@@ -14,7 +63,8 @@
   },
   "statusLine": {
     "type": "command",
-    "command": "context-mode statusline"
+    "command": "~/.claude/statusline.py",
+    "refreshInterval": 1
   },
   "enabledPlugins": {
     "context-mode@context-mode": true,
@@ -31,5 +81,15 @@
       }
     }
   },
-  "theme": "auto"
+  "effortLevel": "xhigh",
+  "modelSettings": {
+    "claude-opus-5": {
+      "effortLevel": "medium"
+    },
+    "claude-sonnet-5": {
+      "effortLevel": "medium"
+    }
+  },
+  "theme": "dark",
+  "agentPushNotifEnabled": true
 }

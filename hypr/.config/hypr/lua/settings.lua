@@ -1,5 +1,4 @@
--- Main Hyprland settings (from UserSettings.conf, plus the input overrides that
--- used to live at the bottom of hyprland.conf and therefore won).
+-- Main Hyprland settings: layout, input, gestures, misc.
 -- https://wiki.hypr.land/Configuring/Basics/Variables/
 
 hl.config({
@@ -22,7 +21,6 @@ hl.config({
 
     input = {
         -- Caps-Lock acts as CTRL, Alt+Shift toggles layout.
-        -- These came from hyprland.conf, which was parsed after UserSettings.conf.
         kb_layout  = "us,ara",
         kb_variant = "",
         kb_model   = "",
@@ -103,26 +101,19 @@ hl.config({
 
     cursor = {
         sync_gsettings_theme    = true,
-        no_hardware_cursors     = true,
+        no_hardware_cursors     = 2,      -- auto: hardware cursor (screens are on Intel), so moving the mouse no longer recomposites
         enable_hyprcursor       = true,
-        warp_on_change_workspace = 2,
-        no_warps                = true,
+        -- The pointer stays put when you switch workspaces, and follows the
+        -- keyboard when focus moves inside a workspace (ALT+TAB, SUPER+arrows).
+        warp_on_change_workspace = 0,
+        no_warps                = false,
     },
 })
 
 -- Gestures. https://wiki.hypr.land/Configuring/Basics/Gestures/
 hl.gesture({ fingers = 3, direction = "horizontal", action = "workspace" })
 
--- 3-finger up/down zooms the cursor magnifier in/out.
--- hl.gesture only accepts a string or a Lua function for `action`, so the old
--- "dispatcher, exec, ..." form becomes a closure that dispatches exec_cmd.
-local function zoom(factor)
-    return function()
-        hl.dispatch(hl.dsp.exec_cmd(
-            ([[hyprctl keyword cursor:zoom_factor "$(hyprctl getoption cursor:zoom_factor | awk 'NR==1 {factor = $2; if (factor < 1) {factor = 1}; print factor %s}')"]])
-            :format(factor)))
-    end
-end
-
-hl.gesture({ fingers = 3, direction = "up",   action = zoom("* 1.5") })
-hl.gesture({ fingers = 3, direction = "down", action = zoom("/ 1.5") })
+-- 3-finger up/down zooms the screen magnifier in/out.
+local zoom = os.getenv("HOME") .. "/.config/hypr/scripts/zoom.sh"
+hl.gesture({ fingers = 3, direction = "up",   action = function() hl.dispatch(hl.dsp.exec_cmd(zoom .. " in")) end })
+hl.gesture({ fingers = 3, direction = "down", action = function() hl.dispatch(hl.dsp.exec_cmd(zoom .. " out")) end })

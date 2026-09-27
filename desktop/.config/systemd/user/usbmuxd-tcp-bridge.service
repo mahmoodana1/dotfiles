@@ -1,0 +1,13 @@
+[Unit]
+Description=usbmuxd TCP bridge for AltServer (Wine) - 127.0.0.1:27015 -> /run/usbmuxd
+After=usbmuxd.service
+Wants=usbmuxd.service
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/usbmuxd-tcp-bridge
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=default.target

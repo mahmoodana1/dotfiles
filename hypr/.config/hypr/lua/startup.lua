@@ -1,65 +1,40 @@
--- Autostart. https://wiki.hypr.land/Configuring/Basics/Autostart/
---
--- These run inside hl.on("hyprland.start", ...) so they fire once per session,
--- matching the old exec-once behaviour rather than re-running on every reload.
+-- Autostart: runs once per login (not on every `hyprctl reload`).
+-- To add an app: add a line to the list below.
+-- To pin it to a workspace: { "cmd", workspace = "9 silent" }
 
 local d = require("defaults")
+local s = d.scripts
 
-local scripts = d.scriptsDir
-local user    = d.userScripts
-local term    = d.terminal
+local autostart = {
+    -- Session plumbing
+    "dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP",
+    "systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP",
+    "/usr/lib/hyprpolkitagent/hyprpolkitagent",   -- password prompts for GUI apps
+
+    -- Desktop
+    "awww-daemon --format xrgb",                  -- wallpaper (remembers the last image)
+    s .. "/wallpaper.sh restore",                 -- ...or restarts a video wallpaper
+    s .. "/bar.sh boot",                          -- island / peek / waybar (SUPER+SHIFT+B)
+    -- glass panels, on Intel (they capture the screen); restarted if they ever exit
+    "sh -c 'while :; do env __NV_PRIME_RENDER_OFFLOAD=0 qs -c glass; sleep 1; done'",
+    "swaync",                                     -- notifications
+    d.home .. "/.config/hypr/panel/panel.py",     -- prayer times: alerts + the HUD's data
+    "hypridle",                                   -- idle -> lock
+    "wl-paste --type text --watch cliphist store",  -- clipboard history
+    "wl-paste --type image --watch cliphist store", -- (browse: cliphist list | fzf ...)
+    "nm-applet --indicator",
+    "blueman-applet",
+
+    -- Apps
+    { d.browser, workspace = "9 silent" },
+}
 
 hl.on("hyprland.start", function()
-    -- Initial boot script: applies initial wallpapers, theming and new settings.
-    -- It self-disables once ~/.config/hypr/.initial_startup_done exists, so
-    -- leave both this line and that reference file alone.
-    hl.exec_cmd(d.home .. "/.config/hypr/initial-boot.sh")
-
-    -- Wallpaper daemon
-    hl.exec_cmd("awww-daemon --format xrgb")
-    -- hl.exec_cmd("mpvpaper '*' -o \"load-scripts=no no-audio --loop\" <file>")
-    -- hl.exec_cmd(user .. "/WallpaperAutoChange.sh " .. d.wallDir) -- random wallpaper every 30 min
-
-    -- Session environment
-    hl.exec_cmd("dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP")
-    hl.exec_cmd("systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP")
-    hl.exec_cmd(scripts .. "/KeybindsLayoutInit.sh")
-
-    -- Dropdown terminal. See JaKooLit/Hyprland-Dots#810
-    hl.exec_cmd(scripts .. "/Dropterminal.sh " .. term .. " &")
-
-    -- Polkit agent (GNOME / KDE)
-    hl.exec_cmd(scripts .. "/Polkit.sh")
-
-    -- Tray and shell
-    hl.exec_cmd("nm-applet --indicator")
-    hl.exec_cmd("nm-tray")
-    hl.exec_cmd("swaync")
-    hl.exec_cmd(scripts .. "/PeekBar.sh boot") -- waybar, or the Peek glass bar if selected (SUPER+SHIFT+B)
-    hl.exec_cmd("qs") -- quickshell, the AGS desktop-overview alternative
-    hl.exec_cmd("ags")
-    hl.exec_cmd("blueman-applet")
-    -- hl.exec_cmd("rog-control-center")
-
-    -- Hold-to-show HUD panel daemon (SUPER+SHIFT+P)
-    hl.exec_cmd(d.home .. "/.config/hypr/panel/panel.py")
-
-    -- Clipboard manager
-    hl.exec_cmd("wl-paste --type text --watch cliphist store")
-    hl.exec_cmd("wl-paste --type image --watch cliphist store")
-
-    -- Rainbow borders (drives general:col.active_border at runtime)
-    hl.exec_cmd(user .. "/RainbowBorders.sh")
-
-    -- Idle daemon, which in turn starts hyprlock
-    hl.exec_cmd("hypridle")
-
-    -- Restore hyprsunset state from the previous session
-    hl.exec_cmd(scripts .. "/Hyprsunset.sh init")
-
-    -- xdg-desktop-portal-hyprland (usually autostarts; forced here)
-    hl.exec_cmd(scripts .. "/PortalHyprland.sh")
-
-    -- Open firefox on workspace 9
-    hl.exec_cmd("hyprctl dispatch workspace 9 | firefox --class floating-zenbrowser -o initial_window_width=90c -o initial_window_height=24c")
+    for _, app in ipairs(autostart) do
+        if type(app) == "string" then
+            hl.exec_cmd(app)
+        else
+            hl.exec_cmd(app[1], { workspace = app.workspace })
+        end
+    end
 end)

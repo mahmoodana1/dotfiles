@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+# cool-down: stop the fan running all the time on this laptop (HP, i7-1065G7).
+# Run once:   sudo ~/.local/bin/cool-down
+# Undo:       sudo ~/.local/bin/cool-down --undo
+#
+# 1. The CPU was pinned to the "performance" governor + EPP at every boot
+#    (cpu-performance.service): max clocks all the time = heat = fan.
+#    -> back to intel_pstate's normal dynamic mode, managed by
+#       power-profiles-daemon (powerprofilesctl set performance|balanced|power-saver).
+# 2. thermald: Intel's thermal daemon, throttles gently before the fan has to roar.
+# 3. ACPI GPE 0x6E fires ~770 times a second (a firmware bug on these HP
+#    laptops); every interrupt wakes the CPU. It gets masked now and at boot.
+set -euo pipefail
+[ "$(id -u)" = 0 ] || { echo "run with sudo: sudo $0 $*" >&2; exit 1; }
+
+GPE=6E
+UNIT=/etc/systemd/system/mask-gpe.service
+
+if [ "${1:-}" = "--undo" ]; then
+    systemctl disable --now mask-gpe.service thermald power-profiles-daemon 2>/dev/null || true
+    rm -f "$UNIT"; systemctl daemon-reload
+    echo enable > /sys/firmware/acpi/interrupts/gpe$GPE 2>/dev/null || true
+    systemctl enable --now cpu-performance.service 2>/dev/null || true
+    echo "undone: performance service back on, GPE $GPE unmasked, daemons disabled (still installed)"
+    exit 0
+fi
+
+echo "==> 1/3 stop pinning the CPU to performance"
+systemctl disable --now cpu-performance.service 2>/dev/null || true
+for c in /sys/devices/system/cpu/cpu[0-9]*/cpufreq; do
+    echo powersave > "$c/scaling_governor"                    # intel_pstate: dynamic, not slow
+    echo balance_performance > "$c/energy_performance_preference"
+done
+
+echo "==> 2/3 mask the ACPI interrupt storm (GPE $GPE), now and at boot"
+echo disable > /sys/firmware/acpi/interrupts/gpe$GPE
+cat > "$UNIT" <<EOF
+[Unit]
+Description=Mask ACPI GPE $GPE (interrupt storm that keeps the CPU awake)
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c 'echo disable > /sys/firmware/acpi/interrupts/gpe$GPE'
+
+[Install]
+WantedBy=multi-user.target
+EOF
+systemctl daemon-reload
+systemctl enable mask-gpe.service
+
+echo "==> 3/3 install + enable thermald and power-profiles-daemon"
+if pacman -S --needed --noconfirm thermald power-profiles-daemon; then
+    systemctl enable --now thermald power-profiles-daemon
+    powerprofilesctl set balanced
+else
+    echo "!! install failed (usually an out-of-date package list: run  sudo pacman -Syu  then this script again)"
+    exit 1
+fi
+
+echo
+echo "done. Profile: $(powerprofilesctl get 2>/dev/null)   (switch: powerprofilesctl set performance|balanced|power-saver)"
+echo "check: plug/unplug the charger and try the brightness keys; if either stopped"
+echo "working, the masked GPE was needed: sudo $0 --undo"

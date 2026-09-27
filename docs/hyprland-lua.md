@@ -12,8 +12,8 @@ Verified against **Hyprland 0.56.2** with a Lua config.
 
 This config was migrated from the legacy `.conf` format to Lua, which Hyprland
 0.57 makes mandatory. `~/.config/hypr/hyprland.lua` is the entry point and
-`require()`s modules from `lua/`. Originals are archived under
-`~/.config/hypr/legacy-conf/` with a rollback README.
+`require()`s modules from `lua/`. (The pre-Lua `.conf` originals are in git
+history if you ever need them.)
 
 The Lua parser is stricter than the old one. It enforces ranges the `.conf`
 parser silently accepted — animation speed must be ≤ 100, bezier control points
@@ -82,7 +82,7 @@ hyprctl dispatch 'hl.dsp.focus({ window = "address:0x55f1a2b3c4" })'
 hyprctl dispatch 'hl.dsp.window.fullscreen(1)'
 ```
 
-This is why the TUI launchers in `hypr/scripts/` and `hypr/UserScripts/` avoid
+This is why the TUI launchers in `hypr/scripts/` avoid
 address-based dispatch entirely. They set a unique `--class` and let **window
 rules** do the placement — declarative, race-free, and applied before the
 window maps:
@@ -141,21 +141,26 @@ hl.dsp.group:      active, lock, lock_active, move_window, next, prev, toggle
 
 ## Tools that write into the config directory
 
-Three tools rewrite files under `~/.config/hypr`. Because that path is a
+Two tools rewrite files under `~/.config/hypr`. Because that path is a
 directory symlink into this repo, their writes land in the repo — which is why
 the generated files are gitignored.
 
 | Tool | Writes | Notes |
 |---|---|---|
-| wallust | `lua/colors.lua` | From `wallust/templates/colors-hyprland.lua`, which emits a Lua table. Triggered by `SUPER+W` |
+| `palette-apply` | `lua/colors.lua` | Rendered from `~/.config/palette/templates/hypr-colors.lua` using `palette.conf` |
 | nwg-displays | `monitors.conf`, `workspaces.conf` | Can only emit `.conf`. **Use the wrapper** `scripts/nwg-displays.sh`, which then runs `scripts/nwg-displays-to-lua.py` to convert. Running `nwg-displays` directly leaves the Lua stale |
-| `Animations.sh` | `lua/animations.lua` | Copies a preset from `animations/*.lua` |
 
-`UserConfigs/01-UserDefaults.conf` is deliberately kept on disk in `.conf` form:
-several scripts `grep` it for `$term`, `$files`, `$Search_Engine` and `$edit`.
+`hyprctl getoption` still works for reading live values, but **`hyprctl keyword`
+is rejected** by the Lua parser ("keyword can't work with non-legacy parsers").
+Set options at runtime through `hyprctl eval` instead:
 
-Scripts that use `hyprctl keyword` or `hyprctl getoption` needed no migration —
-they act on live state rather than parsing config files.
+```sh
+hyprctl eval 'hl.config({ cursor = { zoom_factor = 2 } })'
+hyprctl eval 'hl.device({ name = "etps/2-elantech-touchpad", enabled = false })'
+```
+
+`hl.exec_cmd(cmd, { workspace = "9 silent" })` places a launched app on a
+workspace (used by the autostart list in `lua/startup.lua`).
 
 ---
 

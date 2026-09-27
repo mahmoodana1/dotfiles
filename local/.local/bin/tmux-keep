@@ -1,0 +1,161 @@
+#!/usr/bin/env bash
+# tmux-keep: save tmux sessions and bring them back after a reboot.
+# Replaces tmux-resurrect/continuum, whose restore killed or replaced the
+# session you had just opened and switch-client'ed you into a random one.
+#
+#   tmux-keep save        write the snapshot (hooks + the daemon call this)
+#   tmux-keep restore     recreate saved sessions that don't exist yet, detached;
+#                         never touches existing sessions, never moves a client
+#   tmux-keep daemon      save every 60 s while the tmux server runs
+#   tmux-keep show        print the current snapshot
+#   tmux-keep reset       start over: forget everything saved and kill all sessions
+#
+# What's kept: named sessions -> windows (name, layout) -> panes (folder, and the
+# program running in it if it's in RELAUNCH below). Plain shell panes also keep
+# their text (last 3000 lines, colours included): it's replayed on restore with
+# a fresh prompt under it. Panes running a RELAUNCH program skip that, the
+# program redraws itself. Not kept: numbered throwaway sessions ("0", "7"...),
+# sessions in SKIP.
+# Snapshot: ~/.local/share/tmux-keep/snapshot.tsv  (history/ keeps 20 old ones)
+# Pane text: ~/.local/share/tmux-keep/panes/  (mode 700: it may hold secrets)
+# Wired up in ~/.tmux.conf.
+set -u
+
+DIR="${XDG_DATA_HOME:-$HOME/.local/share}/tmux-keep"
+SNAP="$DIR/snapshot.tsv"
+PANES="$DIR/panes"
+LINES=3000
+SKIP='^(dojo)$'                       # sessions never saved (regex)
+# program (pane_current_command) -> how to start it again
+#   "="  rerun with the same arguments it had
+declare -A RELAUNCH=(
+    [claude]="claude --continue"
+    [nvim]="=" [vim]="=" [ssh]="="
+    [btop]="btop" [lazygit]="lazygit" [yazi]="yazi" [lazydocker]="lazydocker"
+)
+mkdir -p "$DIR/history"; chmod 700 "$DIR"
+
+# pane text file for session/window/pane
+pane_file() { printf '%s/%s__%s__%s.txt' "$1" "${2//\//_}" "$3" "$4"; }
+
+# Capture a pane's text cleanly: drop trailing blank lines and a final empty
+# prompt (the restored shell prints a new one), end with a colour reset.
+capture() {
+    tmux capture-pane -p -e -J -S "-$LINES" -t "$1" 2>/dev/null | awk '
+        { line[NR] = $0 }
+        function plain(t) { gsub(/\033\[[0-9;?]*[A-Za-z]/, "", t); return t }
+        END {
+            n = NR
+            while (n > 0 && plain(line[n]) ~ /^[ \t]*$/) n--
+            if (n > 0 && plain(line[n]) ~ /^╰─➜[ \t]*$/) n--      # empty prompt, 2nd line
+            if (n > 0 && plain(line[n]) ~ /^╭─/) n--                 # ...and its 1st line
+            while (n > 0 && plain(line[n]) ~ /^[ \t]*$/) n--
+            for (i = 1; i <= n; i++) print line[i]
+            printf "\033[0m"
+        }'
+}
+
+# Full command line of what's running in the foreground of a pane ("" if just the shell).
+fg_args() {
+    local shell_pid=$1 tp
+    tp=$(ps -o tpgid= -p "$shell_pid" 2>/dev/null | tr -d ' ')
+    [ -n "$tp" ] && [ "$tp" != "$shell_pid" ] && [ "$tp" -gt 0 ] || return 0
+    tr '\0' ' ' < "/proc/$tp/cmdline" 2>/dev/null | sed 's/ $//'
+}
+
+save() {
+    # never save before this server's restore finished: a half-restored
+    # server would overwrite a good snapshot with a partial one
+    [ "$(tmux show -gqv @keep-restored)" = 1 ] || return 0
+    local tmp; tmp=$(mktemp "$DIR/.snap.XXXXXX")
+    mkdir -m 700 "$tmp.panes"
+    tmux list-panes -a -F \
+'#{session_name}	#{window_index}	#{window_name}	#{?automatic-rename,auto,fixed}	#{window_layout}	#{window_active}	#{pane_index}	#{pane_active}	#{pane_current_path}	#{pane_current_command}	#{pane_pid}	#{pane_id}' |
+    while IFS=$'\t' read -r s wi wn wr lay wa pi pa cwd cmd pid id; do
+        [[ "$s" =~ ^[0-9]+$ || "$s" =~ $SKIP ]] && continue
+        run=""
+        if [ -n "${RELAUNCH[$cmd]:-}" ]; then
+            if [ "${RELAUNCH[$cmd]}" = "=" ]; then run=$(fg_args "$pid"); else run=${RELAUNCH[$cmd]}; fi
+        fi
+        [ -z "$run" ] && capture "$id" > "$(pane_file "$tmp.panes" "$s" "$wi" "$pi")"
+        printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$s" "$wi" "$wn" "$wr" "$lay" "$wa" "$pi" "$pa" "$cwd" "$run"
+    done > "$tmp"
+    # pane text changes all the time: always keep the newest
+    rm -rf "$PANES"; mv "$tmp.panes" "$PANES"
+    if [ -f "$SNAP" ] && cmp -s "$tmp" "$SNAP"; then rm -f "$tmp"; return 0; fi
+    [ -f "$SNAP" ] && cp "$SNAP" "$DIR/history/$(date +%Y%m%dT%H%M%S).tsv"
+    mv "$tmp" "$SNAP"
+    ls -1t "$DIR"/history/*.tsv 2>/dev/null | tail -n +21 | xargs -r rm -f
+}
+
+restore() {
+    # once per server: re-sourcing ~/.tmux.conf must not resurrect sessions
+    # you closed on purpose since the server started
+    [ "$(tmux show -gqv @keep-restored)" = 1 ] && return 0
+    if [ -f "$SNAP" ]; then
+        local cur_s="" cur_w="" first
+        while IFS=$'\t' read -r s wi wn wr lay wa pi pa cwd run; do
+            [ -d "$cwd" ] || cwd=$HOME
+            if [ "$s" != "$cur_s" ]; then
+                cur_s=$s; cur_w=""
+                tmux has-session -t "=$s" 2>/dev/null && { cur_s="__skip__$s"; continue; }
+                first=1
+            fi
+            [ "$cur_s" = "__skip__$s" ] && continue
+            local name=(); [ "$wr" = fixed ] && name=(-n "$wn")
+            # a plain pane starts by replaying its saved text, then your shell
+            local start=() f; f=$(pane_file "$PANES" "$s" "$wi" "$pi")
+            [ -z "$run" ] && [ -s "$f" ] && start=("cat '$f'; TMUX_KEEP_REPLAY=1 exec \"\${SHELL:-zsh}\"")
+            if [ -n "${first:-}" ]; then
+                tmux new-session -d -s "$s" -c "$cwd" "${name[@]}" "${start[@]}"
+                # new-session numbers from base-index; line it up with the saved index
+                local made; made=$(tmux display -p -t "=$s:" '#{window_index}')
+                [ "$made" != "$wi" ] && tmux move-window -s "=$s:$made" -t "=$s:$wi"
+                first=""; cur_w=$wi
+            elif [ "$wi" != "$cur_w" ]; then
+                tmux new-window -d -t "=$s:$wi" -c "$cwd" "${name[@]}" "${start[@]}"
+                cur_w=$wi
+            else
+                # split the previous pane so the new one lands at index $pi
+                # (splitting the active pane inserts after it and reverses the order)
+                tmux split-window -d -t "=$s:$wi.$((pi - 1))" -c "$cwd" "${start[@]}"
+            fi
+            tmux select-layout -t "=$s:$wi" "$lay" 2>/dev/null
+            [ -n "$run" ] && tmux send-keys -t "=$s:$wi.$pi" "$run" Enter
+            [ "$pa" = 1 ] && tmux select-pane -t "=$s:$wi.$pi"
+            [ "$wa" = 1 ] && tmux select-window -t "=$s:$wi"
+        done < "$SNAP"
+    fi
+    tmux set -g @keep-restored 1
+}
+
+daemon() {
+    local pidfile="${XDG_RUNTIME_DIR:-/tmp}/tmux-keep.pid"
+    if [ -f "$pidfile" ] && kill -0 "$(cat "$pidfile")" 2>/dev/null; then return 0; fi
+    echo $$ > "$pidfile"
+    while tmux has-session 2>/dev/null; do
+        save
+        sleep 60
+    done
+    rm -f "$pidfile"
+}
+
+# Start over. Saving is switched off first, so the sessions dying during
+# kill-server can't write a new snapshot behind our back.
+reset() {
+    tmux set -g @keep-restored 0 2>/dev/null
+    pkill -f '^bash .*/tmux-keep daemon$' 2>/dev/null
+    rm -f "${XDG_RUNTIME_DIR:-/tmp}/tmux-keep.pid"
+    rm -rf "$SNAP" "$PANES" "$DIR/history"
+    tmux kill-server 2>/dev/null
+    echo "tmux-keep: all sessions closed and nothing saved; the next tmux starts fresh"
+}
+
+case "${1:-}" in
+    save)    save ;;
+    restore) restore ;;
+    daemon)  daemon ;;
+    show)    [ -f "$SNAP" ] && column -t -s $'\t' "$SNAP" || echo "(nothing saved yet)" ;;
+    reset)   reset ;;
+    *) echo "usage: tmux-keep save|restore|daemon|show|reset" >&2; exit 2 ;;
+esac
