@@ -2,6 +2,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Wayland
 import Quickshell.Hyprland
+import Quickshell.Io
 import "shared"
 import "common"
 
@@ -218,6 +219,21 @@ PanelWindow {
     }
     readonly property real targetW: modeW(viewMode)
     readonly property real targetH: modeH(viewMode)
+
+    // Publish where the island sits (monitor coordinates, final size, not the
+    // springing one) for panels that bud off it: $XDG_RUNTIME_DIR/island-<monitor>.json
+    readonly property string publishText: JSON.stringify({
+        shown: shown, x: Math.round((modelData.width - targetW) / 2), y: 6,
+        w: targetW, h: targetH,
+        r: viewMode === "wifi" || viewMode === "bt" || viewMode === "notif" ? 26 : targetH / 2
+    })
+    onPublishTextChanged: publishTimer.restart()
+    Timer { id: publishTimer; interval: 30; onTriggered: publishFile.setText(win.publishText) }
+    FileView {
+        id: publishFile
+        path: Quickshell.env("XDG_RUNTIME_DIR") + "/island-" + win.modelData.name + ".json"
+    }
+    Component.onCompleted: publishTimer.restart()
 
     // Each view is pinned to ITS OWN final frame, on whole pixels, in pill
     // coordinates: text never creeps while the glass springs and settles,

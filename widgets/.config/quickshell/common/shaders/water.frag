@@ -29,6 +29,12 @@ layout(std140, binding = 0) uniform buf {
     vec4 tint;         // sea tint: rgb (palette accent) + strength in a
     float darkLift;    // 0..1 faint fill + brighter rim over dark backdrops
     vec4 tint2;        // rgb: tint colour toward the bottom-right; a: depth shading 0..1 (1 = water)
+    vec4 box;          // px: the shape's rect in the item (w <= 0: inset by pad on every side)
+    vec4 bud;          // px: the "mother" rect in the item (the island a panel buds off)
+    float budK;        // px: neck reach; 0 = no bud. The shape is smooth-unioned with
+                       // the mother (a neck forms while they're closer than budK) and
+                       // the mother itself is cut out: the real island is drawn there
+    float budR;        // px: the mother's corner radius
 };
 layout(binding = 1) uniform sampler2D source;
 layout(binding = 2) uniform sampler2D lumTex;
@@ -38,18 +44,37 @@ float sdRoundBox(vec2 p, vec2 b, float r) {
     return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r;
 }
 
+float momD(vec2 l) {
+    vec2 h = bud.zw * 0.5;
+    return sdRoundBox(l - bud.xy - h, h, min(budR, min(h.x, h.y)));
+}
+
+// the shape, budding off the mother while they're close (cell division)
+float sceneD(vec2 l, vec2 c, vec2 h, float r) {
+    float dc = sdRoundBox(l - c, h, r);
+    if (budK <= 0.0) return dc;
+    float dm = momD(l);
+    float k = max(budK - abs(dc - dm), 0.0) / budK;
+    float du = min(dc, dm) - k * k * budK * 0.25;      // smooth union: the neck
+    return max(du, -dm);                                // minus the mother
+}
+
 void main() {
     vec2 local = qt_TexCoord0 * itemSize;
-    vec2 center = itemSize * 0.5;
+    vec4 bx = box.z > 0.0 ? box : vec4(pad, pad, itemSize - 2.0 * pad);
+    vec2 halfBox = bx.zw * 0.5;
+    vec2 center = bx.xy + halfBox;
     vec2 p = local - center;
-    vec2 halfBox = center - vec2(pad);
+    vec2 uv = clamp((local - bx.xy) / bx.zw, 0.0, 1.0);   // 0..1 across the shape
     float r = min(radius, min(halfBox.x, halfBox.y));
-    float d = sdRoundBox(p, halfBox, r);
+    float d = sceneD(local, center, halfBox, r);
+    // fade the rim where the neck meets the island, so there's no seam
+    float seam = budK > 0.0 ? smoothstep(0.0, 8.0, momD(local)) : 1.0;
 
     float e = 0.75;
     vec2 n = normalize(vec2(
-        sdRoundBox(p + vec2(e, 0.0), halfBox, r) - sdRoundBox(p - vec2(e, 0.0), halfBox, r),
-        sdRoundBox(p + vec2(0.0, e), halfBox, r) - sdRoundBox(p - vec2(0.0, e), halfBox, r)) + 1e-5);
+        sceneD(local + vec2(e, 0.0), center, halfBox, r) - sceneD(local - vec2(e, 0.0), center, halfBox, r),
+        sceneD(local + vec2(0.0, e), center, halfBox, r) - sceneD(local - vec2(0.0, e), center, halfBox, r)) + 1e-5);
 
     float inside = clamp(0.5 - d, 0.0, 1.0);          // AA coverage
     float depth = max(-d, 0.0);                        // px in from the edge
@@ -67,9 +92,9 @@ void main() {
     float pa = smokeA;
 
     // ---- sea tint: like looking through seawater, deeper toward the bottom
-    float tA = tint.a * mix(1.0, 0.72, qt_TexCoord0.y * tint2.a);
-    vec3 tcol = mix(tint.rgb, tint2.rgb, clamp(qt_TexCoord0.x * 0.45 + qt_TexCoord0.y * 0.55, 0.0, 1.0));
-    vec3 tc = tcol * mix(1.0, mix(1.05, 0.55, qt_TexCoord0.y), tint2.a);
+    float tA = tint.a * mix(1.0, 0.72, uv.y * tint2.a);
+    vec3 tcol = mix(tint.rgb, tint2.rgb, clamp(uv.x * 0.45 + uv.y * 0.55, 0.0, 1.0));
+    vec3 tc = tcol * mix(1.0, mix(1.05, 0.55, uv.y), tint2.a);
     pc = pc * (1.0 - tA) + tc * tA;
     pa = pa + tA * (1.0 - pa);
 
@@ -80,15 +105,15 @@ void main() {
 
     // ---- meniscus: thin refracted edge ----------------------------------
     float band = 1.0 - smoothstep(0.0, edgeW, depth);
-    vec2 base = itemPos + center + p;
+    vec2 base = itemPos + local;
     vec2 q = base + n * (depth + pad + 2.0 + 2.5 * band);
     vec3 refr = texture(source, clamp(q / srcSize, 0.0, 1.0)).rgb;
-    float bandA = band * band * 0.8;
+    float bandA = band * band * 0.8 * seam;
     pc = refr * mix(1.0, 0.75, bright) * bandA + pc * (1.0 - bandA);
     pa = bandA + pa * (1.0 - bandA);
 
     // faint surface glow from above, like light on the water's skin
-    float skin = 0.035 * pow(1.0 - qt_TexCoord0.y, 3.0);
+    float skin = 0.035 * pow(1.0 - uv.y, 3.0);
     pc += vec3(skin);
     pa += skin * 0.5;
 
@@ -97,19 +122,19 @@ void main() {
     float key = pow(max(dot(n, light), 0.0), 1.5);
     float line = exp(-pow((depth - 0.7) / 0.9, 2.0));
     float along = fract(time * 0.025);                 // one pass every 40 s
-    float sheen = exp(-pow((qt_TexCoord0.x - (along * 1.6 - 0.3)) * 5.0, 2.0))
+    float sheen = exp(-pow((uv.x - (along * 1.6 - 0.3)) * 5.0, 2.0))
                 * max(-n.y, 0.0);
-    float spec = line * (0.18 + 0.42 * key + 0.35 * sheen) * (1.0 + 0.9 * dark);
+    float spec = line * (0.18 + 0.42 * key + 0.35 * sheen) * (1.0 + 0.9 * dark) * seam;
     pc += vec3(spec);
     pa += spec;
 
     vec4 glass = vec4(pc, clamp(pa, 0.0, 1.0)) * inside;
 
     // very soft shadow, just enough to lift it off bright screens
-    float sd = sdRoundBox(p - vec2(0.0, 2.0), halfBox, r);
+    float sd = sceneD(local - vec2(0.0, 2.0), center, halfBox, r);
     float shadowA = shadow * (0.4 + 1.6 * bright) * exp(-max(sd, 0.0) / (pad * 0.45))
                   * (1.0 - smoothstep(pad * 0.4, pad - 1.0, sd));
-    vec4 shade = vec4(0.0, 0.0, 0.0, shadowA * (1.0 - inside));
+    vec4 shade = vec4(0.0, 0.0, 0.0, shadowA * (1.0 - inside) * seam);
 
     fragColor = (glass + shade) * qt_Opacity;
 }

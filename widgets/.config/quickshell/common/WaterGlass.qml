@@ -30,6 +30,13 @@ ShaderEffect {
     property real tintShade: 1
     readonly property vector4d tint2: Qt.vector4d(tintColor2.r, tintColor2.g, tintColor2.b, tintShade)
 
+    // shape rect inside the item (default: inset by `pad` on every side), and
+    // an optional "mother" rect the shape buds off (see GlassCard's `bud`)
+    property rect box: Qt.rect(0, 0, 0, 0)
+    property rect bud: Qt.rect(0, 0, 0, 0)
+    property real budK: 0                // px neck reach; 0 = no bud
+    property real budR: 18               // the mother's corner radius
+
     property real darkLift: Theme.mocha ? 0 : 1   // milky lift over dark backdrops (off for dark glass)
 
     // drifting light; runs only while drawn. animate: false freezes it, so a

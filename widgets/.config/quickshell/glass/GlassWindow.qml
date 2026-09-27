@@ -42,9 +42,15 @@ PanelWindow {
     // box a blurred layer covers on every frame, transparent or not, so a
     // full-screen idle layer cost ~10-15% of the iGPU with video playing.
     margins {
-        right: win.open ? 0 : win.sw - 1
-        bottom: win.open ? 0 : win.sh - 1
+        right: win.expanded ? 0 : win.sw - 1
+        bottom: win.expanded ? 0 : win.sh - 1
     }
+    // stay full-size a few seconds after closing, so opening again soon
+    // doesn't wait on a resize (that costs the first frames of the pour)
+    property bool lingering: false
+    readonly property bool expanded: open || lingering
+    onOpenChanged: if (open) lingerTimer.stop(); else { lingering = true; lingerTimer.restart() }
+    Timer { id: lingerTimer; interval: 5000; onTriggered: win.lingering = false }
     // the monitor's size, valid before the window is mapped and configured
     readonly property real sw: modelData.width
     readonly property real sh: modelData.height
@@ -84,9 +90,16 @@ PanelWindow {
     }
     function requestClose() { if (ctl.current === kind) ctl.close() }
 
+    // panels bud off the island like a dividing cell (off the top edge while it's hidden)
+    IslandSpot {
+        id: island
+        monitorName: win.monitor ? win.monitor.name : ""
+        screenWidth: win.sw
+    }
+
     PourMotion {
         id: motion
-        from: Qt.rect((win.sw - dropWidth) / 2, 6, dropWidth, dropHeight)
+        mother: island.rect
         to: Qt.rect((win.sw - card.wantW) / 2,
                     card.centered ? Math.max(40, (win.sh - card.wantH) / 2 - 30) : 70,
                     card.wantW, card.wantH)
@@ -142,6 +155,9 @@ PanelWindow {
         x: motion.rect.x; y: motion.rect.y
         width: motion.rect.width; height: motion.rect.height
         radius: motion.radius
+        bud: island.rect
+        budK: motion.budK
+        budR: island.radius
         smoke: win.item && win.item.smoke !== undefined ? win.item.smoke : Theme.panelShade
 
         readonly property real wantW: win.item ? win.item.implicitWidth : 400
