@@ -80,6 +80,9 @@ function M.setup()
 
     map({ "n", "x" }, "<leader>y", [["+y]], "Yank to system clipboard")
     map("n", "<leader>Y", [["+Y]], "Yank line to system clipboard")
+    -- Whole buffer; clipboard=unnamedplus sends it to the system clipboard.
+    -- :%yank rather than ggyG, so the cursor stays where it is.
+    map("n", "yig", "<cmd>%yank<cr>", "Yank whole buffer")
 
     -- =======================================================================
     --  2. WINDOWS & SPLITS
