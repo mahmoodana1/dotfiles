@@ -2,7 +2,8 @@
 # Top-bar switcher. Three modes; the choice persists across logins.
 #   waybar  the regular waybar (config/style links are never touched)
 #   peek    liquid-glass bar, shown while SUPER is held   (~/.config/quickshell/peek)
-#   island  liquid-glass Dynamic Island that pops on events (~/.config/quickshell/island)
+#   island  liquid-glass Dynamic Island that pops on events (~/.config/quickshell/island);
+#           also the notification daemon: outside island mode nothing shows them
 #
 #   bar.sh cycle          waybar -> peek -> island -> waybar   (SUPER+SHIFT+B)
 #   bar.sh set <mode>     switch to a mode
@@ -20,7 +21,6 @@ export QSG_USE_SIMPLE_ANIMATION_DRIVER=1
 
 STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/peek-bar"
 MODE_FILE="$STATE_DIR/mode"          # volume.sh/brightness.sh read this too
-DND_FILE="$STATE_DIR/dnd-before-island"
 mkdir -p "$STATE_DIR"
 [ -e "$STATE_DIR/on" ] && { echo peek > "$MODE_FILE"; rm -f "$STATE_DIR/on"; }  # migrate
 
@@ -35,7 +35,6 @@ stop_qs() {
     /Process ID:/ { pid = $3 }
     /Config path:/ && index($0, cfg) { print pid }' | xargs -r kill -9
   pkill -f "quickshell/(peek|island)/(shared/)?[s]uperwatch.py"
-  pkill -f "quickshell/island/[n]otifwatch.py"
 }
 
 start_waybar() { pgrep -x waybar >/dev/null || setsid -f waybar >/dev/null 2>&1; }
@@ -44,25 +43,14 @@ stop_waybar() {
   while pgrep -x waybar >/dev/null; do sleep 0.1; done
 }
 
-# swaync keeps collecting notifications; only its popups step aside
-island_dnd_on() {
-  [ -e "$DND_FILE" ] || swaync-client -D > "$DND_FILE" 2>/dev/null
-  swaync-client -dn >/dev/null 2>&1
-}
-island_dnd_off() {
-  [ -e "$DND_FILE" ] || return 0
-  [ "$(cat "$DND_FILE")" = true ] || swaync-client -df >/dev/null 2>&1
-  rm -f "$DND_FILE"
-}
-
 stop_all() {
-  stop_qs peek; stop_qs island; island_dnd_off; stop_waybar
+  stop_qs peek; stop_qs island; stop_waybar
 }
 
 start_mode() {
   case "$1" in
     peek)   setsid -f qs -c peek >/dev/null 2>&1 ;;
-    island) island_dnd_on; setsid -f qs -c island >/dev/null 2>&1 ;;
+    island) setsid -f qs -c island >/dev/null 2>&1 ;;
     *)      start_waybar ;;
   esac
 }

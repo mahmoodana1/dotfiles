@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Toggle airplane mode (all radios) — XF86Rfkill and the swaync button.
+# Toggle airplane mode (all radios) (XF86Rfkill).
 
 if rfkill list wifi | grep -q "Soft blocked: yes"; then
     rfkill unblock all; msg="Off"

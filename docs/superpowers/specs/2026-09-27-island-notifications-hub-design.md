@@ -44,8 +44,12 @@ is true while a live `Notification` object backs the entry (never saved).
 - `deserialize(text)` → entries (invalid / missing file → `[]`; entries
   missing `key` or `time` are dropped); every entry comes back `live: false`.
 - `ago(time, now)` → `"now"`, `"5m"`, `"3h"`, `"2d"`.
-- `isOsd(hints)`: true for `x-canonical-private-synchronous` or a `value`
-  hint (volume/brightness level popups; the island shows those natively).
+- `isOsd(hints)`: true for a `value` hint (volume/brightness level popups;
+  the island shows those natively). Not the `x-canonical-private-synchronous`
+  hint alone: screenshot, airplane, touchpad and media notifications use it.
+- `icons(appIcon, image)`: notify-send `-i` arrives as `image://icon/<name>`
+  (→ the app icon, kept across restarts) or `image://icon//<path>` (→ a
+  `file://` image).
 
 ### `island/Notifs.qml` — the daemon + history
 
@@ -57,8 +61,10 @@ Instantiated once in `shell.qml`, exposed as `root.notifs`.
   - OSD → ignored (not tracked, so it's dropped).
   - otherwise `tracked = true`, a new entry is added, it's remembered in a
     `key → Notification` map, and the `posted(entry)` signal fires (the popup).
-  - `transient` notifications popup but are not added to the history; they
-    are dismissed after their popup.
+  - `transient` notifications popup but stay out of the list; shell.qml
+    dismisses them once neither their popup nor their full view in the hub
+    shows them (so a popup with actions, like "Screenshot saved", can still
+    be clicked open and answered).
 - A live notification's `closed(reason)`:
   - closed by the app (`CloseRequested`) → the entry is removed from the hub.
   - expired / dismissed by us → nothing extra (we already handled it).
@@ -96,21 +102,19 @@ Two views, cross-faded:
     "Open" button invokes it. Restored entries show no buttons.
   - Dismiss button: removes it and returns to the list.
 
-Size: width ~420 px; height follows content, capped (~480 px), so the island
-morphs to it like the other panels.
+Size: width 400 px; height follows content, the list capped at 300 px (the
+island window is 380 tall), so the island morphs to it like the other panels.
 
 ### Changes to existing files
 
 - `island/shell.qml`
   - Replace the `notifwatch` Process with `Notifs { id: notifs }`;
     `onPosted` sets `root.notif` and pulses the popup as today.
-  - New state: `hubKey` (notification to open in full, `""` = list),
-    `hubKeyboard` (hub opened from the keyboard).
+  - New state: `hubKey` (notification to open in full, `""` = list).
   - `openHub(key)` → `panel = "notifs"`, `hubKey = key`.
   - `GlobalShortcut { name: "notifs" }` toggles the hub (keyboard).
-  - The `close` shortcut also closes the hub.
   - IPC: `hub <key|"">` opens the hub (list or one entry), `hubclose`
-    closes it. The existing `notify` test call stays as-is (popup only,
+    closes it, `act <key> <action>` invokes an action (testing). The existing `notify` test call stays as-is (popup only,
     not added to the history); real tests go through `notify-send`.
 - `island/DynIsland.qml`
   - `notifs` joins `wifi`/`bt` as a panel mode (size, radius 26, fullscreen
@@ -121,14 +125,13 @@ morphs to it like the other panels.
     chips keep their own handling.
   - A small count (e.g. a bell + number) in the info and SUPER-held views
     when the hub is not empty.
-  - Keyboard: while the hub is open from the keyboard, the island takes
-    `Exclusive` keyboard focus; Esc / Ctrl+[ close it (common/keys.js), and
-    the 4 s idle close doesn't apply. Opened by click, it behaves like the
+  - Behaves exactly like the Wi-Fi / Bluetooth panels: no keyboard focus
+    (other apps keep theirs), closes when the pointer leaves; opened from
+    outside (SUPER+SHIFT+N, IPC) it closes after 4 s unless the pointer
+    comes over it. SUPER+SHIFT+N again closes it. Opened by click, it behaves like the
     other panels (closes when the pointer leaves).
 - `island/notifwatch.py` — deleted.
-- `hypr/.config/hypr/lua/keybinds.lua` — SUPER+SHIFT+N → `island:notifs`;
-  SUPER+Q also checks the `island` layer (keyboard-held hub) and dispatches
-  `island:close`.
+- `hypr/.config/hypr/lua/keybinds.lua` — SUPER+SHIFT+N → `island:notifs`.
 - `hypr/.config/hypr/lua/startup.lua` — drop `swaync`.
 - `hypr/.config/hypr/scripts/bar.sh` — drop the swaync DND functions and the
   `notifwatch.py` pkill.
@@ -174,5 +177,5 @@ app ─Notify─▶ NotificationServer ─▶ Notifs (entry + live map + posted)
 - Live checks with `notify-send`: plain, long body, `-A` actions (and
   `default`), `-i` image, several from one app, `-u critical`, `-e`
   transient, a volume OSD hint; restart the island (PRIME=0, see memory) and
-  confirm the history returns without actions; SUPER+SHIFT+N, Esc, SUPER+Q;
+  confirm the history returns without actions; SUPER+SHIFT+N (and its 4 s idle close);
   click paths from info view, SUPER-held view and a popup.

@@ -74,7 +74,6 @@ def main():
     quiet = {"stdout": subprocess.DEVNULL, "stderr": subprocess.DEVNULL}
     if os.environ.get("HYPRLAND_INSTANCE_SIGNATURE"):
         subprocess.run(["hyprctl", "reload"], **quiet)
-    subprocess.run(["swaync-client", "--reload-css"], **quiet)
     subprocess.run(["pkill", "-SIGUSR2", "-x", "waybar"], **quiet)
 
 

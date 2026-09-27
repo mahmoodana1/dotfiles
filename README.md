@@ -70,7 +70,6 @@ everything back. No templating language, no daemon, no state directory.
 | `nvim` | `~/.config/nvim` | Neovim, kickstart-derived, with `lazy-lock.json` pinning plugin versions |
 | `waybar` | `~/.config/waybar` | Fallback status bar (the Dynamic Island is the main one) |
 | `rofi` | `~/.config/rofi` | Fallback launcher (used only if the glass shell isn't running) |
-| `notify` | `~/.config/swaync` | Notification centre |
 | `widgets` | `~/.config/quickshell` | Dynamic Island, Peek bar, and the **glass panels** (launcher, shortcuts, wallpaper, windows, power, HUD) sharing one water-glass kit in `common/` |
 | `terminals` | `~/.config/{kitty,alacritty,ghostty,wezterm}` | All four terminals |
 | `shell` | `~/.zshrc`, `~/.tmux.conf`, `~/.tmux` | Zsh (custom prompt, lazy-loaded nvm, plugins) and tmux |

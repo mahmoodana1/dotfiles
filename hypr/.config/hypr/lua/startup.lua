@@ -17,7 +17,6 @@ local autostart = {
     s .. "/bar.sh boot",                          -- island / peek / waybar (SUPER+SHIFT+B)
     -- glass panels, on Intel (they capture the screen); restarted if they ever exit
     "sh -c 'while :; do env __NV_PRIME_RENDER_OFFLOAD=0 qs -c glass; sleep 1; done'",
-    "swaync",                                     -- notifications
     d.home .. "/.config/hypr/panel/panel.py",     -- prayer times: alerts + the HUD's data
     "hypridle",                                   -- idle -> lock
     "wl-paste --type text --watch cliphist store",  -- clipboard history

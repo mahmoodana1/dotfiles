@@ -4,7 +4,9 @@
 // everything while SUPER is held. Hidden otherwise.
 // Run:    qs -c island         (managed by ~/.config/hypr/scripts/bar.sh)
 // Shares glass/text/stats with the Peek bar through the `shared` -> ../peek link.
-// Test:   qs ipc -c island call island down|up|shiftdown|info <true|false>|panel <wifi|bt|>|float <bt|wifi|none>|ws|charger|notify <summary> <body>
+// It's also the notification daemon (Notifs.qml): popups on the island, a
+// hub (NotifPanel.qml) on click or SUPER+SHIFT+N.
+// Test:   qs ipc -c island call island down|up|shiftdown|info <true|false>|panel <wifi|bt|notifs|>|float <bt|wifi|none>|ws|charger|notify <summary> <body>|hub <key>|hubclose|act <key> <action>
 import QtQuick
 import Quickshell
 import Quickshell.Io
@@ -28,17 +30,21 @@ ShellRoot {
     property bool hoverHold: false           // pointer on the island: don't time out
     property bool ignoreFullscreen: false    // testing: show even over fullscreen
     property bool infoOpen: false            // hover panel (cpu/mem/wifi/bluetooth...)
-    property string panel: ""                // "wifi" | "bt": list panel opened from the info chips
+    property string panel: ""                // "wifi" | "bt" | "notifs": list panel in the island
     property string floating: ""             // "bt" | "wifi": panel detached to the middle (FloatPanel.qml)
     // SUPER+Q closes the floating panel (hypr/lua/keybinds.lua checks first)
     GlobalShortcut { appid: "island"; name: "close"; onPressed: root.floating = "" }
+    // SUPER+SHIFT+N: the hub, like a panel opened from outside (closes by
+    // itself unless the pointer comes over it)
+    GlobalShortcut { appid: "island"; name: "notifs"; onPressed: root.panel === "notifs" ? root.closeHub() : root.openHub("") }
     property rect floatFrom: Qt.rect(0, 0, 0, 0)   // island rect it springs out of / back into
     property string floatScreen: ""          // monitor name it shows on
 
     property string levelKind: "volume"      // volume | mic | brightness
     property real levelValue: 0              // 0..1
     property bool levelMuted: false
-    property var notif: ({ app: "", summary: "", body: "", icon: "", urgency: 1 })
+    property var notif: ({ key: "", app: "", summary: "", body: "", icon: "", urgency: 1 })
+    property string hubKey: ""               // notification open in the hub ("" = the list)
     property string toastIcon: ""
     property string toastText: ""
 
@@ -99,6 +105,13 @@ ShellRoot {
         else if (mode === "ws") wsUntil = 0
         now = Date.now()
     }
+    function openHub(key) {
+        hubKey = key
+        panel = "notifs"
+        if (mode === "notif") notifUntil = 0     // the popup becomes the hub
+    }
+    function closeHub() { if (panel === "notifs") panel = "" }
+    onPanelChanged: if (panel !== "notifs") hubKey = ""
     function toast(icon, text, ms) {
         toastIcon = icon; toastText = text
         pulse("toast", ms)
@@ -177,23 +190,29 @@ ShellRoot {
         toast(charging ? "\u{f0084}" : "\u{f0079}",
               (charging ? "Charging  " : "On battery  ") + Stats.batteryPct + "%", 1600)
 
-    // ---- notifications (swaync stays the daemon; we eavesdrop) ------------
-    Process {
-        id: notifwatch
-        running: true
-        command: ["python3", Qt.resolvedUrl("notifwatch.py").toString().replace("file://", "")]
-        stdout: SplitParser {
-            onRead: line => {
-                let n
-                try { n = JSON.parse(line) } catch (e) { return }
-                if (n.osd) return
-                root.notif = n
-                root.pulse("notif", n.urgency >= 2 ? 6000 : 4000)
-            }
+    // ---- notifications (we're the daemon: Notifs.qml) ----------------------
+    readonly property alias notifs: notifStore
+    Notifs {
+        id: notifStore
+        onPosted: e => {
+            root.notif = { key: e.key, app: e.app, summary: e.summary, body: e.body,
+                           icon: e.image || e.appIcon, urgency: e.urgency }
+            // the app's own timeout when it's shorter (screenshot countdown)
+            const ms = e.urgency >= 2 ? 6000 : 4000
+            root.pulse("notif", e.timeout > 0 ? Math.max(1000, Math.min(ms, e.timeout)) : ms)
+            root.sweep()
         }
-        onExited: notifRestart.start()
     }
-    Timer { id: notifRestart; interval: 1000; onTriggered: notifwatch.running = true }
+    // A transient notification lives only while its popup or its full view
+    // in the hub shows it; then it's dismissed (notify-send -A gets its answer).
+    function sweep() {
+        notifStore.entries.filter(e => e.transient).forEach(e => {
+            const shown = (mode === "notif" && notif.key === e.key) || (panel === "notifs" && hubKey === e.key)
+            if (!shown) notifStore.dismiss(e.key)
+        })
+    }
+    onModeChanged: Qt.callLater(sweep)
+    onHubKeyChanged: Qt.callLater(sweep)
 
     // ---- manual control / testing -----------------------------------------
     IpcHandler {
@@ -201,7 +220,10 @@ ShellRoot {
         function down(): void { root.held = true }
         function up(): void { root.held = false; root.shiftHeld = false }
         function info(open: bool): void { root.infoOpen = open }
-        function panel(name: string): void { root.panel = name === "none" ? "" : name }   // wifi | bt | none
+        function panel(name: string): void { root.panel = name === "none" ? "" : name }   // wifi | bt | notifs | none
+        function hub(key: string): void { root.openHub(key) }
+        function hubclose(): void { root.closeHub() }
+        function act(key: string, action: string): void { notifStore.invoke(key, action) }
         function float(name: string): void {                                                // bt | wifi | none
             if (name !== "none" && Hyprland.focusedMonitor) {
                 root.floatFrom = Qt.rect(0, 0, 0, 0)
@@ -214,7 +236,7 @@ ShellRoot {
         function ws(): void { root.pulse("ws", 300) }
         function charger(): void { root.toast("\u{f0084}", "Charging  " + Stats.batteryPct + "%", 1600) }
         function notify(summary: string, body: string): void {
-            root.notif = { app: "Test", summary: summary, body: body, icon: "", urgency: 1 }
+            root.notif = { key: "", app: "Test", summary: summary, body: body, icon: "", urgency: 1 }
             root.pulse("notif", 4000)
         }
     }

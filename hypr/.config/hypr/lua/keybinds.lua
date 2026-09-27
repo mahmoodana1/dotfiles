@@ -58,7 +58,7 @@ hl.bind(mod .. " + SHIFT + Q", hl.dsp.window.kill(), { description = "force-kill
 hl.bind("CTRL + ALT + L", sh("loginctl lock-session"), { description = "lock screen" })
 hl.bind("CTRL + ALT + P", glass("power"), { description = "power menu" })
 hl.bind("CTRL + ALT + Delete", hl.dsp.exit(), { description = "exit Hyprland" })
-hl.bind(mod .. " + SHIFT + N", sh("swaync-client -t -sw"), { description = "notification center" })
+hl.bind(mod .. " + SHIFT + N", hl.dsp.global("island:notifs"), { description = "notifications (island hub)" })
 
 ----------------------------------------------------------------------
 -- WINDOWS

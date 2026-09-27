@@ -168,7 +168,6 @@ steam
 stow
 strace
 swappy
-swaync
 tailscale
 telegram-desktop
 tesseract

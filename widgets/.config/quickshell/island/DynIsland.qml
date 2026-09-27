@@ -10,11 +10,13 @@ import "common"
 // capsule springs between sizes for each mode:
 //   ws     workspace numbers + sliding droplet
 //   level  volume / mic / brightness with a level bar
-//   notif  app icon, summary, body (hover keeps it, click dismisses)
+//   notif  app icon, summary, body (hover keeps it, click opens it in the hub)
 //   toast  one icon + line (charger plugged/unplugged)
 //   full   (SUPER held) workspaces · clock · battery/volume
 //   info   (hover the island, or push the pointer to the top-center edge)
 //          wifi · bluetooth · battery · volume / cpu · ram · temp · disk · brightness
+//   wifi / bt / notifs   panels (notifs: the notification hub, NotifPanel.qml;
+//          click the island in info / full to open it)
 PanelWindow {
     id: win
 
@@ -209,14 +211,17 @@ PanelWindow {
             : m === "info" ? Math.max(infoTop.implicitWidth, infoBottom.implicitWidth) + 44
             : m === "wifi" ? wifiPanel.implicitWidth
             : m === "bt" ? btPanel.implicitWidth
+            : m === "notifs" ? notifPanel.implicitWidth
             : 120
     }
     function modeH(m) {
         return m === "notif" ? 64 : m === "info" ? 72
             : m === "wifi" ? wifiPanel.implicitHeight
             : m === "bt" ? btPanel.implicitHeight
+            : m === "notifs" ? notifPanel.implicitHeight
             : 36
     }
+    readonly property bool tall: viewMode === "wifi" || viewMode === "bt" || viewMode === "notifs" || viewMode === "notif"
     readonly property real targetW: modeW(viewMode)
     readonly property real targetH: modeH(viewMode)
 
@@ -225,7 +230,7 @@ PanelWindow {
     readonly property string publishText: JSON.stringify({
         shown: shown, x: Math.round((modelData.width - targetW) / 2), y: 6,
         w: targetW, h: targetH,
-        r: viewMode === "wifi" || viewMode === "bt" || viewMode === "notif" ? 26 : targetH / 2
+        r: tall ? 26 : targetH / 2
     })
     onPublishTextChanged: publishTimer.restart()
     Timer { id: publishTimer; interval: 30; onTriggered: publishFile.setText(win.publishText) }
@@ -301,14 +306,23 @@ PanelWindow {
 
         HoverHandler { id: pillHover }
         Binding { target: win.ctl; property: "hoverHold"; value: pillHover.hovered; when: win.isFocused }
-        // Click-to-dismiss for event popups only. Decide from the mode at
-        // press time: a chip tap in the same click may already have switched
-        // the view (info → wifi), which must not be dismissed.
+        // Click on the island: info / full open the notification hub, a
+        // notification popup opens in it, other popups are dismissed. Decide
+        // from the mode at press time: a chip tap in the same click may
+        // already have switched the view (info → wifi). Handlers see taps on
+        // the chips inside too, so a chip marks `innerTap` and we check after.
         TapHandler {
             property string pressMode: ""
-            onPressedChanged: if (pressed) pressMode = win.viewMode
-            onTapped: if (win.ctl && ["notif", "level", "toast", "ws", "full"].indexOf(pressMode) >= 0)
-                win.ctl.dismiss()
+            onPressedChanged: if (pressed) { pressMode = win.viewMode; win.innerTap = false }
+            onTapped: {
+                const m = pressMode
+                Qt.callLater(() => {
+                    if (!win.ctl || win.innerTap) return
+                    if (m === "info" || m === "full") win.ctl.openHub("")
+                    else if (m === "notif" && win.ctl.notif.key) win.ctl.openHub(win.ctl.notif.key)
+                    else if (["notif", "level", "toast", "ws"].indexOf(m) >= 0) win.ctl.dismiss()
+                })
+            }
         }
 
         // glass + content, grouped so the droplet can lens both
@@ -336,10 +350,10 @@ PanelWindow {
                 tintStrength: Theme.islandTint
                 lumTex: lum.texture
                 // capsule for bars; rounded rect for the tall panels
-                radius: win.viewMode === "wifi" || win.viewMode === "bt" || win.viewMode === "notif" ? 26 : 999
+                radius: win.tall ? 26 : 999
                 // text-heavy views get smoked glass so they read over busy backdrops
                 // (a little everywhere there's text: clear water, still readable)
-                smoke: win.viewMode === "wifi" || win.viewMode === "bt" ? 0.5
+                smoke: win.viewMode === "wifi" || win.viewMode === "bt" || win.viewMode === "notifs" ? 0.5
                      : win.viewMode === "info" || win.viewMode === "notif" ? 0.22 : 0.1
                 useLum: 1
                 x: -pad; y: -pad
@@ -391,6 +405,11 @@ PanelWindow {
                     GlassText {
                         text: Qt.formatDateTime(clock.date, "HH:mm")
                         size: 13; weight: Font.Bold
+                    }
+                    GlassText {
+                        visible: win.notifCount > 0
+                        text: "\u{f009a} " + win.notifCount
+                        color: Qt.rgba(1, 1, 1, 0.85)
                     }
                     GlassText {
                         visible: Stats.hasBattery
@@ -504,7 +523,7 @@ PanelWindow {
                         TapHandler {
                             id: tap
                             enabled: chip.clickable
-                            onTapped: chip.action !== "" ? win.launch(chip.action) : chip.clicked()
+                            onTapped: { win.innerTap = true; chip.action !== "" ? win.launch(chip.action) : chip.clicked() }
                         }
                     }
 
@@ -526,6 +545,13 @@ PanelWindow {
                             tone: Stats.btOn ? "white" : infoCol.dim
                             panelChip: true
                             onClicked: if (win.ctl) win.ctl.panel = "bt"
+                        }
+                        Chip {
+                            visible: win.notifCount > 0
+                            icon: "\u{f009a}"
+                            label: win.notifCount
+                            panelChip: true
+                            onClicked: if (win.ctl) win.ctl.openHub("")
                         }
                         Chip {
                             visible: Stats.hasBattery
@@ -584,6 +610,19 @@ PanelWindow {
                     Behavior on opacity { enabled: win.morphReady; NumberAnimation { duration: 120 } }
                 }
 
+                // -- notification hub --
+                NotifPanel {
+                    id: notifPanel
+                    ctl: win.ctl
+                    store: win.ctl ? win.ctl.notifs : null
+                    x: win.fx("notifs"); y: 0
+                    active: win.viewMode === "notifs" && win.shown
+                    width: implicitWidth
+                    opacity: win.viewMode === "notifs" ? 1 : 0
+                    visible: opacity > 0
+                    Behavior on opacity { enabled: win.morphReady; NumberAnimation { duration: 120 } }
+                }
+
                 // -- notification --
                 Row {
                     id: notifRow
@@ -594,12 +633,7 @@ PanelWindow {
                     opacity: win.viewMode === "notif" ? 1 : 0
                     Behavior on opacity { enabled: win.morphReady; NumberAnimation { duration: 110 } }
                     readonly property var n: win.ctl ? win.ctl.notif : ({})
-                    readonly property string iconSrc: {
-                        const i = n.icon || ""
-                        if (i.startsWith("/")) return "file://" + i
-                        if (i.startsWith("file://")) return i
-                        return Quickshell.iconPath(i || (n.app || "").toLowerCase(), true)
-                    }
+                    readonly property string iconSrc: win.ctl ? win.ctl.notifs.iconFor(n.icon, n.app) : ""
 
                     Item {
                         width: 34; height: 34
@@ -703,6 +737,8 @@ PanelWindow {
     }
 
     SystemClock { id: clock; precision: SystemClock.Minutes }
+    property bool innerTap: false            // a chip took this click (see the pill's TapHandler)
+    readonly property int notifCount: ctl ? ctl.notifs.count : 0
 
     // info-panel chip actions; the panel closes after launching
     readonly property string floatTerm: "alacritty --class alacritty-float -e "
