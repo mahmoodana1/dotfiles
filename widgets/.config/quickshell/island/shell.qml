@@ -43,16 +43,19 @@ ShellRoot {
     // what the island shows, by priority
     readonly property string mode: panel !== "" ? panel
         : infoOpen ? "info"
+        : now < levelUntil ? "level"             // volume/brightness: always shown the moment it changes
         : held ? "full"
         : now < notifUntil ? "notif"
         : now < toastUntil ? "toast"
-        : now < levelUntil ? "level"
         : now < wsUntil ? "ws"
         : "hidden"
 
     // Networking/Bluetooth connect to D-Bus lazily on first access; touch them
     // now so the panels have data when opened.
-    Component.onCompleted: { Networking.wifiEnabled; Bluetooth.defaultAdapter }
+    Component.onCompleted: {
+        Networking.wifiEnabled; Bluetooth.defaultAdapter
+        TextStyle.minWeight = Font.Bold      // small island labels read better bold
+    }
 
     // ignore the burst of property changes while services start up
     property bool armed: false
@@ -64,13 +67,12 @@ ShellRoot {
         running: root.now < Math.max(root.wsUntil, root.levelUntil, root.notifUntil, root.toastUntil)
         onTriggered: {
             const t = Date.now()
-            // hovering keeps whatever is showing open
+            // hovering keeps whatever is showing open (not workspace switches: those never linger)
             if (root.hoverHold && root.mode !== "hidden" && root.mode !== "full") {
                 const keep = t + 400
                 if (root.mode === "notif") root.notifUntil = Math.max(root.notifUntil, keep)
                 else if (root.mode === "toast") root.toastUntil = Math.max(root.toastUntil, keep)
                 else if (root.mode === "level") root.levelUntil = Math.max(root.levelUntil, keep)
-                else if (root.mode === "ws") root.wsUntil = Math.max(root.wsUntil, keep)
             }
             root.now = t
         }
@@ -123,7 +125,7 @@ ShellRoot {
 
     // ---- workspace switches -----------------------------------------------
     readonly property int focusedWs: Hyprland.focusedWorkspace ? Hyprland.focusedWorkspace.id : -1
-    onFocusedWsChanged: pulse("ws", 350)   // droplet lands in ~0.2s, then go
+    onFocusedWsChanged: pulse("ws", 300)   // flash on every switch, then gone at once
 
     // ---- volume / mic -----------------------------------------------------
     readonly property var sink: Pipewire.defaultAudioSink
@@ -207,7 +209,7 @@ ShellRoot {
         }
         function ignorefs(on: bool): void { root.ignoreFullscreen = on }   // testing only
         function shiftdown(): void { root.held = true; root.shiftHeld = true }
-        function ws(): void { root.pulse("ws", 350) }
+        function ws(): void { root.pulse("ws", 300) }
         function charger(): void { root.toast("\u{f0084}", "Charging  " + Stats.batteryPct + "%", 1600) }
         function notify(summary: string, body: string): void {
             root.notif = { app: "Test", summary: summary, body: body, icon: "", urgency: 1 }

@@ -3,6 +3,7 @@ import Quickshell
 import Quickshell.Wayland
 import Quickshell.Hyprland
 import "shared"
+import "common"
 
 // One per screen; only the focused monitor's island shows. A single glass
 // capsule springs between sizes for each mode:
@@ -23,7 +24,8 @@ PanelWindow {
     readonly property var monitor: Hyprland.monitorFor(modelData)
     readonly property bool isFocused: Hyprland.focusedMonitor !== null && monitor !== null
                                       && Hyprland.focusedMonitor.name === monitor.name
-    // over a fullscreen window only SUPER+SHIFT (held) shows it, as the full view
+    // over a fullscreen window only workspace switches, open panels and
+    // SUPER+SHIFT (held) show it
     readonly property bool fullscreenHere: monitor !== null && monitor.activeWorkspace !== null
                                            && monitor.activeWorkspace.hasFullscreen
                                            && !(ctl && ctl.ignoreFullscreen)
@@ -37,10 +39,16 @@ PanelWindow {
     readonly property string mode: baseMode === "hidden" && reverting ? "full" : baseMode
     readonly property string baseMode: !ctl ? "hidden"
         : !isFocused ? (emptyHere ? "full" : "hidden")
-        : !fullscreenHere ? (ctl.mode === "hidden" && emptyHere ? "full" : ctl.mode)
+        // on an empty workspace the resting full view wins over the bare
+        // workspace flash, so switching into one never squishes to numbers first
+        : !fullscreenHere ? ((ctl.mode === "hidden" || ctl.mode === "ws") && emptyHere ? "full" : ctl.mode)
         : ctl.panel !== "" ? ctl.panel
         : ctl.infoOpen ? "info"                      // stays while hovered
         : ctl.held && ctl.shiftHeld ? "full"
+        // a switch just happened: show it even while SUPER is held (SUPER+N
+        // switches with SUPER down, which otherwise means "full", hidden here)
+        : ctl.now < ctl.wsUntil ? "ws"
+        : ctl.now < ctl.levelUntil ? "level"         // volume/brightness bar, over fullscreen too
         : "hidden"
     readonly property bool shown: mode !== "hidden"
 
@@ -56,6 +64,7 @@ PanelWindow {
     onShownChanged: {
         morphReady = false
         if (shown) {
+            snap.captureFrame(); lum.kick()
             popOut.stop()
             popIn.restart()
             Qt.callLater(() => win.morphReady = win.shown)
@@ -66,16 +75,16 @@ PanelWindow {
     }
     ParallelAnimation {
         id: popIn
-        NumberAnimation { target: pill; property: "pop"; from: 0.78; to: 1; duration: 280
-                          easing.type: Easing.OutBack; easing.overshoot: 1.6 }
-        NumberAnimation { target: pill; property: "popC"; from: 0.9; to: 1; duration: 240; easing.type: Easing.OutCubic }
-        NumberAnimation { target: pill; property: "fade"; to: 1; duration: 90; easing.type: Easing.OutQuad }
+        NumberAnimation { target: pill; property: "pop"; from: 0.7; to: 1; duration: 190
+                          easing.type: Easing.OutBack; easing.overshoot: 2.4 }   // quick, bubbly pop
+        NumberAnimation { target: pill; property: "popC"; from: 0.88; to: 1; duration: 150; easing.type: Easing.OutCubic }
+        NumberAnimation { target: pill; property: "fade"; to: 1; duration: 60; easing.type: Easing.OutQuad }
     }
     ParallelAnimation {
         id: popOut
-        NumberAnimation { target: pill; property: "pop"; to: 0.86; duration: 140; easing.type: Easing.InCubic }
-        NumberAnimation { target: pill; property: "popC"; to: 0.92; duration: 140; easing.type: Easing.InCubic }
-        NumberAnimation { target: pill; property: "fade"; to: 0; duration: 130; easing.type: Easing.InQuad }
+        NumberAnimation { target: pill; property: "pop"; to: 0.9; duration: 80; easing.type: Easing.InCubic }
+        NumberAnimation { target: pill; property: "popC"; to: 0.94; duration: 80; easing.type: Easing.InCubic }
+        NumberAnimation { target: pill; property: "fade"; to: 0; duration: 70; easing.type: Easing.InQuad }
     }
 
     readonly property int winW: 760
@@ -83,8 +92,13 @@ PanelWindow {
     readonly property real winX: (modelData.width - winW) / 2   // layer is centered
 
     anchors.top: true
-    implicitWidth: winW
-    implicitHeight: winH
+    // Hidden and faded out, the window shrinks to just the hover strip:
+    // Hyprland blurs a blurred layer's whole box every frame (mocha style),
+    // and the idle 760x380 box cost ~15% of the iGPU over a playing video.
+    readonly property bool idle: !shown && pill.fade === 0
+    readonly property int stripW: 260
+    implicitWidth: idle ? stripW : winW
+    implicitHeight: idle ? 3 : winH
     exclusionMode: ExclusionMode.Ignore
     color: "transparent"
     WlrLayershell.layer: WlrLayer.Overlay
@@ -108,9 +122,9 @@ PanelWindow {
     // closes it. An open notification stays as-is so it can be read.
     Item {
         id: hoverZone
-        x: win.shown ? pill.x : (win.winW - 260) / 2
+        x: win.shown ? pill.x : win.idle ? 0 : (win.winW - win.stripW) / 2
         y: 0
-        width: win.shown ? pill.width : 260
+        width: win.shown ? pill.width : win.stripW
         height: win.shown ? pill.y + pill.height : 3
         HoverHandler { id: zoneHover }
     }
@@ -153,14 +167,25 @@ PanelWindow {
     }
 
     // ---- live capture of what's behind (includes us; glass samples outside) --
+    // Stills, not a live stream: a live copy of the whole monitor every frame
+    // cost ~16% of the Intel GPU just to refract the rim. One still when the
+    // island appears, then a refresh every 1.5 s while it stays up (water
+    // style only: mocha's dark tint doesn't follow the backdrop's brightness,
+    // and each refresh redraws the island for ~0.7 s, ~20% CPU while resting).
     ScreencopyView {
         id: snap
         captureSource: win.modelData
-        live: win.shown || pill.opacity > 0
+        live: false
         paintCursor: false
         width: win.modelData.width
         height: win.modelData.height
     }
+    Timer {
+        interval: 1500; repeat: true
+        running: win.shown && !Theme.mocha
+        onTriggered: win.recapture()
+    }
+    function recapture() { snap.captureFrame(); lum.kick() }
     ShaderEffectSource {
         id: behind
         sourceItem: snap
@@ -209,8 +234,37 @@ PanelWindow {
     property real stripAbsX: stripTargetX
     Behavior on stripAbsX { enabled: win.morphReady; SpringAnimation { spring: 7.5; damping: 0.48; epsilon: 0.2 } }
 
-    // stiff + well damped: responsive, one soft overshoot, settles in ~0.25 s
-    component Spring: SpringAnimation { spring: 7.5; damping: 0.48; epsilon: 0.2 }
+    // Growing: a snappy spring that pops ~8% past its size and settles in
+    // ~0.18 s. Shrinking stays stiff (1.5%), so it never cuts into the content.
+    component Morph: SpringAnimation {
+        property bool grow: false
+        spring: grow ? 12 : 7.5
+        damping: 0.48
+        epsilon: 0.2
+    }
+    // Remember which way each side is heading when a view changes (the
+    // spring itself overshoots, so the live width can't tell).
+    property real lastTW: targetW
+    property real lastTH: targetH
+    property bool growW: false
+    property bool growH: false
+    onTargetWChanged: { growW = targetW > lastTW; Qt.callLater(morphed) }
+    onTargetHChanged: { growH = targetH > lastTH; Qt.callLater(morphed) }
+    function morphed() {
+        const rw = (targetW - lastTW) / lastTW, rh = (targetH - lastTH) / lastTH
+        lastTW = targetW; lastTH = targetH
+        // an expand stretches the way it grew most (not on shrink)
+        if (morphReady && Math.max(rw, rh) > 0.05) jellyAnim.kick(rw >= rh ? 1 : -1)
+    }
+    // Squash & stretch of the glass on expand: it stretches the way it grows
+    // and squashes the other way, then wobbles back (content stays put).
+    SequentialAnimation {
+        id: jellyAnim
+        property real dir: 1                 // +1 wider, -1 taller
+        function kick(d) { dir = d; restart() }
+        NumberAnimation { target: pill; property: "jelly"; to: jellyAnim.dir; duration: 70; easing.type: Easing.OutQuad }
+        NumberAnimation { target: pill; property: "jelly"; to: 0; duration: 260; easing.type: Easing.OutBack; easing.overshoot: 3 }
+    }
 
     Item {
         id: pill
@@ -221,9 +275,12 @@ PanelWindow {
         property real fade: 0
         property real pop: 1                 // glass scale (springy overshoot)
         property real popC: 1                // content scale (no overshoot: text never wobbles)
+        property real jelly: 0               // squash & stretch: +1 stretched wide, -1 tall
+        readonly property real jellyX: 1 + 0.035 * jelly
+        readonly property real jellyY: 1 - 0.07 * jelly
         opacity: fade
-        Behavior on width { enabled: win.morphReady; Spring { } }
-        Behavior on height { enabled: win.morphReady; Spring { } }
+        Behavior on width { enabled: win.morphReady; Morph { grow: win.growW } }
+        Behavior on height { enabled: win.morphReady; Morph { grow: win.growH } }
         visible: opacity > 0
 
         HoverHandler { id: pillHover }
@@ -245,6 +302,7 @@ PanelWindow {
 
             GlassLum {
                 id: lum
+                alwaysRun: false                 // re-measure only after a new capture
                 source: behind
                 shape: Qt.rect(pill.x, pill.y, pill.width, pill.height)
                 srcSize: Qt.size(win.winW, win.winH)
@@ -252,6 +310,14 @@ PanelWindow {
 
             WaterGlass {
                 id: glass
+                animate: false                   // still glass: no redraws while resting
+                // plain see-through pill: no refracting edge
+                // (the screen stills are only used to read backdrop brightness)
+                edgeW: 0
+                tintColor: Theme.islandTintColor
+                tintColor2: Theme.islandTintColor2
+                tintShade: Theme.tintShade
+                tintStrength: Theme.islandTint
                 lumTex: lum.texture
                 // capsule for bars; rounded rect for the tall panels
                 radius: win.viewMode === "wifi" || win.viewMode === "bt" || win.viewMode === "notif" ? 26 : 999
@@ -267,7 +333,8 @@ PanelWindow {
                 sourceOrigin: Qt.point(pill.x - pad, pill.y - pad)
                 sourceSize: Qt.size(win.winW, win.winH)
                 // scale from the top edge, like it grows out of the bezel
-                transform: Scale { origin.x: glass.width / 2; origin.y: glass.pad; xScale: pill.pop; yScale: pill.pop }
+                transform: Scale { origin.x: glass.width / 2; origin.y: glass.pad
+                                   xScale: pill.pop * pill.jellyX; yScale: pill.pop * pill.jellyY }
             }
 
             // Content pops in without overshoot (the glass keeps its bounce),
@@ -598,6 +665,19 @@ PanelWindow {
             magnify: 1.25
             tint: 0.12
             shadow: 0.22
+        }
+        // The lens magnifies a picture of the strip, which blurs the number
+        // inside it. Once the droplet settles, draw the active number crisply
+        // on top at the lens's magnified size; hide it again while it slides.
+        GlassText {
+            readonly property bool settled: droplet.w <= droplet.restW + 1.5
+            visible: droplet.visible
+            opacity: settled ? droplet.opacity : 0
+            Behavior on opacity { NumberAnimation { duration: 90 } }
+            text: wsStrip.activeId > 0 ? wsStrip.activeId : ""
+            size: 12 * droplet.magnify
+            x: wsStrip.x + (wsStrip.dropL + wsStrip.dropR) / 2 - width / 2
+            y: wsStrip.y + wsStrip.height / 2 - height / 2
         }
     }
 

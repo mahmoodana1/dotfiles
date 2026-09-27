@@ -3,12 +3,13 @@ import Quickshell
 import Quickshell.Wayland
 import Quickshell.Hyprland
 import "shared"
+import "common"
 
 // Floating panel: the island's Bluetooth or Wi-Fi panel detached (⤢) into the
 // middle of the screen, in its larger, barred `floating` form. Springs out of
 // the island's rect (ctl.floatFrom) to the center and back into it on close.
 // Close: ✕, Esc, or a click outside. One per screen; shows on ctl.floatScreen.
-// Always mapped (screencopy needs a live window); closed = empty input mask.
+// Full-screen while open (or springing back); idle it shrinks to 1x1 px.
 PanelWindow {
     id: win
 
@@ -32,24 +33,36 @@ PanelWindow {
     }
     function close() { if (ctl) ctl.floating = "" }
 
+    // Idle = a 1x1 px window at the top-left (never unmap: Quickshell segfaults
+    // when a window with a ScreencopyView unmaps). Hyprland blurs whatever
+    // box a blurred layer covers on every frame, transparent or not, so a
+    // full-screen idle layer cost ~10-15% of the iGPU with video playing.
+    margins {
+        right: win.open ? 0 : win.sw - 1
+        bottom: win.open ? 0 : win.sh - 1
+    }
+    // the monitor's size, valid before the window is mapped and configured
+    readonly property real sw: modelData.width
+    readonly property real sh: modelData.height
+
     anchors { top: true; bottom: true; left: true; right: true }
     exclusionMode: ExclusionMode.Ignore
     color: "transparent"
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.namespace: "island-float"
     WlrLayershell.keyboardFocus: wanted ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
-    readonly property Region fullMask: Region { x: 0; y: 0; width: win.width; height: win.height }
+    readonly property Region fullMask: Region { x: 0; y: 0; width: win.sw; height: win.sh }
     readonly property Region noMask: Region {}
     mask: open ? fullMask : noMask
 
     // ---- geometry ----------------------------------------------------------
     readonly property var panel: kind === "wifi" ? wifi : bt
     readonly property rect from: ctl && ctl.floatFrom.width > 0 ? ctl.floatFrom
-        : Qt.rect((width - 380) / 2, 6, 380, 60)
+        : Qt.rect((sw - 380) / 2, 6, 380, 60)
     readonly property real toW: 500
     readonly property real toH: panel.implicitHeight
-    readonly property real toX: (width - toW) / 2
-    readonly property real toY: Math.max(40, (height - toH) / 2 - 40)
+    readonly property real toX: (sw - toW) / 2
+    readonly property real toY: Math.max(40, (sh - toH) / 2 - 40)
     property real t: 0
     function lerp(a, b) { return a + (b - a) * t }
 
@@ -70,21 +83,23 @@ PanelWindow {
         captureSource: win.modelData
         live: win.open
         paintCursor: false
-        width: win.width
-        height: win.height
+        width: win.sw
+        height: win.sh
     }
     ShaderEffectSource {
         id: behind
         sourceItem: snap
         hideSource: true
         live: true
-        width: win.width
-        height: win.height
+        width: win.sw
+        height: win.sh
         visible: false
     }
 
     // click outside the card closes
-    TapHandler { enabled: win.open; onTapped: win.close() }
+    // (a MouseArea, not a TapHandler: handlers see taps on the buttons inside
+    // the card too, so every click in the panel closed it)
+    MouseArea { anchors.fill: parent; enabled: win.open; onClicked: win.close() }
 
     Item {
         id: keys
@@ -100,16 +115,20 @@ PanelWindow {
         width: win.lerp(win.from.width, win.toW)
         height: win.lerp(win.from.height, win.toH)
         // swallow taps so they don't reach the close-on-outside handler
-        TapHandler { }
+        MouseArea { anchors.fill: parent }   // clicks inside the card stop here
 
         readonly property real pad: 12
         GlassLum {
             id: lum
             source: behind
             shape: Qt.rect(card.x, card.y, card.width, card.height)
-            srcSize: Qt.size(win.width, win.height)
+            srcSize: Qt.size(win.sw, win.sh)
         }
         WaterGlass {
+            tintColor: Theme.islandTintColor
+            tintColor2: Theme.islandTintColor2
+            tintShade: Theme.tintShade
+            tintStrength: Theme.islandTint
             lumTex: lum.texture
             useLum: 1
             radius: 26
@@ -119,7 +138,7 @@ PanelWindow {
             height: card.height + card.pad * 2
             source: behind
             sourceOrigin: Qt.point(card.x - card.pad, card.y - card.pad)
-            sourceSize: Qt.size(win.width, win.height)
+            sourceSize: Qt.size(win.sw, win.sh)
         }
         Item {
             anchors.fill: parent

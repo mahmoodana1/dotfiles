@@ -1,5 +1,5 @@
 // Peek — liquid-glass top bar, visible only while SUPER is held.
-// Run:     qs -c peek          (managed by ~/.config/hypr/scripts/WaybarPeek.sh)
+// Run:     qs -c peek          (managed by ~/.config/hypr/scripts/bar.sh)
 // Shader:  shaders/glass.frag → recompile to .qsb after editing (command inside)
 import QtQuick
 import Quickshell

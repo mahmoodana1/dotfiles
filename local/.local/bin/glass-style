@@ -1,0 +1,19 @@
+#!/bin/sh
+# glass-style [water|mocha|toggle]
+# Pick the look of the island and glass panels (quickshell/common/Theme.qml):
+#   water  clear sea-tinted water glass (default)
+#   mocha  dark blurred glass tinted mauve/pink (Catppuccin Mocha)
+# Running shells restyle live; Hyprland reloads so the island gets its blur.
+# No argument prints the current style.
+f=${XDG_STATE_HOME:-$HOME/.local/state}/glass/style
+cur=$(cat "$f" 2>/dev/null || echo water)
+case $1 in
+    "") echo "$cur"; exit 0 ;;
+    toggle) [ "$cur" = mocha ] && new=water || new=mocha ;;
+    water|mocha) new=$1 ;;
+    *) echo "usage: glass-style [water|mocha|toggle]" >&2; exit 2 ;;
+esac
+mkdir -p "${f%/*}"
+echo "$new" > "$f"
+hyprctl reload >/dev/null 2>&1
+echo "$new"

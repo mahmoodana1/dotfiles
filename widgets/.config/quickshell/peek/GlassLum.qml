@@ -20,13 +20,20 @@ Item {
 
     // time-based per-frame blend: k = 1 - e^(-dt/tau)
     property real k: 1
+    // alwaysRun: false = only ease for a moment after kick() (call it when the
+    // backdrop capture changes) instead of redrawing every frame forever.
+    property bool alwaysRun: true
+    property bool settling: false
+    function kick() { settling = true; settleTimer.restart() }
+    Timer { id: settleTimer; interval: 700; onTriggered: root.settling = false }
+    readonly property bool running: visible && (alwaysRun || settling)
     FrameAnimation {
-        running: root.visible
+        running: root.running
         onTriggered: root.k = root.snapping ? 1 : 1 - Math.exp(-Math.max(frameTime, 0.001) / root.tau)
     }
 
     property bool snapping: true
-    onVisibleChanged: if (visible) { snapping = true; snapTimer.restart() }
+    onVisibleChanged: if (visible) { snapping = true; snapTimer.restart(); kick() }
     Timer { id: snapTimer; interval: 60; onTriggered: root.snapping = false }
     Component.onCompleted: snapTimer.restart()
 
@@ -46,7 +53,9 @@ Item {
         id: lumSrc
         sourceItem: eff
         recursive: true
-        live: true
+        // a live recursive source redraws its window every frame, forever:
+        // update only while easing (the last value stays in the texture)
+        live: root.running
         hideSource: true
         textureSize: Qt.size(1, 1)
         width: 1

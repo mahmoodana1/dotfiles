@@ -5,9 +5,8 @@
 //             over bright backdrops (lumTex) or on text-heavy views (smoke).
 //   edge      a thin meniscus: ~edgeW px of refracted backdrop sampled just
 //             outside the shape (the live capture contains this island, so
-//             it never samples itself), with a sub-pixel ripple.
-//   light     slow caustic filaments drifting across the body (a few %),
-//             a bright meniscus line, and a sheen gliding along the top.
+//             it never samples itself). Smooth: no ripple or waves.
+//   light     a bright meniscus line and a sheen gliding along the top.
 //
 // Compile: /usr/lib/qt6/bin/qsb --glsl "100es,120,150" --hlsl 50 --msl 12 -o water.frag.qsb water.frag
 
@@ -23,10 +22,13 @@ layout(std140, binding = 0) uniform buf {
     float pad;         // px of shadow padding around the shape
     float radius;      // px corner radius
     float edgeW;       // px width of the refracting meniscus
-    float time;        // seconds, drives the drifting light
+    float time;        // seconds, drives the sheen along the top
     float smoke;       // 0..1 minimum smoke (text-heavy views)
     float useLum;      // 1: backdrop brightness from lumTex
     float shadow;      // drop shadow strength
+    vec4 tint;         // sea tint: rgb (palette accent) + strength in a
+    float darkLift;    // 0..1 faint fill + brighter rim over dark backdrops
+    vec4 tint2;        // rgb: tint colour toward the bottom-right; a: depth shading 0..1 (1 = water)
 };
 layout(binding = 1) uniform sampler2D source;
 layout(binding = 2) uniform sampler2D lumTex;
@@ -34,24 +36,6 @@ layout(binding = 2) uniform sampler2D lumTex;
 float sdRoundBox(vec2 p, vec2 b, float r) {
     vec2 q = abs(p) - b + r;
     return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r;
-}
-
-float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
-float noise(vec2 p) {
-    vec2 i = floor(p), f = fract(p);
-    vec2 u = f * f * (3.0 - 2.0 * f);
-    return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x),
-               mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y);
-}
-
-// thin bright filaments, like sunlight through a water surface
-float caustic(vec2 p, float t) {
-    vec2 w = vec2(noise(p * 0.8 + vec2(t * 0.050, 0.0)),
-                  noise(p * 0.8 + vec2(3.1, -t * 0.040)));
-    vec2 q = p + w * 1.4;
-    float n = noise(q + vec2(t * 0.035, -t * 0.025)) * 0.65
-            + noise(q * 2.1 - vec2(t * 0.030, t * 0.045)) * 0.35;
-    return pow(1.0 - abs(n * 2.0 - 1.0), 7.0);
 }
 
 void main() {
@@ -70,28 +54,38 @@ void main() {
     float inside = clamp(0.5 - d, 0.0, 1.0);          // AA coverage
     float depth = max(-d, 0.0);                        // px in from the edge
 
-    float bright = useLum > 0.5 ? smoothstep(0.45, 0.9, texture(lumTex, vec2(0.5)).r) : 0.0;
+    float lum = useLum > 0.5 ? texture(lumTex, vec2(0.5)).r : 0.5;
+    float bright = useLum > 0.5 ? smoothstep(0.45, 0.9, lum) : 0.0;
+    float dark = useLum > 0.5 ? (1.0 - smoothstep(0.04, 0.3, lum)) * darkLift : 0.0;
 
     // ---- body: clear, smoked only when it has to be --------------------
-    float smokeA = max(0.26 * bright, smoke * 0.8);
+    // Smoke behind the content rises with backdrop brightness (starting from
+    // mid-bright), so white text stays readable over bright or colourful screens.
+    float backing = useLum > 0.5 ? smoothstep(0.22, 0.8, lum) : 0.0;
+    float smokeA = max(0.6 * backing, smoke * 0.8);
     vec3 pc = vec3(0.0);                               // premultiplied colour
     float pa = smokeA;
 
-    // ---- meniscus: thin refracted edge with a sub-pixel ripple ---------
+    // ---- sea tint: like looking through seawater, deeper toward the bottom
+    float tA = tint.a * mix(1.0, 0.72, qt_TexCoord0.y * tint2.a);
+    vec3 tcol = mix(tint.rgb, tint2.rgb, clamp(qt_TexCoord0.x * 0.45 + qt_TexCoord0.y * 0.55, 0.0, 1.0));
+    vec3 tc = tcol * mix(1.0, mix(1.05, 0.55, qt_TexCoord0.y), tint2.a);
+    pc = pc * (1.0 - tA) + tc * tA;
+    pa = pa + tA * (1.0 - pa);
+
+    // over a dark backdrop, a faint milky fill so the glass doesn't vanish
+    float lift = 0.07 * dark;
+    pc += vec3(lift);
+    pa += lift * 0.6;
+
+    // ---- meniscus: thin refracted edge ----------------------------------
     float band = 1.0 - smoothstep(0.0, edgeW, depth);
-    float ripple = (noise(local * 0.06 + vec2(time * 0.18, -time * 0.13)) - 0.5) * 1.1;
     vec2 base = itemPos + center + p;
-    vec2 q = base + n * (depth + pad + 2.0 + 2.5 * band + ripple);
+    vec2 q = base + n * (depth + pad + 2.0 + 2.5 * band);
     vec3 refr = texture(source, clamp(q / srcSize, 0.0, 1.0)).rgb;
     float bandA = band * band * 0.8;
     pc = refr * mix(1.0, 0.75, bright) * bandA + pc * (1.0 - bandA);
     pa = bandA + pa * (1.0 - bandA);
-
-    // ---- drifting light --------------------------------------------------
-    float c = caustic(local / 70.0, time) * (1.0 - band);
-    float cAmt = 0.055 * (1.0 - 0.6 * max(bright, smoke));
-    pc += vec3(c * cAmt);
-    pa += c * cAmt * 0.5;
 
     // faint surface glow from above, like light on the water's skin
     float skin = 0.035 * pow(1.0 - qt_TexCoord0.y, 3.0);
@@ -105,7 +99,7 @@ void main() {
     float along = fract(time * 0.025);                 // one pass every 40 s
     float sheen = exp(-pow((qt_TexCoord0.x - (along * 1.6 - 0.3)) * 5.0, 2.0))
                 * max(-n.y, 0.0);
-    float spec = line * (0.18 + 0.42 * key + 0.35 * sheen);
+    float spec = line * (0.18 + 0.42 * key + 0.35 * sheen) * (1.0 + 0.9 * dark);
     pc += vec3(spec);
     pa += spec;
 
@@ -113,7 +107,7 @@ void main() {
 
     // very soft shadow, just enough to lift it off bright screens
     float sd = sdRoundBox(p - vec2(0.0, 2.0), halfBox, r);
-    float shadowA = shadow * (0.4 + 1.6 * bright) * exp(-max(sd, 0.0) / 5.0)
+    float shadowA = shadow * (0.4 + 1.6 * bright) * exp(-max(sd, 0.0) / (pad * 0.45))
                   * (1.0 - smoothstep(pad * 0.4, pad - 1.0, sd));
     vec4 shade = vec4(0.0, 0.0, 0.0, shadowA * (1.0 - inside));
 
