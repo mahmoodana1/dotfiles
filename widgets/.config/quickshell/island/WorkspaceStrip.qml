@@ -16,6 +16,9 @@ Item {
                     || (w.monitor && monitor && w.monitor.name === monitor.name)))
         .sort((a, b) => a.id - b.id)
     readonly property bool hasActive: activeId > 0 && rep.count > 0
+    // false: lay out and track the droplet but draw no numbers (the island
+    // draws them crisply in a second strip above the droplet lens)
+    property bool numbers: true
 
     width: row.implicitWidth
     implicitWidth: row.implicitWidth
@@ -39,8 +42,11 @@ Item {
                 GlassText {
                     anchors.centerIn: parent
                     text: modelData.id
+                    // the picked one is drawn big and crisp (it used to be lens-magnified: blurry)
+                    size: isActive ? 15 : 12
                     color: isActive ? "white" : Qt.rgba(1, 1, 1, 0.55)
                     Behavior on color { ColorAnimation { duration: 180 } }
+                    opacity: strip.numbers ? 1 : 0
                 }
             }
         }

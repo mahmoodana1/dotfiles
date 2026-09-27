@@ -368,6 +368,8 @@ PanelWindow {
                 // -- workspaces (ws + full) --
                 WorkspaceStrip {
                     id: wsStrip
+                    // geometry only: the numbers are drawn crisply above the droplet (below)
+                    numbers: false
                     visible: opacity > 0.01
                     monitor: win.monitor
                     height: 36
@@ -682,18 +684,21 @@ PanelWindow {
             tint: 0.12
             shadow: 0.22
         }
-        // The lens magnifies a picture of the strip, which blurs the number
-        // inside it. Once the droplet settles, draw the active number crisply
-        // on top at the lens's magnified size; hide it again while it slides.
-        GlassText {
-            readonly property bool settled: droplet.w <= droplet.restW + 1.5
-            visible: droplet.visible
-            opacity: settled ? droplet.opacity : 0
-            Behavior on opacity { NumberAnimation { duration: 90 } }
-            text: wsStrip.activeId > 0 ? wsStrip.activeId : ""
-            size: 12 * droplet.magnify
-            x: wsStrip.x + (wsStrip.dropL + wsStrip.dropR) / 2 - width / 2
-            y: wsStrip.y + wsStrip.height / 2 - height / 2
+        // Every workspace number is drawn crisply above the droplet, which
+        // only has glass to magnify: a lens-magnified picture of text is
+        // always soft, so the picked number is never blurry, even mid-slide.
+        Item {
+            anchors.fill: parent
+            clip: true
+            // same pop as the content the strip lives in
+            transform: Scale { origin.x: pill.width / 2; origin.y: 0; xScale: pill.popC; yScale: pill.popC }
+            WorkspaceStrip {
+                monitor: win.monitor
+                height: wsStrip.height
+                x: wsStrip.x
+                visible: wsStrip.visible
+                opacity: wsStrip.opacity
+            }
         }
     }
 
