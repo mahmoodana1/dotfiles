@@ -1,0 +1,11 @@
+[Unit]
+Description=Stop Docker when no containers are running
+# Docker is socket-activated (docker.socket): any docker command starts it
+# again. Skipped while a docker client (pull, build, compose) is still at work.
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/sh -c 'systemctl is-active -q docker.service || exit 0; \
+    pgrep -x "docker|docker-compose|docker-buildx" >/dev/null && exit 0; \
+    [ -n "$$(docker ps -q)" ] && exit 0; \
+    systemctl stop docker.service containerd.service'

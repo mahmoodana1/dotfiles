@@ -128,6 +128,18 @@ fnv() {
 alias octui='openclaw tui --token "$OPENCLAW_TOKEN"'
 alias get_idf='. ~/esp-idf/export.sh'
 
+# tailscaled is off until needed (system/on-demand.sh): `up` starts it,
+# `down` stops it again. polkit lets systemctl do this without sudo.
+tailscale() {
+    case "${1:-}" in
+        up|login|set|switch)
+            systemctl is-active -q tailscaled || systemctl start tailscaled || return ;;
+    esac
+    command tailscale "$@" || return
+    [ "${1:-}" = down ] && systemctl stop tailscaled
+    return 0
+}
+
 # OpenClaw Completion
 [ -f "/home/mahmood/.openclaw/completions/openclaw.zsh" ] && source "/home/mahmood/.openclaw/completions/openclaw.zsh"
 

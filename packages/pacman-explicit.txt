@@ -194,6 +194,7 @@ vulkan-intel
 vulkan-nouveau
 vulkan-radeon
 waybar
+weston
 wev
 wget
 wine-gecko

@@ -1,0 +1,9 @@
+[Unit]
+Description=OpenClaw Gateway on demand (stops after 15 idle minutes)
+# Started by openclaw.socket. When the proxy exits idle, the gateway goes with
+# it (StopWhenUnneeded in openclaw-gateway.service).
+Requires=openclaw-gateway.service openclaw.socket
+After=openclaw-gateway.service openclaw.socket
+
+[Service]
+ExecStart=/usr/lib/systemd/systemd-socket-proxyd --exit-idle-time=15min 127.0.0.1:18790
