@@ -106,8 +106,11 @@ PanelWindow {
     color: "transparent"
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.namespace: "island"
-    // keyboard only while typing a wifi password
-    WlrLayershell.keyboardFocus: wifiPanel.typing && viewMode === "wifi" ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+    // keyboard only while typing a wifi password, or in the notification hub
+    // (vim keys; NotifPanel.qml)
+    WlrLayershell.keyboardFocus: (wifiPanel.typing && viewMode === "wifi") || (notifPanel.active && isFocused)
+                                 ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+    readonly property bool hubPinned: ctl !== null && ctl !== undefined && ctl.panel === "notifs" && ctl.hubPinned
     // One hover area that changes shape: a thin top-center strip while hidden
     // (off over fullscreen), the island from the top edge down while shown.
     // (Two stacked hover items don't work: only the topmost one gets hovered.)
@@ -150,7 +153,7 @@ PanelWindow {
         id: closeInfo
         interval: 40            // just debounce handler hand-offs; leaving is instant
         onTriggered: {
-            if (!win.ctl || win.pointerIn || wifiPanel.typing) return
+            if (!win.ctl || win.pointerIn || wifiPanel.typing || win.hubPinned) return
             if (win.ctl.infoOpen || win.ctl.panel !== "") {
                 win.reverting = true      // shrink first; pops out if nothing remains
                 revertTimer.restart()
@@ -166,7 +169,7 @@ PanelWindow {
     Timer {
         id: idleClose
         interval: 4000
-        onTriggered: if (win.ctl && !win.pointerIn && win.isFocused && !wifiPanel.typing) win.ctl.panel = ""
+        onTriggered: if (win.ctl && !win.pointerIn && win.isFocused && !wifiPanel.typing && !win.hubPinned) win.ctl.panel = ""
     }
 
     // ---- live capture of what's behind (includes us; glass samples outside) --

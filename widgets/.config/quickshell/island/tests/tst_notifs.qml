@@ -120,4 +120,62 @@ TestCase {
         verify(!N.isOsd(null))
         verify(!N.isOsd(undefined))
     }
+
+    // ---- keyboard rows ------------------------------------------------------------
+    function gs() { return N.groups([e("c", "Discord", 30), e("b", "Mail", 20), e("a", "Discord", 10)]) }
+    function test_rows_collapsed() {
+        const r = N.rows(gs(), "")
+        compare(r.map(N.rowId).join(","), "g:Discord,g:Mail")
+        compare(r[0].key, "")                       // a group of 2 expands
+        compare(r[1].key, "b")                      // a lone one opens
+    }
+    function test_rows_expanded() {
+        compare(N.rows(gs(), "Discord").map(N.rowId).join(","), "g:Discord,i:c,i:a,g:Mail")
+        // expanding a lone app adds nothing
+        compare(N.rows(gs(), "Mail").length, 2)
+    }
+    function test_rowid_empty() { compare(N.rowId(undefined), "") }
+    function test_relocate_follows_id() {
+        const r = N.rows(gs(), "Discord")
+        compare(N.relocate(r, "g:Mail", 0), 3)
+        compare(N.relocate(r, "i:a", 0), 2)
+    }
+    function test_relocate_gone_clamps() {
+        const r = N.rows(gs(), "")
+        compare(N.relocate(r, "i:zzz", 1), 1)
+        compare(N.relocate(r, "i:zzz", 9), 1)
+        compare(N.relocate(r, "i:zzz", -3), 0)
+        compare(N.relocate([], "g:x", 4), 0)
+    }
+    function test_rowspan() {
+        const r = N.rows(gs(), "Discord")          // group, item, item, group
+        compare(N.rowSpan(r, 0, 50, 42, 2).y, 0)
+        compare(N.rowSpan(r, 1, 50, 42, 2).y, 50)
+        compare(N.rowSpan(r, 1, 50, 42, 2).h, 42)
+        compare(N.rowSpan(r, 2, 50, 42, 2).y, 92)
+        compare(N.rowSpan(r, 3, 50, 42, 2).y, 136)  // + gap before the next group
+        compare(N.rowSpan(r, 3, 50, 42, 2).h, 50)
+    }
+    function test_selfor() {
+        const a = N.selFor(gs(), "a")
+        compare(a.expanded, "Discord"); compare(a.id, "i:a")
+        const b = N.selFor(gs(), "b")
+        compare(b.expanded, ""); compare(b.id, "g:Mail")
+        compare(N.selFor(gs(), "nope").id, "")
+    }
+    function test_after_remove_group() {
+        const r = N.rows(gs(), "Discord")          // g:Discord, i:c, i:a, g:Mail
+        compare(N.afterRemove(r, 0), "g:Mail")      // skips its own notifications
+        compare(N.afterRemove(r, 3), "g:Discord")   // last → previous group
+        compare(N.afterRemove([], 0), "")
+        compare(N.afterRemove(N.rows(gs(), "").slice(0, 1), 0), "")
+    }
+    function test_after_remove_item() {
+        // two left → one: the group row stands in for it
+        compare(N.afterRemove(N.rows(gs(), "Discord"), 1), "g:Discord")
+        const three = N.groups([e("c", "D", 30), e("b", "D", 20), e("a", "D", 10)])
+        const r = N.rows(three, "D")                // g:D, i:c, i:b, i:a
+        compare(N.afterRemove(r, 1), "i:b")         // next one
+        compare(N.afterRemove(r, 3), "i:b")         // last → previous
+    }
 }

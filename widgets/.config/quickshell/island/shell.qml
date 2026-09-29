@@ -34,9 +34,16 @@ ShellRoot {
     property string floating: ""             // "bt" | "wifi": panel detached to the middle (FloatPanel.qml)
     // SUPER+Q closes the floating panel (hypr/lua/keybinds.lua checks first)
     GlobalShortcut { appid: "island"; name: "close"; onPressed: root.floating = "" }
-    // SUPER+SHIFT+N: the hub, like a panel opened from outside (closes by
-    // itself unless the pointer comes over it)
-    GlobalShortcut { appid: "island"; name: "notifs"; onPressed: root.panel === "notifs" ? root.closeHub() : root.openHub("") }
+    // SUPER+SHIFT+N: the hub, pinned: it holds the keyboard and stays until
+    // Ctrl+] / Esc (or the shortcut again), not just while hovered
+    GlobalShortcut {
+        appid: "island"; name: "notifs"
+        onPressed: {
+            if (root.panel === "notifs") { root.closeHub(); return }
+            root.openHub("")
+            root.hubPinned = true
+        }
+    }
     property rect floatFrom: Qt.rect(0, 0, 0, 0)   // island rect it springs out of / back into
     property string floatScreen: ""          // monitor name it shows on
 
@@ -45,6 +52,7 @@ ShellRoot {
     property bool levelMuted: false
     property var notif: ({ key: "", app: "", summary: "", body: "", icon: "", urgency: 1 })
     property string hubKey: ""               // notification open in the hub ("" = the list)
+    property bool hubPinned: false           // hub driven by keyboard: pointer leaving / idling won't close it
     property string toastIcon: ""
     property string toastText: ""
 
@@ -111,7 +119,7 @@ ShellRoot {
         if (mode === "notif") notifUntil = 0     // the popup becomes the hub
     }
     function closeHub() { if (panel === "notifs") panel = "" }
-    onPanelChanged: if (panel !== "notifs") hubKey = ""
+    onPanelChanged: if (panel !== "notifs") { hubKey = ""; hubPinned = false }
     function toast(icon, text, ms) {
         toastIcon = icon; toastText = text
         pulse("toast", ms)
