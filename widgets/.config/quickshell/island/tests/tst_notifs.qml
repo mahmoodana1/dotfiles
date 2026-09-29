@@ -170,6 +170,15 @@ TestCase {
         compare(N.afterRemove([], 0), "")
         compare(N.afterRemove(N.rows(gs(), "").slice(0, 1), 0), "")
     }
+    function test_cycle() {
+        const ids = ["a", "b", "c"]
+        compare(N.cycle(ids, "a", 1), "b")
+        compare(N.cycle(ids, "c", 1), "a")          // wraps
+        compare(N.cycle(ids, "a", -1), "c")
+        compare(N.cycle(ids, "", 1), "a")           // nothing focused yet
+        compare(N.cycle(ids, "", -1), "c")
+        compare(N.cycle([], "a", 1), "")
+    }
     function test_after_remove_item() {
         // two left → one: the group row stands in for it
         compare(N.afterRemove(N.rows(gs(), "Discord"), 1), "g:Discord")

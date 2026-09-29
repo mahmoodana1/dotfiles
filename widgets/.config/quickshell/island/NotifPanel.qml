@@ -13,7 +13,9 @@ import "common/keys.js" as K
 // No HoverHandlers here: they would steal `hovered` from the pill.
 // Keyboard (the island grabs it while the hub is open): j/k move, g/G ends,
 // l/Enter open (a group expands), h collapses, d dismisses; in the full view
-// j/k scroll, Enter/o opens, 1-9 run actions, h/Esc go back. Ctrl+] closes.
+// j/k scroll, Enter/o opens, 1-9 run actions, h/Esc go back. Tab / Shift+Tab
+// walk the buttons (the rows, then Clear all, in the list); Enter presses the
+// focused one. Ctrl+] closes.
 Item {
     id: panel
 
@@ -60,6 +62,7 @@ Item {
         reveal()
     }
     function select(i) {
+        clearFocus = false
         if (rows.length === 0) return
         sel = Math.max(0, Math.min(rows.length - 1, i))
         selId = N.rowId(rows[sel])
@@ -102,6 +105,23 @@ Item {
         store.dismiss(fullView.e.key)
         back()
     }
+    // Tab focus: in the list, the rows then "Clear all"; in the full view, its buttons
+    property bool clearFocus: false
+    property string btn: ""                      // focused full-view button ("" = none)
+    onFullChanged: { btn = ""; clearFocus = false }
+    function tab(dir) {
+        if (full) { btn = N.cycle(fullView.buttons, btn, dir); return }
+        const ids = rows.map(N.rowId).concat(store && store.count > 0 ? ["clear"] : [])
+        const next = N.cycle(ids, clearFocus ? "clear" : selId, dir)
+        if (next === "clear") clearFocus = true
+        else select(ids.indexOf(next))
+    }
+    function clearAll() { expanded = ""; clearFocus = false; store.clearAll() }
+    function press(id) {                         // a full-view button
+        if (id === "default") { store.invoke(fullView.e.key, "default"); ctl.closeHub() }
+        else if (id === "dismiss") dismissOpen()
+        else { store.invoke(fullView.e.key, id); back() }
+    }
     function scrollBody(dy) {
         bodyFlick.contentY = Math.max(0, Math.min(bodyFlick.contentHeight - bodyFlick.height, bodyFlick.contentY + dy))
     }
@@ -115,8 +135,11 @@ Item {
         const enterKey = k === Qt.Key_Return || k === Qt.Key_Enter
         let done = true
         if (K.isClose(event)) ctl.closeHub()
+        else if (k === Qt.Key_Backtab || (k === Qt.Key_Tab && (event.modifiers & Qt.ShiftModifier))) tab(-1)
+        else if (k === Qt.Key_Tab) tab(1)
+        else if (full && btn !== "" && (enterKey || k === Qt.Key_Space)) press(btn)
+        else if (!full && clearFocus && (enterKey || k === Qt.Key_Space)) clearAll()
         else if (full) {
-            const acts = fullView.acts.filter(a => a.identifier !== "default" && a.text !== "")
             const n = k - Qt.Key_1
             if (K.isEscape(event) || l === "h" || l === "q" || k === Qt.Key_Left || k === Qt.Key_Backspace) back()
             else if (ctrl && l === "d") scrollBody(bodyFlick.height / 2)
@@ -126,8 +149,8 @@ Item {
             else if (l === "k" || k === Qt.Key_Up) scrollBody(-40)
             else if (l === "g" || k === Qt.Key_Home) scrollBody(-bodyFlick.contentHeight)
             else if (l === "G" || k === Qt.Key_End) scrollBody(bodyFlick.contentHeight)
-            else if ((enterKey || l === "o") && fullView.hasDefault) { store.invoke(fullView.e.key, "default"); ctl.closeHub() }
-            else if (n >= 0 && n < 9 && n < acts.length) { store.invoke(fullView.e.key, acts[n].identifier); back() }
+            else if ((enterKey || l === "o") && fullView.hasDefault) press("default")
+            else if (n >= 0 && n < 9 && n < fullView.extra.length) press(fullView.extra[n].identifier)
             else if (l === "d" || l === "x" || k === Qt.Key_Delete) dismissOpen()
             else done = false
         } else {
@@ -135,8 +158,8 @@ Item {
             else if (ctrl && l === "d") select(sel + 5)
             else if (ctrl && l === "u") select(sel - 5)
             else if (ctrl) done = false
-            else if (l === "j" || k === Qt.Key_Down || k === Qt.Key_Tab) select(sel + 1)
-            else if (l === "k" || k === Qt.Key_Up || k === Qt.Key_Backtab) select(sel - 1)
+            else if (l === "j" || k === Qt.Key_Down) select(sel + 1)
+            else if (l === "k" || k === Qt.Key_Up) select(sel - 1)
             else if (l === "g" || k === Qt.Key_Home) select(0)
             else if (l === "G" || k === Qt.Key_End) select(rows.length - 1)
             else if (enterKey || k === Qt.Key_Space) activate()
@@ -207,7 +230,8 @@ Item {
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
             text: "Clear all"
-            onClicked: { panel.expanded = ""; panel.store.clearAll() }
+            focused: panel.kbd && panel.clearFocus
+            onClicked: panel.clearAll()
         }
     }
 
@@ -253,7 +277,7 @@ Item {
                     Item {
                         width: grp.width; height: 50
                         Rectangle {
-                            readonly property bool picked: panel.kbd && panel.selId === "g:" + grp.g.app
+                            readonly property bool picked: panel.kbd && !panel.clearFocus && panel.selId === "g:" + grp.g.app
                             anchors.fill: parent
                             radius: 14
                             color: gTap.pressed ? Qt.rgba(1, 1, 1, 0.16)
@@ -308,7 +332,7 @@ Item {
                             required property var modelData
                             width: grp.width; height: 42
                             Rectangle {
-                                readonly property bool picked: panel.kbd && panel.selId === "i:" + it.modelData.key
+                                readonly property bool picked: panel.kbd && !panel.clearFocus && panel.selId === "i:" + it.modelData.key
                                 x: 40; width: parent.width - 40; height: parent.height
                                 radius: 12
                                 color: iTap.pressed ? Qt.rgba(1, 1, 1, 0.16)
@@ -367,10 +391,12 @@ Item {
         property var e: ({ app: "", appIcon: "", summary: "", body: "", time: 0, key: "" })
         Connections {
             target: panel
-            function onEntryChanged() { if (panel.entry) fullView.e = panel.entry }
+            function onEntryChanged() { if (panel.entry) { fullView.e = panel.entry; panel.btn = "" } }
         }
         readonly property var acts: panel.store && e.key ? panel.store.actions(e.key) : []
         readonly property bool hasDefault: acts.some(a => a.identifier === "default")
+        readonly property var extra: acts.filter(a => a.identifier !== "default" && a.text !== "")
+        readonly property var buttons: (hasDefault ? ["default"] : []).concat(extra.map(a => a.identifier), ["dismiss"])
         readonly property string img: panel.store && e.key ? panel.store.image(e.key) : ""
 
         Item {                            // ← · icon app · time
@@ -440,22 +466,25 @@ Item {
                 visible: fullView.hasDefault
                 text: "Open"
                 size: 11
-                onClicked: { panel.store.invoke(fullView.e.key, "default"); panel.ctl.closeHub() }
+                focused: panel.kbd && panel.btn === "default"
+                onClicked: panel.press("default")
             }
             Repeater {
-                model: fullView.acts.filter(a => a.identifier !== "default" && a.text !== "")
+                model: fullView.extra
                 delegate: PillButton {
                     required property var modelData
                     text: modelData.text
                     size: 11
-                    onClicked: { panel.store.invoke(fullView.e.key, modelData.identifier); panel.back() }
+                    focused: panel.kbd && panel.btn === modelData.identifier
+                    onClicked: panel.press(modelData.identifier)
                 }
             }
             PillButton {
                 text: "Dismiss"
                 size: 11
                 danger: true
-                onClicked: panel.dismissOpen()
+                focused: panel.kbd && panel.btn === "dismiss"
+                onClicked: panel.press("dismiss")
             }
         }
     }

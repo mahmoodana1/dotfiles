@@ -131,3 +131,12 @@ function afterRemove(list, i) {
     const next = list[i + 1] && list[i + 1].kind === "item" ? list[i + 1] : list[i - 1]
     return rowId(next)
 }
+
+// Tab / Shift+Tab: the id after (dir 1) or before (dir -1) `cur` in `ids`,
+// wrapping; from nothing, the first (or last)
+function cycle(ids, cur, dir) {
+    if (ids.length === 0) return ""
+    const i = ids.indexOf(cur)
+    if (i < 0) return dir > 0 ? ids[0] : ids[ids.length - 1]
+    return ids[(i + dir + ids.length) % ids.length]
+}
