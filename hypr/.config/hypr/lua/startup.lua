@@ -21,8 +21,7 @@ local autostart = {
     "hypridle",                                   -- idle -> lock
     "wl-paste --type text --watch cliphist store",  -- clipboard history
     "wl-paste --type image --watch cliphist store", -- (browse: cliphist list | fzf ...)
-    "nm-applet --indicator",
-    "blueman-applet",
+    "blueman-applet",                             -- pairing agent (nm-applet: waybar mode only, bar.sh)
 
     -- Apps
     { d.browser, workspace = "9 silent" },

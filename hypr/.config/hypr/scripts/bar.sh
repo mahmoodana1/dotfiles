@@ -37,8 +37,14 @@ stop_qs() {
   pkill -f "quickshell/(peek|island)/(shared/)?[s]uperwatch.py"
 }
 
-start_waybar() { pgrep -x waybar >/dev/null || setsid -f waybar >/dev/null 2>&1; }
+# nm-applet only lives in waybar mode: the island/peek have no tray and do
+# Wi-Fi themselves (password prompt included).
+start_waybar() {
+  pgrep -x waybar >/dev/null || setsid -f waybar >/dev/null 2>&1
+  pgrep -x nm-applet >/dev/null || setsid -f nm-applet --indicator >/dev/null 2>&1
+}
 stop_waybar() {
+  pkill -x nm-applet
   pkill -x waybar
   while pgrep -x waybar >/dev/null; do sleep 0.1; done
 }
