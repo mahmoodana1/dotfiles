@@ -1,0 +1,26 @@
+/* Glass: the new tab page is Vimium C's blank page (vimkeys.uc.js points
+   Firefox at it), so vim keys work from the moment a tab opens. Give it the
+   plain black backdrop and a one-line key hint. */
+
+@-moz-document regexp("moz-extension://[^/]+/pages/blank\\.html.*") {
+  html {
+    background: #0a0a0a !important;
+    color-scheme: dark !important;
+    min-height: 100vh;
+  }
+  body::before {
+    content: "o  open      O  open in new tab      b  tabs      H/L  back/forward      ?  all keys";
+    position: fixed;
+    top: 42%;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 12px 22px;
+    border-radius: 22px;
+    border: 1px solid rgba(255, 255, 255, .14);
+    background: rgba(18, 18, 18, .92);
+    color: rgba(255, 255, 255, .55);
+    font: 13px/1.4 "Inter", "Roboto", "Noto Sans", sans-serif;
+    word-spacing: 2px;
+    white-space: pre;
+  }
+}

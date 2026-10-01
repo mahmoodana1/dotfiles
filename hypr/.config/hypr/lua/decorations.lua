@@ -41,6 +41,7 @@ hl.config({
             passes = 2,
             new_optimizations = true,
             special = true,
+            popups = true,       -- glass menus (Firefox Glass mod: ~/.config/firefox)
         },
     },
 
