@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Nothing secret gets committed (see secret-scan).
+exec "$(dirname "$0")/secret-scan" staged

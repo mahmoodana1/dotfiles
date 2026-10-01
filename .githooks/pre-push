@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Second net: scan every commit that is about to leave the machine, in case
+# it was made with --no-verify or before the hooks were wired.
+zero=0000000000000000000000000000000000000000
+while read -r _ local_sha _ remote_sha; do
+    [ "$local_sha" = "$zero" ] && continue                 # deleting a branch
+    if [ "$remote_sha" = "$zero" ]; then range=("$local_sha" --not --remotes)
+    else range=("$remote_sha..$local_sha"); fi
+    "$(dirname "$0")/secret-scan" range "${range[@]}" || exit 1
+done
+exit 0
