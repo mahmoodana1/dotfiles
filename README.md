@@ -104,6 +104,11 @@ Every exclusion is deliberate. Grouped by why.
 | `~/.config/secrets.env` | The OpenClaw token. Created from a template by `install.sh`, `chmod 600`, gitignored |
 | `~/.ssh`, `~/.gnupg` | Private keys. Move these by hand, over a channel you trust |
 
+A second net behind `.gitignore`: `.githooks/secret-scan` runs on every commit
+and push (wired by `install.sh` via `core.hooksPath`) and blocks token shapes,
+hardcoded passwords and files like keys or `.env`. Audit the whole history
+with `.githooks/secret-scan all`.
+
 ### Personal data — not config
 
 `~/.config/zen` (84 MB Firefox-derived browser profile: history, cookies,

@@ -156,6 +156,10 @@ else
     ok "tpm already installed"
 fi
 
+# This repo is public: the hooks refuse commits/pushes that carry secrets.
+run git -C "$DOTFILES" config core.hooksPath .githooks
+ok "secret-scan git hooks wired (.githooks)"
+
 # ~/.gitconfig is not stowed: it holds your name and email.
 if [ ! -e "$HOME/.gitconfig" ]; then
     warn "no ~/.gitconfig — copy templates/gitconfig.example and set your identity:"
