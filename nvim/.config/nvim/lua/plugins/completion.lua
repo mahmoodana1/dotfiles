@@ -8,17 +8,37 @@
 --  outside a popup is still in core/keymaps.lua.
 -- ===========================================================================
 
+-- Copilot's language server needs Node 22+. nvim started outside a shell
+-- (launcher, file manager) has no nvm on PATH and finds the system node (20),
+-- so hand it the newest nvm node instead when PATH's is too old.
+local function copilot_node()
+    local function major(bin)
+        local out = vim.fn.system({ bin, "--version" })
+        return vim.v.shell_error == 0 and tonumber(out:match("v(%d+)")) or 0
+    end
+    if vim.fn.executable("node") == 1 and major("node") >= 22 then return "node" end
+    local best, best_major = "node", 0
+    for _, bin in ipairs(vim.fn.glob("~/.config/nvm/versions/node/*/bin/node", false, true)) do
+        local m = major(bin)
+        if m > best_major then best, best_major = bin, m end
+    end
+    return best
+end
+
 return {
     -- --- Copilot: suggestions go into the completion menu, not as ghost text
     {
         "zbirenbaum/copilot.lua",
         cmd = "Copilot",
         event = "InsertEnter",
-        opts = {
-            suggestion = { enabled = false }, -- blink renders them instead
-            panel = { enabled = false },
-            filetypes = { markdown = true, gitcommit = true },
-        },
+        opts = function()
+            return {
+                copilot_node_command = copilot_node(),
+                suggestion = { enabled = false }, -- blink renders them instead
+                panel = { enabled = false },
+                filetypes = { markdown = true, gitcommit = true },
+            }
+        end,
     },
 
     {
