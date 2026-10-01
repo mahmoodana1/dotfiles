@@ -2,12 +2,15 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import "shared"
+import "common/keys.js" as K
 import "lib/match.js" as Match
 import "lib/shortcuts.js" as Parser
 
 // SUPER+H: ~/dotfiles/shortcuts.md as a browsable cheat sheet.
-// Left: sections (Up/Down or click). Right: that section's shortcuts.
-// Typing searches every section at once. Edit shortcuts.md; this reloads.
+// Left: sections. Right: that section's shortcuts. Vim keys: j/k move,
+// h/l switch pane, g/G ends, Ctrl+D/U page, / searches every section at once
+// (Enter or Esc leaves the box, Esc again clears it), q closes.
+// Edit shortcuts.md; this reloads.
 FocusScope {
     id: root
     signal closeRequested()
@@ -18,11 +21,50 @@ FocusScope {
 
     property var parsed: ({ sections: [], skipped: 0 })
     property int section: 0
+    property bool listPane: false                       // j/k walk the rows, not the sections
+    readonly property bool inList: query !== "" || listPane
+    onSectionChanged: list.currentIndex = 0
+
+    // vim keys: focus the scope itself. (root.forceActiveFocus() alone would
+    // hand focus back to `search`, the scope's remembered focus child.)
+    function normalMode() { search.focus = false; root.forceActiveFocus() }
 
     function opened(arg) {
         search.text = ""
         root.section = 0
-        search.forceActiveFocus()
+        root.listPane = false
+        list.currentIndex = 0
+        normalMode()
+    }
+    function move(d) {
+        if (inList) list.currentIndex = Math.max(0, Math.min(list.count - 1, list.currentIndex + d))
+        else { const n = parsed.sections.length; if (n) section = (section + d + n) % n }
+    }
+    function jump(last) {
+        if (inList) list.currentIndex = last ? Math.max(0, list.count - 1) : 0
+        else section = last ? Math.max(0, parsed.sections.length - 1) : 0
+    }
+
+    Keys.onPressed: event => {
+        const k = event.key
+        const l = K.letter(event)
+        const ctrl = (event.modifiers & Qt.ControlModifier) !== 0
+        let done = true
+        if (K.isClose(event)) root.closeRequested()
+        else if (K.isEscape(event)) { if (root.query) search.text = ""; else root.closeRequested() }
+        else if (ctrl && l === "d") list.currentIndex = Math.min(list.count - 1, list.currentIndex + 8)
+        else if (ctrl && l === "u") list.currentIndex = Math.max(0, list.currentIndex - 8)
+        else if (ctrl) done = false
+        else if (l === "j" || k === Qt.Key_Down) move(1)
+        else if (l === "k" || k === Qt.Key_Up) move(-1)
+        else if (l === "g" || k === Qt.Key_Home) jump(false)
+        else if (l === "G" || k === Qt.Key_End) jump(true)
+        else if (l === "l" || k === Qt.Key_Right) root.listPane = true
+        else if (l === "h" || k === Qt.Key_Left) root.listPane = false
+        else if (k === Qt.Key_Slash || event.nativeScanCode === 61 || l === "i") search.forceActiveFocus()
+        else if (l === "q") root.closeRequested()
+        else done = false
+        event.accepted = done
     }
 
     FileView {
@@ -58,6 +100,7 @@ FocusScope {
         color: Qt.rgba(1, 1, 1, 0.10)
         border.color: Qt.rgba(1, 1, 1, search.activeFocus ? 0.28 : 0.14)
 
+        MouseArea { anchors.fill: parent; onClicked: search.forceActiveFocus() }
         GlassText {
             x: 16
             anchors.verticalCenter: parent.verticalCenter
@@ -69,36 +112,29 @@ FocusScope {
             id: search
             x: 46
             width: parent.width - 62
-            anchors.verticalCenter: parent.verticalCenter
+            y: Math.round((parent.height - height) / 2)     // whole pixel: a half-pixel y blurs the glyphs
             color: "white"
             selectionColor: Qt.rgba(1, 1, 1, 0.3)
             font.family: "JetBrainsMono Nerd Font"
             font.pixelSize: 16
-            focus: true
             onTextChanged: list.currentIndex = 0
 
             Text {
                 visible: search.text === ""
-                text: "Search shortcuts"
+                text: search.activeFocus ? "Search shortcuts" : "/ to search"
                 color: Qt.rgba(1, 1, 1, 0.75)
                 font: search.font
             }
 
+            // insert mode: keys type; Esc / Ctrl+[ / Enter go back to the vim keys
             Keys.onPressed: event => {
-                const n = root.parsed.sections.length
-                switch (event.key) {
-                case Qt.Key_Up:
-                    if (root.query) list.decrementCurrentIndex()
-                    else root.section = (root.section - 1 + n) % n
-                    break
-                case Qt.Key_Down:
-                    if (root.query) list.incrementCurrentIndex()
-                    else root.section = (root.section + 1) % n
-                    break
-                case Qt.Key_PageDown: list.flick(0, -1600); break
-                case Qt.Key_PageUp:   list.flick(0, 1600); break
-                default: return
-                }
+                if (K.isClose(event)) root.closeRequested()
+                else if (K.isEscape(event) || event.key === Qt.Key_Return || event.key === Qt.Key_Enter) root.normalMode()
+                else if (event.key === Qt.Key_Up) root.move(-1)
+                else if (event.key === Qt.Key_Down) root.move(1)
+                else if (event.key === Qt.Key_PageDown) list.currentIndex = Math.min(list.count - 1, list.currentIndex + 8)
+                else if (event.key === Qt.Key_PageUp) list.currentIndex = Math.max(0, list.currentIndex - 8)
+                else return
                 event.accepted = true
             }
         }
@@ -121,8 +157,8 @@ FocusScope {
         highlightMoveDuration: 120
         highlight: Rectangle {
             radius: 12
-            color: Qt.rgba(1, 1, 1, 0.16)
-            border.color: Qt.rgba(1, 1, 1, 0.24)
+            color: Qt.rgba(1, 1, 1, root.inList ? 0.08 : 0.16)
+            border.color: Qt.rgba(1, 1, 1, root.inList ? 0.12 : 0.24)
         }
         delegate: Item {
             id: sec
@@ -142,7 +178,7 @@ FocusScope {
             }
             MouseArea {
                 anchors.fill: parent
-                onClicked: { search.text = ""; root.section = sec.index; search.forceActiveFocus() }
+                onClicked: { search.text = ""; root.listPane = false; root.section = sec.index; root.normalMode() }
             }
         }
     }
@@ -168,7 +204,7 @@ FocusScope {
         boundsBehavior: Flickable.StopAtBounds
         highlightMoveDuration: 90
         highlight: Rectangle {
-            visible: root.query !== ""
+            visible: root.inList
             radius: 10
             color: Qt.rgba(1, 1, 1, 0.12)
         }
@@ -255,7 +291,7 @@ FocusScope {
         y: parent.height - 26
         size: 10
         color: Qt.rgba(1, 1, 1, 0.45)
-        text: "↑↓ sections · type to search all · edit ~/dotfiles/shortcuts.md"
+        text: "j/k move · h/l pane · g/G ends · ^d/^u page · / search all · q close · edit ~/dotfiles/shortcuts.md"
               + (root.parsed.skipped ? "   ·   " + root.parsed.skipped + " lines skipped" : "")
     }
 }
