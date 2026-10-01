@@ -1,0 +1,42 @@
+{
+  "name": "Vimium C",
+  "keyLayout": 2,
+  "keyMappings": [
+    "# Vimium C: qutebrowser-flavoured. Source: ~/.config/firefox/vimium-c.json",
+    "# (re-import it in Vimium C options after editing). ? shows every key.",
+    "",
+    "# Ctrl+[ is Escape, like everywhere else on the desktop",
+    "mapKey <c-[> <esc>",
+    "",
+    "# o / O open Firefox's own URL bar (Google suggestions, inline URL",
+    "# completion): glass/vimkeys.uc.js handles them, so Vimium lets go",
+    "unmap o",
+    "unmap O",
+    "",
+    "# tabs, qutebrowser style",
+    "map J nextTab",
+    "map K previousTab",
+    "map d removeTab",
+    "map u restoreTab",
+    "map co closeOtherTabs",
+    "map gC duplicateTab",
+    "map b Vomnibar.activateTabSelection",
+    "",
+    "# pages",
+    "map <c-d> scrollPageDown",
+    "map <c-u> scrollPageUp",
+    "map R reload hard",
+    "",
+    "# hints (f = here, F = new background tab, T = new tab and go)",
+    "map T LinkHints.activateOpenInNewForegroundTab"
+  ],
+  "userDefinedCss": "/* Glass: plain black panels, white-alpha rows, Inter/Roboto.\n   Source: ~/.config/firefox/vimium-c.json */\n\n/* #ui */\n\n/* command HUD: a small black pill */\n.HUD, .HUD.D { color: rgba(255, 255, 255, .75) !important; font: 12px/16px \"Inter\", \"Roboto\", \"Noto Sans\", sans-serif !important; }\n.HUD::after, .HUD.D::after {\n  background: rgba(12, 12, 12, .95) !important;\n  border: 1px solid rgba(255, 255, 255, .14) !important;\n  border-radius: 10px !important;\n}\n\n/* link hints */\n.LH, .D > .LH {\n  background: rgba(12, 12, 12, .95) !important;\n  color: #fff !important;\n  border: 1px solid rgba(255, 255, 255, .22) !important;\n  border-radius: 6px !important;\n  box-shadow: 0 2px 6px rgba(0, 0, 0, .5) !important;\n  padding: 1px 5px !important;\n  font: 600 11px/14px \"Inter\", \"Roboto\", \"Noto Sans\", sans-serif !important;\n}\n.MH, .D > .LH .MH { color: rgba(255, 255, 255, .4) !important; }\n.LH.active, .D > .LH.active { background: #fff !important; color: #000 !important; }\n.IH { background: rgba(255, 255, 255, .10) !important; border-color: rgba(255, 255, 255, .5) !important; }\n.Flash { box-shadow: 0 0 0 2px rgba(255, 255, 255, .8) !important; }\n\n/* #omni */\n\n/* Compact. The frame height comes from vomnibarOptions.sizes\n   (\"bar,extra,row,widthRatio,maxWidth\"): keep #bar = 42rem, rows = 34rem\n   and list padding = 6rem in step with it, or the list gets clipped.\n   The box-shadow has to fit the body margins (9/12/10rem) or it clips square. */\nhtml, body { background: transparent !important; }\nbody {\n  background: rgba(12, 12, 12, .96) !important;\n  border-radius: 14rem !important;\n  box-shadow: 0 3rem 9rem rgba(0, 0, 0, .55) !important;\n  font-family: \"Inter\", \"Roboto\", \"Noto Sans\", sans-serif !important;\n}\nbody::after { content: \"\" !important; border: 1rem solid rgba(255, 255, 255, .14) !important; border-radius: 14rem !important; }\n#bar, #bar.empty, .has-dark > #bar {\n  background: transparent !important;\n  border: none !important;\n  height: 30rem !important;\n  padding: 6rem !important;\n}\n#input {\n  height: 30rem !important;\n  background: rgba(255, 255, 255, .08) !important;\n  border: 1rem solid transparent !important;\n  border-radius: 9rem !important;\n  box-shadow: none !important;\n  color: #fff !important;\n  caret-color: #fff !important;\n  font: 14rem/20rem \"Inter\", \"Roboto\", \"Noto Sans\", sans-serif !important;\n  padding: 3rem 10rem !important;\n}\n#input:focus { background: rgba(255, 255, 255, .11) !important; border-color: rgba(255, 255, 255, .22) !important; }\n#toolbar { color: rgba(255, 255, 255, .4) !important; top: 11rem !important; right: 8rem !important; }\n#list { background: transparent !important; padding: 0 6rem 6rem !important; }\n.item, .item.b {\n  height: 34rem !important;\n  padding: 2rem 10rem 0 !important;\n  border: none !important;\n  border-radius: 8rem !important;\n}\n.item:hover { background: rgba(255, 255, 255, .07) !important; }\n.item.s, .p { background: rgba(255, 255, 255, .13) !important; }\n.top {\n  height: 17rem !important;\n  color: rgba(255, 255, 255, .9) !important;\n  font: 13rem/17rem \"Inter\", \"Roboto\", \"Noto Sans\", sans-serif !important;\n}\n.bottom { height: 14rem !important; line-height: 14rem !important; margin-left: 20rem !important; }\n.icon, .tab, .math { --vc-c: rgba(255, 255, 255, .5); margin-top: 0.5rem !important; }\na, .mono-url a { color: rgba(255, 255, 255, .45) !important; font: 11rem/14rem \"Inter\", \"Roboto\", \"Noto Sans\", sans-serif !important; }\n.label, .time { color: rgba(255, 255, 255, .4) !important; font-size: 11rem !important; }\nmatch { color: #fff !important; font-weight: 700 !important; }\n.title > match { text-decoration: none !important; }\n\n/* #find */\n\n#bar, .r, .r.D {\n  background: rgba(12, 12, 12, .95) !important;\n  color: #fff !important;\n  border-radius: 10px 10px 0 0 !important;\n  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .14) !important;\n}\n* { font-family: \"Inter\", \"Roboto\", \"Noto Sans\", sans-serif !important; }\n#s::after, #c::after { color: rgba(255, 255, 255, .6) !important; }\n\n/* #find:host */\n\n:host { caret-color: #fff; }\n\n/* #find:selection */\n\n::selection { background: rgba(255, 255, 255, .3); color: #fff; }\n",
+  "hideHud": true,
+  "vomnibarOptions": {
+    "actions": "",
+    "maxMatches": 8,
+    "queryInterval": 333,
+    "sizes": "64,6,34,0.62,1100",
+    "styles": "dark"
+  }
+}

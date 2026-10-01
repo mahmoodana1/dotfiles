@@ -18,7 +18,7 @@ Legend: `SUPER` = mainMod (Windows key).
 | `SUPER + Q` | Close active window |
 | `SUPER + SHIFT + Q` | Kill active process (force) |
 | `SUPER + SHIFT + N` | Notification panel toggle |
-| `SUPER + H` | Shortcut viewer (glass) — this file; ↑↓ sections, type to search everything |
+| `SUPER + H` | Shortcut viewer (glass) — this file; j/k sections, h/l pane, / searches everything |
 
 ## Hyprland — Windows
 
@@ -277,7 +277,7 @@ Prefix is `Ctrl+a` (rebound from default `Ctrl+b`). All shortcuts below mean: pr
 
 ### Copy mode (vim-style)
 
-Enter copy mode with `Ctrl+a [`, then:
+Enter copy mode with `Ctrl+a v` (or `Ctrl+a [`) to move the cursor freely around the pane, then:
 
 | Keys | Action |
 |---|---|
@@ -574,6 +574,43 @@ Session-only: the log is swept 24 hours after the last change.
 | `●` | Marks an edit you haven't looked at yet (it dims once you land on it) |
 | `?` | Help |
 | `q` | Close the popup (the log stays; `Ctrl+a e` reopens it) |
+
+## Firefox (Vimium C + Glass mod)
+
+Config: `~/.config/firefox/` (`vimium-c.json` = Vimium keys + look, `glass/` = Sine mod for the Firefox UI).
+Keys match on the physical key, so they work on the Arabic layout too. A new tab (`Ctrl+t`) puts the cursor in the address bar: type a URL (completes inline from history, like Chrome) or a search (live Google suggestions). `Esc` drops to the page, where the Vimium keys work.
+
+### On a page (Vimium C)
+
+| Keys | Action |
+|---|---|
+| `?` | Every Vimium key |
+| `f` / `F` / `T` | Hint links: open here / new background tab / new tab and go |
+| `o` / `O` | Firefox's URL bar (Google suggestions, inline URL completion): here / new tab |
+| `B` | Vimium search of bookmarks (new tab) |
+| `b` | Tab picker |
+| `J` / `K` | Next / previous tab |
+| `d` / `u` | Close tab / undo close |
+| `co` | Close all other tabs |
+| `gC` | Duplicate tab |
+| `H` / `L` | Back / forward |
+| `j` / `k`, `gg` / `G` | Scroll, top / bottom |
+| `Ctrl+d` / `Ctrl+u` | Half page down / up |
+| `r` / `R` | Reload / hard reload |
+| `yy` / `p` / `P` | Copy URL / open clipboard here / new tab |
+| `/`, `n` / `N` | Find, next / previous match |
+| `gi` | Focus first input |
+| `i`, `v` | Insert mode (Vimium off until Esc), visual mode |
+| `Ctrl+[` | Escape |
+
+### In Firefox's own UI (URL bar, menus, panels)
+
+| Keys | Action |
+|---|---|
+| `Ctrl+j` / `Ctrl+k` | Down / up in the URL bar results or an open menu |
+| `Ctrl+t` | New tab, cursor in the address bar |
+| `Tab` / `Right` | Accept the inline URL completion |
+| `Ctrl+[` / `Esc` | Close the dropdown or menu; pressed again in the URL bar, back to the page |
 
 ---
 

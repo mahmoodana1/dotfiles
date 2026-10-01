@@ -1,0 +1,286 @@
+/* ─────────────────────────────────────────────────────────────────────
+   Glass: Firefox chrome in the quickshell glass-panel style, neutral black
+   (shapes from ~/.config/quickshell/glass; colours plain black, no tint).
+
+   Loaded by Sine as a local mod: the profile's chrome/sine-mods/glass
+   is a symlink here, set up by ../link.sh.
+
+   Menus and panels are translucent smoked black (no tint); Hyprland blurs what's
+   behind them (decoration.blur.popups in hypr/lua/decorations.lua).
+   ───────────────────────────────────────────────────────────────────── */
+
+:root {
+  /* smoked black glass, white-alpha rows (same shapes as the quickshell panels) */
+  --g-glass: rgba(12, 12, 12, .92);
+  --g-solid: #0a0a0a;           /* toolbar + sidebar, opaque so video stays cheap */
+  --g-rim: rgba(255, 255, 255, .14);
+  --g-rim-hi: rgba(255, 255, 255, .28);
+  --g-fg: #ffffff;
+  --g-fg-2: rgba(255, 255, 255, .75);
+  --g-fg-3: rgba(255, 255, 255, .55);
+  --g-row: rgba(255, 255, 255, .10);
+  --g-row-sel: rgba(255, 255, 255, .14);
+  --g-row-down: rgba(255, 255, 255, .20);
+  --g-field: rgba(255, 255, 255, .08);
+  --g-accent: #e8e8e8;
+  --g-accent-hi: #ffffff;
+  --g-r-panel: 22px;
+  --g-r-row: 12px;
+  --g-font: "Inter", "Roboto", "Noto Sans", sans-serif;
+
+  /* ── popups: menus + arrow panels ── */
+  --panel-background: var(--g-glass) !important;
+  --panel-color: var(--g-fg) !important;
+  --panel-border-color: var(--g-rim) !important;
+  --panel-border-radius: var(--g-r-panel) !important;
+  --panel-padding: 8px !important;
+  --panel-shadow-margin: 0px !important;
+  --panel-separator-color: rgba(255, 255, 255, .08) !important;
+  --panel-item-hover-bgcolor: var(--g-row) !important;
+  --panel-item-active-bgcolor: var(--g-row-down) !important;
+  --panel-subview-body-padding: 4px 0 !important;
+  --panel-description-color: var(--g-fg-3) !important;
+  --panel-disabled-color: rgba(255, 255, 255, .35) !important;
+  --arrowpanel-background: var(--g-glass) !important;
+  --arrowpanel-color: var(--g-fg) !important;
+  --arrowpanel-border-color: var(--g-rim) !important;
+  --arrowpanel-border-radius: var(--g-r-panel) !important;
+  --arrowpanel-padding: 8px !important;
+  --arrowpanel-dimmed: var(--g-row) !important;
+  --arrowpanel-dimmed-further: var(--g-row-down) !important;
+  --menu-background-color: rgba(12, 12, 12, .92) !important;
+  --menu-color: var(--g-fg) !important;
+  --menu-border-color: var(--g-rim) !important;
+  --menu-disabled-color: rgba(255, 255, 255, .35) !important;
+  --menuitem-hover-background-color: var(--g-row-sel) !important;
+  --menuitem-disabled-hover-background-color: transparent !important;
+  --menuitem-border-radius: var(--g-r-row) !important;
+  --menuitem-padding: 6px 12px !important;
+
+  /* ── toolbar ── */
+  --lwt-accent-color: var(--g-solid) !important;
+  --lwt-accent-color-inactive: var(--g-solid) !important;
+  --lwt-text-color: var(--g-fg) !important;
+  --toolbox-bgcolor: var(--g-solid) !important;
+  --toolbox-bgcolor-inactive: var(--g-solid) !important;
+  --toolbox-textcolor: var(--g-fg) !important;
+  --toolbar-bgcolor: var(--g-solid) !important;
+  --toolbar-color: var(--g-fg-2) !important;
+  --toolbar-field-background-color: var(--g-field) !important;
+  --toolbar-field-focus-background-color: rgba(255, 255, 255, .12) !important;
+  --toolbar-field-color: var(--g-fg) !important;
+  --toolbar-field-focus-color: var(--g-fg) !important;
+  --toolbar-field-border-color: transparent !important;
+  --toolbar-field-focus-border-color: var(--g-rim-hi) !important;
+  --toolbarbutton-hover-background: var(--g-row) !important;
+  --toolbarbutton-active-background: var(--g-row-down) !important;
+  --toolbarbutton-border-radius: 10px !important;
+  --tabs-border-color: transparent !important;
+  --chrome-content-separator-color: transparent !important;
+  --focus-outline-color: var(--g-accent) !important;
+  --color-accent-primary: var(--g-accent) !important;
+  --color-accent-primary-hover: var(--g-accent-hi) !important;
+  --color-accent-primary-active: var(--g-accent-hi) !important;
+  --button-text-color-primary: #000000 !important;
+
+  /* ── URL bar results (a glass sheet under the field) ── */
+  --urlbarView-highlight-background: var(--g-row-sel) !important;
+  --urlbarView-highlight-color: var(--g-fg) !important;
+  --urlbarView-hover-background: var(--g-row) !important;
+  --urlbarView-separator-color: transparent !important;
+  --urlbarView-secondary-text-color: var(--g-fg-3) !important;
+  --urlbarView-action-color: var(--g-accent) !important;
+  --urlbar-box-bgcolor: var(--g-row) !important;
+  --urlbar-box-hover-bgcolor: var(--g-row-sel) !important;
+  --urlbar-box-active-bgcolor: var(--g-row-down) !important;
+  --urlbar-box-text-color: var(--g-fg-2) !important;
+
+  /* ── sidebar / vertical tabs ── */
+  --sidebar-background-color: var(--g-solid) !important;
+  --sidebar-text-color: var(--g-fg-2) !important;
+  --sidebar-border-color: transparent !important;
+  --tab-selected-bgcolor: var(--g-row-sel) !important;
+  --tab-selected-textcolor: var(--g-fg) !important;
+  --tab-hover-background-color: var(--g-row) !important;
+  --tab-border-radius: var(--g-r-row) !important;
+  --tab-selected-shadow: none !important;
+  --tab-selected-outline-color: transparent !important;
+  --tabpanel-background-color: var(--g-solid) !important;
+}
+
+/* ─── popups ─────────────────────────────────────────────────────────── */
+
+/* Firefox (popup.css) re-declares these on every menupopup/panel, so they
+   have to be set there, not on :root. --panel-background-color feeds a
+   `background:` shorthand, so the gradient is fine. */
+menupopup, panel {
+  --panel-background-color: var(--g-glass) !important;
+  --panel-text-color: var(--g-fg) !important;
+  --panel-border-color: var(--g-rim) !important;
+  --panel-border-radius: var(--g-r-panel) !important;
+  --panel-padding: 8px !important;
+  --panel-padding-block: 8px !important;
+  --menuitem-border-radius: var(--g-r-row) !important;
+  --menuitem-padding: 6px 12px !important;
+  --menuitem-margin: 0 !important;
+  --text-color-disabled: rgba(255, 255, 255, .35) !important;
+  font-family: var(--g-font) !important;
+  font-size: 13px !important;
+}
+/* right-click menus are tighter than the app-menu panel */
+menupopup:not([type="arrow"]) {
+  --panel-border-radius: 16px !important;
+  --panel-padding: 6px !important;
+  --panel-padding-block: 6px !important;
+  --menuitem-border-radius: 10px !important;
+}
+
+menupopup menuitem, menupopup menu {
+  border-radius: var(--g-r-row) !important;
+  min-height: 30px !important;
+  color: var(--g-fg) !important;
+}
+menupopup menuitem[_moz-menuactive], menupopup menu[_moz-menuactive] {
+  background: var(--g-row-sel) !important;
+  color: var(--g-fg) !important;
+}
+menupopup menuitem[disabled], menupopup menu[disabled] { color: rgba(255, 255, 255, .35) !important; }
+menupopup .menu-accel, menupopup .menu-iconic-accel { color: var(--g-fg-3) !important; }
+menupopup menuseparator { opacity: .35 !important; }
+
+/* arrow panels: app menu, extensions, downloads, permissions, … */
+panel .panel-arrowcontent, .panel-viewstack, .panel-subview-body { color: var(--g-fg) !important; }
+.subviewbutton, .toolbarbutton-1.subviewbutton, .panel-subview-footer-button {
+  border-radius: var(--g-r-row) !important;
+  min-height: 32px !important;
+}
+.subviewbutton:not([disabled]):hover, .panel-subview-footer-button:hover {
+  background: var(--g-row) !important;
+}
+.subviewbutton[checked="true"] { background: var(--g-row-sel) !important; }
+.panel-header { color: var(--g-fg-2) !important; }
+toolbarseparator, .panel-subview-body > toolbarseparator { opacity: .35 !important; }
+
+/* the search box inside panels: a pill like the launcher's */
+panel search-textbox, panel input[type="search"], .panel-subview-body html|input {
+  background: var(--g-row) !important;
+  border: 1px solid transparent !important;
+  border-radius: 14px !important;
+  color: var(--g-fg) !important;
+}
+panel search-textbox[focused], panel input[type="search"]:focus {
+  background: var(--g-row-sel) !important;
+  border-color: var(--g-rim-hi) !important;
+}
+
+/* no pointy arrows: panels hang like the island's */
+.panel-arrow, .panel-arrowbox { display: none !important; }
+
+/* tooltips */
+tooltip {
+  appearance: none !important;
+  background: rgba(12, 12, 12, .95) !important;
+  color: var(--g-fg) !important;
+  border: 1px solid var(--g-rim) !important;
+  border-radius: 10px !important;
+  padding: 5px 9px !important;
+  font-family: var(--g-font) !important;
+  font-size: 12px !important;
+}
+
+/* ─── toolbar ────────────────────────────────────────────────────────── */
+
+#navigator-toolbox {
+  background: var(--g-solid) !important;
+  border-bottom: none !important;
+  font-family: var(--g-font) !important;
+}
+#nav-bar { background: transparent !important; box-shadow: none !important; }
+
+#urlbar-background {
+  border-radius: var(--g-r-row) !important;
+  border: 1px solid transparent !important;
+}
+#urlbar:not([open]) #urlbar-input { color: var(--g-fg-2) !important; }
+#urlbar[focused]:not([open]) > #urlbar-background {
+  border-color: var(--g-rim-hi) !important;
+  outline: none !important;
+}
+
+/* open: the field becomes a glass sheet, like the launcher */
+#urlbar[open] > #urlbar-background {
+  background: var(--g-glass) !important;
+  border: 1px solid var(--g-rim) !important;
+  border-radius: var(--g-r-panel) !important;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, .5) !important;
+  backdrop-filter: blur(24px) saturate(1.2) !important;
+}
+#urlbar[open] #urlbar-input-container {
+  margin: 8px 8px 0 !important;
+  border-radius: 14px !important;
+  background: var(--g-row) !important;
+}
+#urlbar[open] .urlbarView { margin-inline: 8px !important; width: calc(100% - 16px) !important; }
+#urlbar[open] .urlbarView-body-inner { border-top: none !important; }
+/* rows: Firefox paints the selected row itself (view-proton.css) */
+.urlbarView-row {
+  --urlbarview-background-color-selected: var(--g-row-sel) !important;
+  --urlbarview-text-color-selected: var(--g-fg) !important;
+  border-radius: var(--g-r-row) !important;
+}
+.urlbarView-row:not([selected]):hover { background-color: var(--g-row) !important; }
+.urlbarView-row[selected] { background-color: var(--g-row-sel) !important; color: var(--g-fg) !important; }
+.urlbarView-row-inner { border-radius: var(--g-r-row) !important; padding-block: 6px !important; }
+.urlbarView-title strong, .urlbarView-url strong { color: var(--g-accent) !important; font-weight: 600 !important; }
+.urlbarView-url { color: var(--g-fg-3) !important; }
+.search-one-offs { border-top: none !important; opacity: .8; }
+
+/* ─── vertical tabs ──────────────────────────────────────────────────── */
+
+#sidebar-main, #sidebar-box, #vertical-tabs, sidebar-main {
+  background: var(--g-solid) !important;
+  border: none !important;
+}
+#tabbrowser-tabbox, #tabbrowser-tabpanels { background: var(--g-solid) !important; }
+
+.tabbrowser-tab { font-family: var(--g-font) !important; font-size: 13px !important; }
+.tabbrowser-tab .tab-background {
+  border-radius: var(--g-r-row) !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+.tabbrowser-tab:hover > .tab-stack > .tab-background:not([selected]) { background: var(--g-row) !important; }
+.tabbrowser-tab[selected] > .tab-stack > .tab-background { background: var(--g-row-sel) !important; }
+.tabbrowser-tab:not([selected]) .tab-label { color: var(--g-fg-3) !important; }
+.tab-close-button { border-radius: 8px !important; }
+
+/* find bar: a slim pill at the bottom */
+findbar {
+  background: var(--g-solid) !important;
+  border-top: none !important;
+  font-family: var(--g-font) !important;
+}
+.findbar-textbox {
+  background: var(--g-row) !important;
+  border: 1px solid transparent !important;
+  border-radius: 14px !important;
+  color: var(--g-fg) !important;
+}
+.findbar-textbox:focus { border-color: var(--g-rim-hi) !important; outline: none !important; }
+
+/* the new tab is Vimium C's blank page: don't label it "Extension (Vimium C …)" */
+#identity-box.extensionPage #identity-icon-label { display: none !important; }
+
+/* Firefox's own banners in the app menu (sync, updates) are purple: go neutral */
+#appMenu-popup {
+  --panel-banner-item-background-color: var(--g-row) !important;
+  --panel-banner-item-hover-bgcolor: var(--g-row-sel) !important;
+  --panel-banner-item-active-bgcolor: var(--g-row-down) !important;
+  --panel-banner-item-color: var(--g-fg) !important;
+}
+
+/* the inline-completed part of a URL (and any selection in the bar): no blue */
+#urlbar-input::selection, #searchbar input::selection, .findbar-textbox::selection {
+  background-color: rgba(255, 255, 255, .28) !important;
+  color: #fff !important;
+}
