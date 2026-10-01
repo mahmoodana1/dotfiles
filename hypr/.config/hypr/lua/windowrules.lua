@@ -34,7 +34,7 @@ tag_class("video", "^([Mm]pv|com.github.rafostar.Clapper)$")
 -- small utility windows: float, 70% of the screen, centered
 tag_class("settings", "^(nm-applet|nm-connection-editor|blueman-manager|nwg-displays|nwg-look)$")
 tag_class("settings", "^(pavucontrol|org.pulseaudio.pavucontrol|com.saivert.pwvucontrol)$")
-tag_class("settings", "^(qt5ct|qt6ct|[Yy]ad|xdg-desktop-portal-gtk|file-roller|org.gnome.FileRoller)$")
+tag_class("settings", "^(qt5ct|qt6ct|[Yy]ad|[Xx]dg-desktop-portal-gtk|file-roller|org.gnome.FileRoller)$")
 tag_class("settings", "^(gnome-disks|[Bb]aobab|org.gnome.[Bb]aobab|wihotspot(-gui)?)$")
 tag_title("settings", "^(ROG Control|Kvantum Manager)$")
 
