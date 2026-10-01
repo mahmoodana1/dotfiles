@@ -15,6 +15,7 @@ import Quickshell.Services.Pipewire
 import Quickshell.Networking
 import Quickshell.Bluetooth
 import "shared"
+import "lib/flash.js" as Flash
 
 ShellRoot {
     id: root
@@ -97,10 +98,9 @@ ShellRoot {
     function pulse(which, ms) {
         if (!armed) return
         const t = Date.now()
-        if (which === "ws") wsUntil = t + ms
-        else if (which === "level") levelUntil = t + ms
-        else if (which === "notif") notifUntil = t + ms
-        else if (which === "toast") toastUntil = t + ms
+        // a new flash ends the other flashes (lib/flash.js): nothing comes back after it
+        const u = Flash.pulse({ ws: wsUntil, level: levelUntil, notif: notifUntil, toast: toastUntil }, which, t, ms)
+        wsUntil = u.ws; levelUntil = u.level; notifUntil = u.notif; toastUntil = u.toast
         now = t
     }
     function dismiss() {
