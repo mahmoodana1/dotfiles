@@ -89,9 +89,9 @@ PanelWindow {
         id: popOut
         // pops inwards: glass and content collapse together into the island's
         // own centre (popOy), never past its size; solid until the last frames
-        NumberAnimation { target: pill; property: "pop"; to: 0.5; duration: 110; easing.type: Easing.InCubic }
-        NumberAnimation { target: pill; property: "popC"; to: 0.5; duration: 110; easing.type: Easing.InCubic }
-        NumberAnimation { target: pill; property: "fade"; to: 0; duration: 110; easing.type: Easing.InQuart }
+        NumberAnimation { target: pill; property: "pop"; to: 0.5; duration: 55; easing.type: Easing.InCubic }
+        NumberAnimation { target: pill; property: "popC"; to: 0.5; duration: 55; easing.type: Easing.InCubic }
+        NumberAnimation { target: pill; property: "fade"; to: 0; duration: 55; easing.type: Easing.InQuart }
     }
 
     readonly property int winW: 760
