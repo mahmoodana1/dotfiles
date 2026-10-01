@@ -69,10 +69,12 @@ PanelWindow {
         if (shown) {
             snap.captureFrame(); lum.kick()
             popOut.stop()
+            pill.popOy = 0
             popIn.restart()
             Qt.callLater(() => win.morphReady = win.shown)
         } else {
             popIn.stop()
+            pill.popOy = 0.5
             popOut.restart()
         }
     }
@@ -85,9 +87,11 @@ PanelWindow {
     }
     ParallelAnimation {
         id: popOut
-        NumberAnimation { target: pill; property: "pop"; to: 0.9; duration: 80; easing.type: Easing.InCubic }
-        NumberAnimation { target: pill; property: "popC"; to: 0.94; duration: 80; easing.type: Easing.InCubic }
-        NumberAnimation { target: pill; property: "fade"; to: 0; duration: 70; easing.type: Easing.InQuad }
+        // pops inwards: glass and content collapse together into the island's
+        // own centre (popOy), never past its size; solid until the last frames
+        NumberAnimation { target: pill; property: "pop"; to: 0.5; duration: 110; easing.type: Easing.InCubic }
+        NumberAnimation { target: pill; property: "popC"; to: 0.5; duration: 110; easing.type: Easing.InCubic }
+        NumberAnimation { target: pill; property: "fade"; to: 0; duration: 110; easing.type: Easing.InQuart }
     }
 
     readonly property int winW: 760
@@ -227,13 +231,19 @@ PanelWindow {
     readonly property bool tall: viewMode === "wifi" || viewMode === "bt" || viewMode === "notifs" || viewMode === "notif"
     readonly property real targetW: modeW(viewMode)
     readonly property real targetH: modeH(viewMode)
+    // Capsule for bars, rounded rect for the tall panels. The glass eases
+    // between the two: snapping to a capsule while a panel is still shrinking
+    // (hub closed back to the bar) rounds the whole panel into a blob.
+    readonly property real targetR: tall ? 26 : targetH / 2
+    property real cornerR: targetR
+    Behavior on cornerR { enabled: win.morphReady; NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
 
     // Publish where the island sits (monitor coordinates, final size, not the
     // springing one) for panels that bud off it: $XDG_RUNTIME_DIR/island-<monitor>.json
     readonly property string publishText: JSON.stringify({
         shown: shown, x: Math.round((modelData.width - targetW) / 2), y: 6,
         w: targetW, h: targetH,
-        r: tall ? 26 : targetH / 2
+        r: targetR
     })
     onPublishTextChanged: publishTimer.restart()
     Timer { id: publishTimer; interval: 30; onTriggered: publishFile.setText(win.publishText) }
@@ -299,6 +309,7 @@ PanelWindow {
         property real fade: 0
         property real pop: 1                 // glass scale (springy overshoot)
         property real popC: 1                // content scale (no overshoot: text never wobbles)
+        property real popOy: 0               // where the pop scales from: 0 top edge (in), 0.5 centre (out)
         property real jelly: 0               // squash & stretch: +1 stretched wide, -1 tall
         readonly property real jellyX: 1 + 0.035 * jelly
         readonly property real jellyY: 1 - 0.07 * jelly
@@ -352,8 +363,7 @@ PanelWindow {
                 tintShade: Theme.tintShade
                 tintStrength: Theme.islandTint
                 lumTex: lum.texture
-                // capsule for bars; rounded rect for the tall panels
-                radius: win.tall ? 26 : 999
+                radius: win.cornerR
                 // text-heavy views get smoked glass so they read over busy backdrops
                 // (a little everywhere there's text: clear water, still readable)
                 smoke: win.viewMode === "wifi" || win.viewMode === "bt" || win.viewMode === "notifs" ? 0.5
@@ -366,7 +376,8 @@ PanelWindow {
                 sourceOrigin: Qt.point(pill.x - pad, pill.y - pad)
                 sourceSize: Qt.size(win.winW, win.winH)
                 // scale from the top edge, like it grows out of the bezel
-                transform: Scale { origin.x: glass.width / 2; origin.y: glass.pad
+                // (popping out, from its centre: popOy)
+                transform: Scale { origin.x: glass.width / 2; origin.y: glass.pad + pill.height * pill.popOy
                                    xScale: pill.pop * pill.jellyX; yScale: pill.pop * pill.jellyY }
             }
 
@@ -377,7 +388,7 @@ PanelWindow {
                 id: contentClip
                 anchors.fill: parent
                 clip: true
-                transform: Scale { origin.x: pill.width / 2; origin.y: 0; xScale: pill.popC; yScale: pill.popC }
+                transform: Scale { origin.x: pill.width / 2; origin.y: pill.height * pill.popOy; xScale: pill.popC; yScale: pill.popC }
             Item {
                 id: content
                 anchors.fill: parent
@@ -728,7 +739,7 @@ PanelWindow {
             anchors.fill: parent
             clip: true
             // same pop as the content the strip lives in
-            transform: Scale { origin.x: pill.width / 2; origin.y: 0; xScale: pill.popC; yScale: pill.popC }
+            transform: Scale { origin.x: pill.width / 2; origin.y: pill.height * pill.popOy; xScale: pill.popC; yScale: pill.popC }
             WorkspaceStrip {
                 monitor: win.monitor
                 height: wsStrip.height
