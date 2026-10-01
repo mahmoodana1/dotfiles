@@ -301,18 +301,24 @@ Mouse drag → release also copies to system clipboard.
 
 ### Session persistence
 
-| Keys | Action |
+| Command | Action |
 |---|---|
-| `Ctrl+a Ctrl+s` | Save session layout now (tmux-resurrect) |
-| `Ctrl+a Ctrl+r` | Restore the last saved layout |
+| `tmux-keep save` | Save the session snapshot now |
+| `tmux-keep show` | Print the current snapshot |
+| `tmux-keep reset` | Start over: forget everything saved and close all sessions |
 
-Plugins loaded via TPM: `tmux-resurrect` + `tmux-continuum` — sessions auto-save
-every 2 min and restore on tmux start, so they survive a reboot.
+`~/.local/bin/tmux-keep` (wired up in `~/.tmux.conf`, no keybinds) saves named
+sessions on every session change and every 60 s, and brings them back when
+tmux starts, so they survive a reboot. You are never switched to another
+session; the project you open first after a reboot gets its saved windows back
+too. Numbered throwaway sessions (`0`, `7`...) and `dojo` are not kept.
 
-Restored automatically: **pane scrollback**, `nvim`/`vim`, `ssh`, `btop`,
-`lazygit`, `yazi`, `lazydocker`, and `claude` — Claude panes come back as
-`claude --continue`, i.e. on the same conversation, not a blank one.
-Snapshots live in `~/.local/share/tmux/resurrect/` (newest 20 kept).
+Restored automatically: windows, layouts, folders, **pane scrollback** of plain
+shells (last 3000 lines), `nvim`/`vim`, `ssh`, `btop`, `lazygit`, `yazi`,
+`lazydocker`, and `claude` — Claude panes come back as `claude --continue`,
+i.e. on the same conversation, not a blank one.
+The snapshot lives in `~/.local/share/tmux-keep/snapshot.tsv` (`history/` keeps
+the 20 before it).
 
 
 ## Neovim
