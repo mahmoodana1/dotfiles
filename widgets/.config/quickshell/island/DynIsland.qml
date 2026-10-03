@@ -213,7 +213,7 @@ PanelWindow {
     function modeW(m) {
         return m === "ws" ? wsStrip.width + 28
             : m === "level" ? 300
-            : m === "notif" ? Math.min(560, Math.max(340, notifRow.implicitWidth + 40))
+            : m === "notif" ? Math.min(560, Math.max(160, notifRow.implicitWidth + 36))   // hugs the content
             : m === "toast" ? toastRow.implicitWidth + 40
             : m === "full" ? fullW
             : m === "info" ? Math.max(infoTop.implicitWidth, infoBottom.implicitWidth) + 44
@@ -225,7 +225,7 @@ PanelWindow {
     // still cover them, or the panel ends short of the pointer and closes
     readonly property real panelW: Math.min(winW, Math.max(380, infoTop.implicitWidth + 16))
     function modeH(m) {
-        return m === "notif" ? 64 : m === "info" ? 72
+        return m === "notif" ? Math.max(40, notifRow.implicitHeight + 18) : m === "info" ? 72
             : m === "wifi" ? wifiPanel.implicitHeight
             : m === "bt" ? btPanel.implicitHeight
             : m === "notifs" ? notifPanel.implicitHeight
@@ -423,10 +423,18 @@ PanelWindow {
                         text: Qt.formatDateTime(clock.date, "HH:mm")
                         size: 13; weight: Font.Bold
                     }
-                    GlassText {
+                    Row {
                         visible: win.notifCount > 0
-                        text: "\u{f009a} " + win.notifCount
-                        color: Qt.rgba(1, 1, 1, 0.85)
+                        spacing: 4
+                        Image {
+                            width: 13; height: 13
+                            anchors.verticalCenter: parent.verticalCenter
+                            source: win.latestIcon
+                            sourceSize: Qt.size(26, 26)
+                            smooth: false
+                            visible: status === Image.Ready
+                        }
+                        GlassText { text: win.notifCount; color: Qt.rgba(1, 1, 1, 0.85) }
                     }
                     GlassText {
                         visible: Stats.hasBattery
@@ -515,6 +523,7 @@ PanelWindow {
                     component Chip: Item {
                         id: chip
                         property alias icon: ic.text
+                        property string img: ""           // image source shown instead of the glyph
                         property alias label: lb.text
                         property color tone: "white"
                         property string action: ""        // shell command run on click
@@ -533,7 +542,11 @@ PanelWindow {
                             id: chipRow
                             anchors.centerIn: parent
                             spacing: 6
-                            GlassText { id: ic; size: 13; color: chip.tone; anchors.verticalCenter: parent.verticalCenter }
+                            GlassText { id: ic; size: 13; color: chip.tone; anchors.verticalCenter: parent.verticalCenter
+                                        visible: text !== "" }
+                            Image { width: 14; height: 14; anchors.verticalCenter: parent.verticalCenter
+                                    source: chip.img; sourceSize: Qt.size(28, 28); smooth: false
+                                    visible: chip.img !== "" && status === Image.Ready }
                             GlassText { id: lb; size: 11; color: chip.tone; anchors.verticalCenter: parent.verticalCenter
                                         width: Math.min(implicitWidth, 170); elide: Text.ElideRight }
                         }
@@ -565,7 +578,7 @@ PanelWindow {
                         }
                         Chip {
                             visible: win.notifCount > 0
-                            icon: "\u{f009a}"
+                            img: win.latestIcon
                             label: win.notifCount
                             panelChip: true
                             onClicked: if (win.ctl) win.ctl.openHub("")
@@ -652,23 +665,15 @@ PanelWindow {
                     readonly property var n: win.ctl ? win.ctl.notif : ({})
                     readonly property string iconSrc: win.ctl ? win.ctl.notifs.iconFor(n.icon, n.app) : ""
 
-                    Item {
-                        width: 34; height: 34
+                    Image {
+                        id: nIcon
+                        width: 22; height: 22
                         anchors.verticalCenter: parent.verticalCenter
-                        Image {
-                            id: nIcon
-                            anchors.fill: parent
-                            source: notifRow.iconSrc
-                            sourceSize: Qt.size(68, 68)
-                            fillMode: Image.PreserveAspectFit
-                            visible: status === Image.Ready
-                        }
-                        GlassText {
-                            anchors.centerIn: parent
-                            visible: !nIcon.visible
-                            text: "\u{f0f3}"
-                            size: 18
-                        }
+                        source: notifRow.iconSrc
+                        sourceSize: Qt.size(44, 44)
+                        fillMode: Image.PreserveAspectFit
+                        smooth: false                       // keeps pixel-art icons crisp
+                        visible: status === Image.Ready     // no icon -> no slot (never a bell)
                     }
                     Column {
                         anchors.verticalCenter: parent.verticalCenter
@@ -756,6 +761,12 @@ PanelWindow {
     SystemClock { id: clock; precision: SystemClock.Minutes }
     property bool innerTap: false            // a chip took this click (see the pill's TapHandler)
     readonly property int notifCount: ctl ? ctl.notifs.count : 0
+    // the newest kept notification's own icon (stands in for a generic bell)
+    readonly property string latestIcon: {
+        if (!ctl || ctl.notifs.kept.length === 0) return ""
+        const e = ctl.notifs.kept[0]
+        return ctl.notifs.iconFor(e.image || e.appIcon, e.app)
+    }
 
     // info-panel chip actions; the panel closes after launching
     readonly property string floatTerm: "alacritty --class alacritty-float -e "
