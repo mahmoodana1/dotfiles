@@ -41,3 +41,12 @@ opacity = 0.95
 
 [cursor]
 style = { shape = "Block", blinking = "Never" }
+
+# Ctrl+Backspace deletes a word everywhere. Bare Alacritty only gets this right
+# for apps that turn on the kitty keyboard protocol (Claude Code does); inside
+# tmux it arrives as ^H, plain backspace. ^W is word-delete in zsh, Claude Code
+# and nvim insert mode, so send that directly.
+[keyboard]
+bindings = [
+  { key = "Back", mods = "Control", chars = "\u0017" },
+]
