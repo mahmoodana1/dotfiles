@@ -48,6 +48,7 @@ PanelWindow {
         : ctl.panel !== "" ? ctl.panel
         : ctl.infoOpen ? "info"                      // stays while hovered
         : ctl.held && ctl.shiftHeld ? "full"
+        : ctl.mode === "notif" && ctl.notif.urgency >= 2 ? "notif"   // critical: over fullscreen too
         // a switch just happened: show it even while SUPER is held (SUPER+N
         // switches with SUPER down, which otherwise means "full", hidden here)
         : ctl.now < ctl.wsUntil ? "ws"
@@ -216,11 +217,13 @@ PanelWindow {
             : m === "toast" ? toastRow.implicitWidth + 40
             : m === "full" ? fullW
             : m === "info" ? Math.max(infoTop.implicitWidth, infoBottom.implicitWidth) + 44
-            : m === "wifi" ? wifiPanel.implicitWidth
-            : m === "bt" ? btPanel.implicitWidth
+            : m === "wifi" || m === "bt" ? panelW
             : m === "notifs" ? notifPanel.implicitWidth
             : 120
     }
+    // wifi/bt open from the first chips on the info row: just wide enough to
+    // still cover them, or the panel ends short of the pointer and closes
+    readonly property real panelW: Math.min(winW, Math.max(380, infoTop.implicitWidth + 16))
     function modeH(m) {
         return m === "notif" ? 64 : m === "info" ? 72
             : m === "wifi" ? wifiPanel.implicitHeight
@@ -607,7 +610,7 @@ PanelWindow {
                     x: win.fx("wifi"); y: 0
                     onDetach: win.detachPanel("wifi")
                     active: win.viewMode === "wifi" && win.shown
-                    width: implicitWidth
+                    width: win.panelW
                     opacity: win.viewMode === "wifi" ? 1 : 0
                     visible: opacity > 0
                     Behavior on opacity { enabled: win.morphReady; NumberAnimation { duration: 120 } }
@@ -618,7 +621,7 @@ PanelWindow {
                     x: win.fx("bt"); y: 0
                     onDetach: win.detachPanel("bt")
                     active: win.viewMode === "bt" && win.shown
-                    width: implicitWidth
+                    width: win.panelW
                     opacity: win.viewMode === "bt" ? 1 : 0
                     visible: opacity > 0
                     Behavior on opacity { enabled: win.morphReady; NumberAnimation { duration: 120 } }
