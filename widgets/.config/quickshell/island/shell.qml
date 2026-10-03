@@ -61,6 +61,7 @@ ShellRoot {
     readonly property string mode: panel !== "" ? panel
         : infoOpen ? "info"
         : now < levelUntil ? "level"             // volume/brightness: always shown the moment it changes
+        : now < notifUntil && notif.urgency >= 2 ? "notif"   // critical beats SUPER held
         : held ? "full"
         : now < notifUntil ? "notif"
         : now < toastUntil ? "toast"
