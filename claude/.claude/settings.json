@@ -1,5 +1,5 @@
 {
-  "model": "sonnet",
+  "model": "opus",
   "hooks": {
     "SessionStart": [
       {
@@ -56,6 +56,11 @@
           {
             "type": "command",
             "command": "/home/mahmood/.local/bin/lens hook stop"
+          },
+          {
+            "type": "command",
+            "command": "/home/mahmood/.local/bin/claude-notify",
+            "async": true
           }
         ]
       }
@@ -84,12 +89,19 @@
   "effortLevel": "xhigh",
   "modelSettings": {
     "claude-opus-5": {
-      "effortLevel": "medium"
+      "effortLevel": "high"
     },
     "claude-sonnet-5": {
       "effortLevel": "medium"
+    },
+    "claude-opus-5-5": {
+      "effortLevel": "medium"
+    },
+    "claude-sonnet-5-5": {
+      "effortLevel": "high"
     }
   },
+  "awaySummaryEnabled": false,
   "theme": "dark",
   "agentPushNotifEnabled": true
 }

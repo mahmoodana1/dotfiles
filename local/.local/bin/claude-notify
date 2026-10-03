@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# Minimal "Claude is done" desktop notification (Stop hook).
+#   claude-notify          -> notify (no-op when toggled off)
+#   claude-notify toggle   -> flip on/off
+#   claude-notify status   -> print on/off
+flag="$HOME/.claude/notify-off"
+
+case "$1" in
+  toggle)
+    if [[ -e $flag ]]; then rm -f "$flag"; echo "claude-notify: on"
+    else touch "$flag"; echo "claude-notify: off"; fi
+    exit 0 ;;
+  status)
+    [[ -e $flag ]] && echo off || echo on
+    exit 0 ;;
+esac
+
+[[ -e $flag ]] && exit 0
+cwd=$(jq -r '.cwd // empty' 2>/dev/null)
+# critical = shown over fullscreen / SUPER held; island clamps the popup to the 2s timeout.
+# Sent via gdbus so the icon goes out as the real app_icon (kept in the island hub).
+icon="$HOME/.local/share/icons/hicolor/scalable/apps/claude-code.svg"
+gdbus call --session --dest org.freedesktop.Notifications \
+  --object-path /org/freedesktop/Notifications \
+  --method org.freedesktop.Notifications.Notify \
+  Claude 0 "$icon" "done · ${cwd##*/}" "" '[]' '{"urgency": <byte 2>}' 2000 >/dev/null
