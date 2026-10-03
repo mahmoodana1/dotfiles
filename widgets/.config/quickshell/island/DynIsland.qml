@@ -427,14 +427,18 @@ PanelWindow {
                         visible: win.notifCount > 0
                         spacing: 4
                         Image {
+                            id: barIcon
                             width: 13; height: 13
                             anchors.verticalCenter: parent.verticalCenter
-                            source: win.latestIcon
+                            source: win.flashIcon
                             sourceSize: Qt.size(26, 26)
                             smooth: false
-                            visible: status === Image.Ready
+                            visible: win.flashIcon !== "" && status === Image.Ready
                         }
-                        GlassText { text: win.notifCount; color: Qt.rgba(1, 1, 1, 0.85) }
+                        GlassText {
+                            text: (barIcon.visible ? "" : "\u{f009a} ") + win.notifCount
+                            color: Qt.rgba(1, 1, 1, 0.85)
+                        }
                     }
                     GlassText {
                         visible: Stats.hasBattery
@@ -578,7 +582,8 @@ PanelWindow {
                         }
                         Chip {
                             visible: win.notifCount > 0
-                            img: win.latestIcon
+                            icon: win.flashIcon !== "" ? "" : "\u{f009a}"
+                            img: win.flashIcon
                             label: win.notifCount
                             panelChip: true
                             onClicked: if (win.ctl) win.ctl.openHub("")
@@ -665,15 +670,24 @@ PanelWindow {
                     readonly property var n: win.ctl ? win.ctl.notif : ({})
                     readonly property string iconSrc: win.ctl ? win.ctl.notifs.iconFor(n.icon, n.app) : ""
 
-                    Image {
-                        id: nIcon
+                    Item {
                         width: 22; height: 22
                         anchors.verticalCenter: parent.verticalCenter
-                        source: notifRow.iconSrc
-                        sourceSize: Qt.size(44, 44)
-                        fillMode: Image.PreserveAspectFit
-                        smooth: false                       // keeps pixel-art icons crisp
-                        visible: status === Image.Ready     // no icon -> no slot (never a bell)
+                        Image {
+                            id: nIcon
+                            anchors.fill: parent
+                            source: notifRow.iconSrc
+                            sourceSize: Qt.size(44, 44)
+                            fillMode: Image.PreserveAspectFit
+                            smooth: false                   // keeps pixel-art icons crisp
+                            visible: status === Image.Ready
+                        }
+                        GlassText {
+                            anchors.centerIn: parent
+                            visible: !nIcon.visible
+                            text: "\u{f0f3}"
+                            size: 14
+                        }
                     }
                     Column {
                         anchors.verticalCenter: parent.verticalCenter
@@ -761,12 +775,18 @@ PanelWindow {
     SystemClock { id: clock; precision: SystemClock.Minutes }
     property bool innerTap: false            // a chip took this click (see the pill's TapHandler)
     readonly property int notifCount: ctl ? ctl.notifs.count : 0
-    // the newest kept notification's own icon (stands in for a generic bell)
-    readonly property string latestIcon: {
-        if (!ctl || ctl.notifs.kept.length === 0) return ""
-        const e = ctl.notifs.kept[0]
-        return ctl.notifs.iconFor(e.image || e.appIcon, e.app)
+    // The counters show a bell; for a few seconds after a notification arrives
+    // they show that message's own icon instead ("" = bell).
+    property string flashIcon: ""
+    Connections {
+        target: win.ctl
+        function onNotifChanged() {
+            const n = win.ctl.notif
+            win.flashIcon = n && n.icon !== undefined ? win.ctl.notifs.iconFor(n.icon, n.app) : ""
+            flashIconTimer.restart()
+        }
     }
+    Timer { id: flashIconTimer; interval: 4000; onTriggered: win.flashIcon = "" }
 
     // info-panel chip actions; the panel closes after launching
     readonly property string floatTerm: "alacritty --class alacritty-float -e "
