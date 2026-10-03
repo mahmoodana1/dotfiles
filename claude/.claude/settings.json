@@ -36,6 +36,10 @@
           {
             "type": "command",
             "command": "/home/mahmood/.local/bin/lens hook prompt"
+          },
+          {
+            "type": "command",
+            "command": "/home/mahmood/.local/bin/claude-notify prompt"
           }
         ]
       }
