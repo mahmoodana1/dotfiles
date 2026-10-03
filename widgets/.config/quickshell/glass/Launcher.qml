@@ -1,11 +1,13 @@
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import Quickshell.Widgets
 import "shared"
 import "lib/match.js" as Match
 
-// SUPER+D: app list, names only. Most-launched first; typing fuzzy-filters by
-// name, generic name, keywords and description. Up/Down move, Enter launches.
+// SUPER+D: app list, names only (the selected row also shows its icon).
+// Most-launched first; typing fuzzy-filters by name, generic name, keywords and
+// description. Up/Down or Ctrl+J/K move, Enter launches.
 FocusScope {
     id: root
     signal closeRequested()
@@ -96,6 +98,11 @@ FocusScope {
             }
 
             Keys.onPressed: event => {
+                if (event.modifiers & Qt.ControlModifier) {
+                    if (event.key === Qt.Key_J) { grid.incrementCurrentIndex(); event.accepted = true }
+                    else if (event.key === Qt.Key_K) { grid.decrementCurrentIndex(); event.accepted = true }
+                    if (event.accepted) return
+                }
                 switch (event.key) {
                 case Qt.Key_Down:     grid.incrementCurrentIndex(); break
                 case Qt.Key_Up:       grid.decrementCurrentIndex(); break
@@ -110,7 +117,7 @@ FocusScope {
         }
     }
 
-    // ---- app list: names only ------------------------------------------------
+    // ---- app list: names only, icon on the selected row ----------------------
     ListView {
         id: grid
         x: 22
@@ -136,14 +143,27 @@ FocusScope {
             width: grid.width
             height: 38
 
-            GlassText {
-                x: 16
+            readonly property bool current: row.ListView.isCurrentItem
+
+            IconImage {
+                x: 14
                 anchors.verticalCenter: parent.verticalCenter
-                width: parent.width - 32
+                implicitSize: 20
+                visible: opacity > 0
+                opacity: row.current ? 1 : 0
+                Behavior on opacity { NumberAnimation { duration: 90 } }
+                // only the selected row asks for its icon
+                source: row.current ? Quickshell.iconPath(row.modelData.icon, "application-x-executable") : ""
+            }
+            GlassText {
+                x: row.current ? 44 : 16
+                Behavior on x { NumberAnimation { duration: 90; easing.type: Easing.OutCubic } }
+                anchors.verticalCenter: parent.verticalCenter
+                width: parent.width - x - 16
                 text: row.modelData.name
                 size: 14
-                weight: row.ListView.isCurrentItem ? Font.DemiBold : Font.Medium
-                color: row.ListView.isCurrentItem ? "white" : Qt.rgba(1, 1, 1, 0.8)
+                weight: row.current ? Font.DemiBold : Font.Medium
+                color: row.current ? "white" : Qt.rgba(1, 1, 1, 0.8)
                 elide: Text.ElideRight
             }
             MouseArea {
