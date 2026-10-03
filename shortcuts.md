@@ -153,6 +153,7 @@ Shortcuts inside the terminal (zsh + fzf integration loaded in `.zshrc`).
 | `CTRL + T` | **fzf** file picker, inserts path at cursor |
 | `CTRL + F` | **fzf** cd — fuzzy-pick directory to cd into |
 | `**<TAB>` | fzf completion trigger (e.g. `nvim **<TAB>`) |
+| `CTRL + Backspace` | delete previous word (Alacritty sends `^W`; works in tmux, Claude Code, nvim insert) |
 
 ### Inside any fzf picker
 
