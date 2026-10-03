@@ -200,8 +200,8 @@ Item {
         }
         GlassText {
             anchors.centerIn: parent
-            visible: !img.visible
-            text: "\u{f0f3}"
+            visible: !img.visible               // no icon: the app's initial, never a bell
+            text: (parent.app || "?").charAt(0).toUpperCase()
             size: Math.round(parent.size * 0.55)
         }
     }
@@ -222,7 +222,7 @@ Item {
         visible: opacity > 0
         GlassText {
             anchors.verticalCenter: parent.verticalCenter
-            text: "\u{f009a}  Notifications"
+            text: "Notifications"
             size: 13; weight: Font.Bold
         }
         PillButton {
