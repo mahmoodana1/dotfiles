@@ -61,7 +61,7 @@ PanelWindow {
     color: "transparent"
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.namespace: "glass"
-    WlrLayershell.keyboardFocus: wanted && !passive ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+    WlrLayershell.keyboardFocus: (wanted || holdKeyboard) && !passive ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
     readonly property Region fullMask: Region { x: 0; y: 0; width: win.sw; height: win.sh }
     readonly property Region noMask: Region {}
@@ -77,8 +77,44 @@ PanelWindow {
         if (item) { item.forceActiveFocus(); if (item.opened) item.opened(ctl.arg) }
     }
     onWantedChanged: {
-        if (wanted) startOpen()
-        else if (open) motion.close()
+        if (wanted) { openWs = curWs(); startOpen() }
+        else if (open) { stayOnWorkspace(); motion.close() }
+    }
+
+    // ---- stay on the workspace you switched to while a panel was open ---------
+    // Hyprland hands the keyboard back to the window focused before the panel
+    // took it; if that's on the workspace you left, it jumps back there. So
+    // first focus the newest window here, and only then let go of the keyboard.
+    // (workspace_back_and_forth is on, so re-focusing this workspace would
+    // toggle away; empty workspaces get switched back to after the fact.)
+    property int openWs: -1
+    property int stayWs: -1
+    property bool holdKeyboard: false
+    function curWs() { return monitor && monitor.activeWorkspace ? monitor.activeWorkspace.id : -1 }
+    function stayOnWorkspace() {
+        const ws = curWs()
+        if (ws < 0 || ws === openWs) return
+        stayWs = ws
+        holdKeyboard = true
+        releaseKeyboard.restart()
+        Quickshell.execDetached(["sh", "-c",
+            "a=$(hyprctl clients -j | jq -r --argjson w \"$1\" '[.[] | select(.workspace.id == $w and .mapped and (.hidden | not))]"
+            + " | sort_by(.focusHistoryID) | .[0].address // empty')"
+            + " && [ -n \"$a\" ] && hyprctl dispatch \"hl.dsp.focus({ window = \\\"address:$a\\\" })\"",
+            "sh", String(ws)])
+    }
+    Timer {
+        id: releaseKeyboard
+        interval: 120
+        onTriggered: { win.holdKeyboard = false; jumpCheck.restart() }
+    }
+    Timer {
+        id: jumpCheck
+        interval: 150
+        // only undo a jump back to where the panel was opened (the Windows
+        // panel may have sent you somewhere else on purpose)
+        onTriggered: if (win.curWs() === win.openWs && win.stayWs >= 0)
+            Quickshell.execDetached(["hyprctl", "dispatch", "hl.dsp.focus({ workspace = " + win.stayWs + " })"])
     }
     Connections {
         target: win.ctl
@@ -121,6 +157,26 @@ PanelWindow {
         paintCursor: false
         width: win.sw
         height: win.sh
+    }
+    // Switching workspace under an open panel: stream the screen through the
+    // workspace slide (250 ms, hypr animations.lua) so the rim follows it, then
+    // settle on one still again. (The capture now includes the card itself; the
+    // rim samples past the shadow, so that doesn't show.)
+    Connections {
+        target: win.monitor
+        function onActiveWorkspaceChanged() {
+            if (!win.open) return
+            snap.live = true
+            settle.restart()
+        }
+    }
+    Timer {
+        id: settle
+        interval: 320
+        onTriggered: {
+            snap.live = false
+            if (win.open) { snap.captureFrame(); card.refresh() }
+        }
     }
     ShaderEffectSource {
         id: behind
