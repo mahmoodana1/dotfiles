@@ -194,6 +194,7 @@ Item {
             id: img
             anchors.fill: parent
             source: panel.store ? panel.store.iconFor(parent.icon, parent.app) : ""
+            cache: false
             sourceSize: Qt.size(parent.size * 2, parent.size * 2)
             fillMode: Image.PreserveAspectFit
             visible: status === Image.Ready

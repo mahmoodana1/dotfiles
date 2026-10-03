@@ -431,6 +431,7 @@ PanelWindow {
                             width: 13; height: 13
                             anchors.verticalCenter: parent.verticalCenter
                             source: win.flashIcon
+                            cache: false                    // icon files get edited; always read fresh
                             sourceSize: Qt.size(26, 26)
                             smooth: false
                             visible: win.flashIcon !== "" && status === Image.Ready
@@ -549,7 +550,7 @@ PanelWindow {
                             GlassText { id: ic; size: 13; color: chip.tone; anchors.verticalCenter: parent.verticalCenter
                                         visible: text !== "" }
                             Image { width: 14; height: 14; anchors.verticalCenter: parent.verticalCenter
-                                    source: chip.img; sourceSize: Qt.size(28, 28); smooth: false
+                                    source: chip.img; sourceSize: Qt.size(28, 28); smooth: false; cache: false
                                     visible: chip.img !== "" && status === Image.Ready }
                             GlassText { id: lb; size: 11; color: chip.tone; anchors.verticalCenter: parent.verticalCenter
                                         width: Math.min(implicitWidth, 170); elide: Text.ElideRight }
@@ -677,6 +678,7 @@ PanelWindow {
                             id: nIcon
                             anchors.fill: parent
                             source: notifRow.iconSrc
+                            cache: false                    // icon files get edited; always read fresh
                             sourceSize: Qt.size(44, 44)
                             fillMode: Image.PreserveAspectFit
                             smooth: false                   // keeps pixel-art icons crisp

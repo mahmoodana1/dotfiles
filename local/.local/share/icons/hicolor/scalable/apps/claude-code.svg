@@ -1,16 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 14 14" shape-rendering="crispEdges">
   <!-- Claude Code pixel critter -->
   <g fill="#D97757">
-    <rect x="2" y="3" width="10" height="6"/>   <!-- body -->
+    <rect x="2" y="2" width="10" height="8"/>   <!-- body -->
     <rect x="0" y="5" width="2" height="2"/>    <!-- left arm -->
     <rect x="12" y="5" width="2" height="2"/>   <!-- right arm -->
-    <rect x="3" y="9" width="1" height="2"/>    <!-- legs -->
-    <rect x="5" y="9" width="1" height="2"/>
-    <rect x="8" y="9" width="1" height="2"/>
-    <rect x="10" y="9" width="1" height="2"/>
+    <rect x="3" y="10" width="1" height="3"/>   <!-- legs -->
+    <rect x="5" y="10" width="1" height="3"/>
+    <rect x="8" y="10" width="1" height="3"/>
+    <rect x="10" y="10" width="1" height="3"/>
   </g>
   <g fill="#1a1a1a">
-    <rect x="4" y="5" width="1" height="2"/>    <!-- eyes -->
-    <rect x="9" y="5" width="1" height="2"/>
+    <rect x="4" y="4" width="1" height="2"/>    <!-- eyes -->
+    <rect x="9" y="4" width="1" height="2"/>
   </g>
 </svg>
