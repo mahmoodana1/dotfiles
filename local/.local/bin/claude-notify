@@ -35,10 +35,66 @@ rm -f "$mark"
 [[ -e $flag ]] && exit 0
 
 cwd=$(jq -r '.cwd // empty' <<<"$input")
+
+# The terminal window this session lives in: walk up our parents to a Hyprland
+# client. Inside tmux the chain ends at the tmux server instead, so go through
+# the client attached to our pane's session.
+window_of() {
+  local p=$1 addr
+  while [[ $p -gt 1 ]]; do
+    addr=$(hyprctl clients -j | jq -r --argjson p "$p" '.[] | select(.pid == $p) | .address' | head -1)
+    [[ -n $addr ]] && { echo "$addr"; return; }
+    p=$(awk '{print $4}' "/proc/$p/stat" 2>/dev/null) || return
+  done
+}
+if [[ -n $TMUX_PANE ]]; then
+  client=$(tmux list-clients -t "$TMUX_PANE" -F '#{client_pid}' 2>/dev/null | head -1)
+  addr=$(window_of "${client:-0}")
+else
+  addr=$(window_of $$)
+fi
+
 # critical = shown over fullscreen / SUPER held; island clamps the popup to the 2s timeout.
-# Sent via gdbus so the icon goes out as the real app_icon (kept in the island hub).
+# The icon goes out as the real app_icon (kept in the island hub). The "default"
+# action is what a click runs. The daemon sends ActionInvoked only to the
+# connection that created the notification, so the sender stays up (detached,
+# up to an hour) until it's clicked or closed, then jumps to the window/pane.
 icon="$HOME/.local/share/icons/hicolor/scalable/apps/claude-code.svg"
-gdbus call --session --dest org.freedesktop.Notifications \
-  --object-path /org/freedesktop/Notifications \
-  --method org.freedesktop.Notifications.Notify \
-  Claude 0 "$icon" "done · ${cwd##*/}" "" '[]' '{"urgency": <byte 2>}' 2000 >/dev/null
+setsid -f python3 - "done · ${cwd##*/}" "$icon" "$addr" "$TMUX_PANE" >/dev/null 2>&1 <<'PY'
+import subprocess, sys
+from gi.repository import Gio, GLib
+
+summary, icon, addr, pane = sys.argv[1:5]
+bus = Gio.bus_get_sync(Gio.BusType.SESSION)
+loop = GLib.MainLoop()
+nid = [None]
+
+def on_signal(_c, _s, _p, _i, name, params):
+    if params[0] != nid[0]:
+        return
+    if name == "ActionInvoked" and params[1] == "default":
+        if pane:
+            for cmd in ("switch-client", "select-window", "select-pane"):
+                subprocess.run(["tmux", cmd, "-t", pane], stderr=subprocess.DEVNULL)
+        if addr:
+            # Lua-config Hyprland: dispatch takes a Lua expression
+            subprocess.run(["hyprctl", "dispatch", f'hl.dsp.focus({{ window = "address:{addr}" }})'],
+                           stdout=subprocess.DEVNULL)
+    loop.quit()
+
+for sig in ("ActionInvoked", "NotificationClosed"):
+    bus.signal_subscribe("org.freedesktop.Notifications", "org.freedesktop.Notifications",
+                         sig, "/org/freedesktop/Notifications", None,
+                         Gio.DBusSignalFlags.NONE, on_signal)
+nid[0] = bus.call_sync(
+    "org.freedesktop.Notifications", "/org/freedesktop/Notifications",
+    "org.freedesktop.Notifications", "Notify",
+    GLib.Variant("(susssasa{sv}i)", ("Claude", 0, icon, summary, "",
+                 ["default", "Open"] if addr else [],
+                 {"urgency": GLib.Variant("y", 2)}, 2000)),
+    GLib.VariantType("(u)"), Gio.DBusCallFlags.NONE, -1, None)[0]
+if not addr:
+    sys.exit(0)
+GLib.timeout_add_seconds(3600, loop.quit)
+loop.run()
+PY

@@ -336,6 +336,11 @@ PanelWindow {
                 Qt.callLater(() => {
                     if (!win.ctl || win.innerTap) return
                     if (m === "info" || m === "full") win.ctl.openHub("")
+                    // a notification with a default action: the click runs it (e.g. jump to its window)
+                    else if (m === "notif" && win.ctl.notif.key && win.ctl.notifs.hasDefault(win.ctl.notif.key)) {
+                        win.ctl.notifs.invoke(win.ctl.notif.key, "default")
+                        win.ctl.dismiss()
+                    }
                     else if (m === "notif" && win.ctl.notif.key) win.ctl.openHub(win.ctl.notif.key)
                     else if (["notif", "level", "toast", "ws"].indexOf(m) >= 0) win.ctl.dismiss()
                 })
