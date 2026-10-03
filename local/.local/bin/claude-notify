@@ -1,9 +1,13 @@
 #!/usr/bin/env bash
-# Minimal "Claude is done" desktop notification (Stop hook).
-#   claude-notify          -> notify (no-op when toggled off)
+# Minimal "Claude is done" desktop notification.
+#   claude-notify prompt   -> UserPromptSubmit hook: mark this session as working
+#   claude-notify          -> Stop hook: notify once if a prompt is pending (no-op when off)
 #   claude-notify toggle   -> flip on/off
 #   claude-notify status   -> print on/off
+# Only a turn you started with a prompt notifies; Stop also fires for background
+# task wakeups, /clear, compact and resume, and those stay quiet.
 flag="$HOME/.claude/notify-off"
+marks="${XDG_RUNTIME_DIR:-/tmp}/claude-notify"
 
 case "$1" in
   toggle)
@@ -15,8 +19,22 @@ case "$1" in
     exit 0 ;;
 esac
 
+input=$(cat)
+sid=$(jq -r '.session_id // empty' <<<"$input" 2>/dev/null)
+[[ -n $sid ]] || exit 0
+mark="$marks/$sid"
+
+if [[ $1 == prompt ]]; then
+  mkdir -p "$marks" && touch "$mark"
+  exit 0
+fi
+
+[[ -e $mark ]] || exit 0               # no prompt behind this stop
+rm -f "$mark"
+[[ $(jq -r '.stop_hook_active // false' <<<"$input") == true ]] && exit 0
 [[ -e $flag ]] && exit 0
-cwd=$(jq -r '.cwd // empty' 2>/dev/null)
+
+cwd=$(jq -r '.cwd // empty' <<<"$input")
 # critical = shown over fullscreen / SUPER held; island clamps the popup to the 2s timeout.
 # Sent via gdbus so the icon goes out as the real app_icon (kept in the island hub).
 icon="$HOME/.local/share/icons/hicolor/scalable/apps/claude-code.svg"
