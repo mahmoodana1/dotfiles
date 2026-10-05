@@ -49,4 +49,7 @@ style = { shape = "Block", blinking = "Never" }
 [keyboard]
 bindings = [
   { key = "Back", mods = "Control", chars = "\u0017" },
+  # Shift+Space as its own key (CSI u) so nvim can bind <S-Space>; tmux hands
+  # a plain space to apps that don't ask for extended keys.
+  { key = "Space", mods = "Shift", chars = "\u001b[32;2u" },
 ]
