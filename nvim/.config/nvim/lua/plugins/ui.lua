@@ -297,6 +297,8 @@ return {
         dependencies = { "MunifTanjim/nui.nvim" },
         opts = {
             lsp = {
+                -- pyright reports a "checking" progress round on every keystroke.
+                progress = { enabled = false },
                 override = {
                     ["vim.lsp.util.convert_input_to_markdown_lines"] = true,
                     ["vim.lsp.util.stylize_markdown"] = true,
@@ -332,9 +334,14 @@ return {
         "sphamba/smear-cursor.nvim",
         event = "VeryLazy",
         opts = {
-            stiffness = 0.8,
-            trailing_stiffness = 0.5,
-            distance_stop_animating = 0.5,
+            -- Short smear: the head lands almost at once and the tail follows
+            -- close behind. Insert mode has its own (slower) defaults, which is
+            -- what typing felt like.
+            stiffness = 0.9,
+            trailing_stiffness = 0.7,
+            stiffness_insert_mode = 0.9,
+            trailing_stiffness_insert_mode = 0.8,
+            distance_stop_animating = 1,
         },
     },
     {
