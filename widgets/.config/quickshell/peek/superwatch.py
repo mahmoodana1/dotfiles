@@ -5,7 +5,7 @@ With --shift, also print "shift down" / "shift up" for the Shift keys.
 Read straight from evdev (user is in the `input` group) instead of Hyprland
 binds, which drop ~9% of release events and would strand the bar on screen.
 keyd grabs the physical keyboards, so its virtual keyboard carries the events;
-every keyboard-like device is watched, so this also works without keyd.
+every device that can send SUPER is watched, so this also works without keyd.
 Spawned by shell.qml; exits when its stdout closes.
 """
 import glob
@@ -24,11 +24,21 @@ RESCAN_SECS = 5.0                   # pick up hotplugged keyboards
 
 
 def keyboards():
+    # Any device that can send SUPER, whatever it's called: wireless receivers
+    # put their main keyboard on an interface named after the dongle (e.g.
+    # "Compx 2.4G Wireless Receiver"), not "... Keyboard".
     out = []
-    for name_file in glob.glob("/sys/class/input/event*/device/name"):
-        with open(name_file) as f:
-            if "keyboard" in f.read().lower():
-                out.append("/dev/input/" + name_file.split("/")[4])
+    for caps_file in glob.glob("/sys/class/input/event*/device/capabilities/key"):
+        try:
+            with open(caps_file) as f:
+                words = f.read().split()
+        except OSError:
+            continue
+        bits, width = 0, struct.calcsize("l") * 8   # sysfs prints longs, highest first
+        for w in words:
+            bits = (bits << width) | int(w, 16)
+        if bits >> KEY_LEFTMETA & 1 or bits >> KEY_RIGHTMETA & 1:
+            out.append("/dev/input/" + caps_file.split("/")[4])
     return out
 
 
