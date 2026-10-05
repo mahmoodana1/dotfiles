@@ -313,6 +313,19 @@ function M.setup()
         end,
     }):map("<leader>uf")
 
+    -- Copilot in the regular completion menu. Off by default; <C-g> in insert
+    -- mode asks for AI suggestions once regardless (plugins/completion.lua).
+    -- <S-Space> needs the terminal to send it as CSI u (kitty.conf,
+    -- alacritty.toml) and tmux extended-keys. Insert-mode <S-Space> lives in
+    -- blink's keymap (plugins/completion.lua).
+    local ai_toggle = Snacks.toggle({
+        name = "AI completion",
+        get = function() return vim.g.ai_complete == true end,
+        set = function(state) vim.g.ai_complete = state end,
+    })
+    ai_toggle:map("<leader>ua")
+    ai_toggle:map("<S-Space>", { mode = { "n", "x" } })
+
     map("n", "<leader>un", function()
         Snacks.notifier.hide()
     end, "Dismiss notifications")

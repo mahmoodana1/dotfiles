@@ -91,6 +91,10 @@ source /usr/share/fzf/completion.zsh
 bindkey -r '\ec'
 bindkey '^F' fzf-cd-widget
 
+# kitty/alacritty send Shift+Space as CSI u (for nvim). tmux turns it back into
+# a space, but in a bare terminal zsh would see the raw sequence.
+bindkey -s '^[[32;2u' ' '
+
 # fzf: options live in a separate file so complex bindings stay readable
 export FZF_DEFAULT_OPTS_FILE="$HOME/dotfiles/shell/fzf-options"
 

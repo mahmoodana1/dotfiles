@@ -1,5 +1,5 @@
 -- ===========================================================================
---  COMPLETION -- blink.cmp with Copilot as a source
+--  COMPLETION -- blink.cmp with Copilot as an on-demand source
 --
 --  blink.cmp owns the insert-mode completion keys (<C-space>, <Tab>, <CR>,
 --  <C-e>). Those are configured here rather than in core/keymaps.lua because
@@ -57,6 +57,21 @@ return {
                 ["<S-Tab>"] = { "select_prev", "snippet_backward", "fallback" },
                 ["<C-j>"] = { "select_next", "fallback" },
                 ["<C-k>"] = { "select_prev", "fallback" },
+                ["<C-g>"] = { function(cmp) return cmp.show({ providers = { "copilot" } }) end },
+                -- Same toggle as <leader>ua / normal-mode <S-Space> (core/keymaps.lua),
+                -- mid-typing: the menu is rebuilt with the new sources -- opened when
+                -- turning AI on, kept open (minus Copilot) when turning it off.
+                ["<S-Space>"] = {
+                    function(cmp)
+                        local was_open = cmp.is_menu_visible()
+                        vim.g.ai_complete = not vim.g.ai_complete
+                        vim.notify((vim.g.ai_complete and "Enabled" or "Disabled") .. " AI completion",
+                            vim.log.levels.INFO, { title = "AI completion" })
+                        cmp.hide()
+                        if vim.g.ai_complete or was_open then vim.schedule(function() cmp.show() end) end
+                        return true
+                    end,
+                },
             },
             appearance = { nerd_font_variant = "mono" },
             completion = {
@@ -73,7 +88,13 @@ return {
             },
             signature = { enabled = true, window = { border = "rounded" } },
             sources = {
-                default = { "copilot", "lsp", "path", "snippets", "buffer" },
+                -- Copilot is on-demand: <C-g> pops an AI-only menu. <leader>ua
+                -- (vim.g.ai_complete) mixes it back into the regular menu.
+                default = function()
+                    local regular = { "lsp", "path", "snippets", "buffer" }
+                    if vim.g.ai_complete then table.insert(regular, 1, "copilot") end
+                    return regular
+                end,
                 providers = {
                     copilot = {
                         name = "copilot",
