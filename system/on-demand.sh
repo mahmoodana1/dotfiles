@@ -8,6 +8,8 @@
 #   tailscaled not started at boot; `tailscale up` starts it, `tailscale down`
 #              stops it (shell/.zshrc function + polkit rule, no password)
 #   sddm       Wayland greeter (weston), so its Xorg doesn't outlive the login
+#   pacman     pins egl-wayland at 1.1.22: 1.1.23 crashes Hyprland as soon as
+#              an NVIDIA-offloaded app opens (drop the pin past 1.1.23)
 #
 # The user half (OpenClaw gateway on demand, nm-applet only in waybar mode)
 # lives in desktop/.config/systemd/user and hypr/, deployed by stow.
@@ -21,6 +23,7 @@ install -Dm644 etc/systemd/system/docker-idle-stop.service /etc/systemd/system/d
 install -Dm644 etc/systemd/system/docker-idle-stop.timer   /etc/systemd/system/docker-idle-stop.timer
 install -Dm644 etc/polkit-1/rules.d/50-tailscaled.rules    /etc/polkit-1/rules.d/50-tailscaled.rules
 install -Dm644 etc/sddm.conf.d/10-wayland-greeter.conf     /etc/sddm.conf.d/10-wayland-greeter.conf
+install -Dm644 etc/pacman.conf                             /etc/pacman.conf
 systemctl daemon-reload
 
 # docker: socket-activated; running containers are left alone until idle
