@@ -13,6 +13,9 @@ FF="$HOME/.mozilla/firefox"
 
 pgrep -x firefox >/dev/null && { echo "close Firefox first"; exit 1; }
 
+# new tab page wallpapers (not in git)
+"$HERE/glass/wallpapers.sh"
+
 merge_prefs() {   # $1 = a profile's user.js
     touch "$1"
     python3 - "$1" "$HERE/user.js" <<'PY'

@@ -1,25 +1,57 @@
 /* Glass: the new tab page is Vimium C's blank page (vimkeys.uc.js points
-   Firefox at it), so vim keys work from the moment a tab opens. Give it the
-   plain black backdrop and a one-line key hint. */
+   Firefox at it), so vim keys work from the moment a tab opens.
+     html          deep night base, under the wallpaper
+     .glass-wall   this tab's random wallpaper (picked in vimkeys.uc.js, drawn by newtab.sys.mjs)
+     body::before  frosted-glass pill with the key hints
+
+   Wallpapers live in ./wallpapers (not committed; fetch with wallpapers.sh). */
 
 @-moz-document regexp("moz-extension://[^/]+/pages/blank\\.html.*") {
   html {
-    background: #0a0a0a !important;
     color-scheme: dark !important;
     min-height: 100vh;
+    background: #07060f !important;
+    overflow: hidden;
   }
-  body::before {
-    content: "o  open      O  open in new tab      b  tabs      H/L  back/forward      ?  all keys";
+
+  body {
+    margin: 0;
+  }
+
+  /* this tab's wallpaper (newtab.sys.mjs): 1:1 and centred, exactly where the
+     tab's <browser> background drew it before the page painted */
+  .glass-wall {
     position: fixed;
-    top: 42%;
+    inset: 0;
+    z-index: 0;
+    width: 100vw;
+    height: 100vh;
+    object-fit: none;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  /* key hints on a frosted pill */
+  body::before {
+    content: "o  open      O  new tab      b  tabs      H / L  back · forward      ?  all keys";
+    position: fixed;
+    z-index: 2;
+    top: 50%;
     left: 50%;
-    transform: translateX(-50%);
-    padding: 12px 22px;
-    border-radius: 22px;
-    border: 1px solid rgba(255, 255, 255, .14);
-    background: rgba(18, 18, 18, .92);
-    color: rgba(255, 255, 255, .55);
-    font: 13px/1.4 "Inter", "Roboto", "Noto Sans", sans-serif;
+    transform: translate(-50%, -50%);
+    padding: 16px 30px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, .24);
+    background: linear-gradient(135deg, rgba(255, 255, 255, .18), rgba(255, 255, 255, .05));
+    backdrop-filter: blur(28px) saturate(180%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, .40),
+      inset 0 -1px 0 rgba(255, 255, 255, .06),
+      0 20px 60px rgba(0, 0, 0, .45);
+    color: #fff;
+    text-shadow: 0 1px 10px rgba(0, 0, 0, .45);
+    font: 500 14px/1.4 "Inter", "Roboto", "Noto Sans", sans-serif;
+    letter-spacing: .2px;
     word-spacing: 2px;
     white-space: pre;
   }
