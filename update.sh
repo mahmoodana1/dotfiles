@@ -42,6 +42,9 @@ if [ -f "$HOME/.claude/settings.json" ]; then
     cp "$HOME/.claude/settings.json" claude/.claude/settings.json
     ok "claude/.claude/settings.json"
 fi
+# pacman.conf carries the IgnorePkg pins (system/on-demand.sh installs it)
+cp /etc/pacman.conf system/etc/pacman.conf
+ok "system/etc/pacman.conf"
 
 # ---------------------------------------------------------------------
 # 3. Guard: nothing secret may enter a commit.
