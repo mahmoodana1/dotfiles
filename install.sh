@@ -179,6 +179,10 @@ if [ ! -e "$HOME/.claude/settings.json" ]; then
 else
     ok "~/.claude/settings.json present — left alone (diff it against claude/ by hand)"
 fi
+# statusline.py is never rewritten by Claude Code, so it can be a plain symlink.
+run mkdir -p "$HOME/.claude"
+run ln -sfn "$DOTFILES/claude/.claude/statusline.py" "$HOME/.claude/statusline.py"
+ok "linked ~/.claude/statusline.py"
 
 # Scripts lose their +x bit through some transfer paths; assert it.
 run find "$DOTFILES/hypr/.config/hypr" -name '*.sh' -exec chmod +x {} +
