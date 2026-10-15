@@ -57,11 +57,11 @@ ShellRoot {
     property string toastText: ""
 
     // what the island shows, by priority
-    readonly property string mode: panel !== "" ? panel
+    readonly property string mode: now < notifUntil ? "notif"   // Claude Code: over everything for its 2s
+        : panel !== "" ? panel
         : infoOpen ? "info"
         : now < levelUntil ? "level"             // volume/brightness: always shown the moment it changes
         : held ? "full"
-        : now < notifUntil ? "notif"
         : now < toastUntil ? "toast"
         : now < wsUntil ? "ws"
         : "hidden"
@@ -117,6 +117,11 @@ ShellRoot {
         hubKey = key
         panel = "notifs"
         if (mode === "notif") notifUntil = 0     // the popup becomes the hub
+    }
+    // click on a notification: jump to its window if it has one, else open it in the hub
+    function openNotif(key) {
+        if (notifStore.jump(key)) { closeHub(); dismiss(); return }
+        openHub(key)
     }
     function closeHub() { if (panel === "notifs") panel = "" }
     onPanelChanged: if (panel !== "notifs") { hubKey = ""; hubPinned = false }
@@ -202,13 +207,13 @@ ShellRoot {
     readonly property alias notifs: notifStore
     Notifs {
         id: notifStore
+        // no popup: notifications go straight into the hub (count on the island),
+        // except Claude Code ones, which flash for 2s over everything
         onPosted: e => {
+            if (!e.focus && e.app !== "Claude Code") return
             root.notif = { key: e.key, app: e.app, summary: e.summary, body: e.body,
                            icon: e.image || e.appIcon, urgency: e.urgency }
-            // the app's own timeout when it's shorter (screenshot countdown)
-            const ms = e.urgency >= 2 ? 6000 : 4000
-            root.pulse("notif", e.timeout > 0 ? Math.max(1000, Math.min(ms, e.timeout)) : ms)
-            root.sweep()
+            root.pulse("notif", 2000)
         }
     }
     // A transient notification lives only while its popup or its full view

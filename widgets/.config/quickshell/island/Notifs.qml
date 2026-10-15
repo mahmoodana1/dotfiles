@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import Quickshell.Hyprland
 import Quickshell.Services.Notifications
 import "lib/notifs.js" as N
 
@@ -65,6 +66,15 @@ Scope {
         // invoke() dismisses a non-resident notification itself; make sure
         if (!resident) Qt.callLater(() => { try { if (n.tracked) n.dismiss() } catch (e) {} })
     }
+    // a notification tagged with a window (Claude Code hook): click jumps there
+    function focusFor(key) { const e = find(key); return e ? e.focus || "" : "" }
+    function jump(key) {
+        const addr = focusFor(key)
+        if (!addr) return false
+        Hyprland.dispatch(`hl.dsp.focus({ window = "address:${addr}" })`)
+        dismiss(key)
+        return true
+    }
     function forget(key) {
         if (live[key] === undefined) return
         delete live[key]
@@ -80,7 +90,9 @@ Scope {
             app: n.appName, appIcon: ic.appIcon,
             summary: n.summary, body: n.body, urgency: n.urgency,
             time: Date.now(), image: ic.image, live: true,
-            transient: n.transient, timeout: n.expireTimeout
+            // no popups, so transient ones are kept in the hub too
+            transient: false, timeout: n.expireTimeout,
+            focus: String(n.hints["x-island-focus"] || "")   // Hyprland window to jump to on click
         }
         live[e.key] = n
         liveRev++

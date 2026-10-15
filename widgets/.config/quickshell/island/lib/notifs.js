@@ -31,7 +31,7 @@ function removeApp(entries, app) { return entries.filter(e => appOf(e) !== app) 
 function serialize(entries) {
     return JSON.stringify(entries.map(e => ({
         key: e.key, app: e.app, appIcon: e.appIcon, summary: e.summary,
-        body: e.body, urgency: e.urgency, time: e.time
+        body: e.body, urgency: e.urgency, time: e.time, focus: e.focus || ""
     })))
 }
 
@@ -44,7 +44,8 @@ function deserialize(text) {
         .map(e => ({
             key: e.key, app: String(e.app || ""), appIcon: String(e.appIcon || ""),
             summary: String(e.summary || ""), body: String(e.body || ""),
-            urgency: Number(e.urgency) || 1, time: e.time, image: "", live: false
+            urgency: Number(e.urgency) || 1, time: e.time, image: "", live: false,
+            focus: String(e.focus || "")
         }))
 }
 

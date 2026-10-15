@@ -142,3 +142,36 @@ vim.api.nvim_create_autocmd("SwapExists", {
         vim.v.swapchoice = "e" -- edit anyway
     end,
 })
+
+-- --- Fill the terminal window edge to edge -------------------------------
+-- The terminal's window padding sits outside nvim's grid, so it frames the
+-- editor with a margin. While nvim runs: Alacritty's padding is dropped to 0
+-- over its IPC socket (skipped inside tmux, where it would hit every pane), and
+-- OSC 11 paints any remaining padding with Normal's bg. Both are undone on exit.
+local alacritty_id = not vim.env.TMUX and vim.env.ALACRITTY_WINDOW_ID
+
+local function term_fill()
+    local bg = vim.api.nvim_get_hl(0, { name = "Normal", link = false }).bg
+    if bg then
+        vim.api.nvim_ui_send(("\027]11;#%06x\027\\"):format(bg))
+    end
+    if alacritty_id then
+        vim.system({ "alacritty", "msg", "config", "-w", alacritty_id, "window.padding.x=0", "window.padding.y=0" })
+    end
+end
+
+local function term_restore()
+    vim.api.nvim_ui_send("\027]111\027\\")
+    if alacritty_id then
+        vim.system({ "alacritty", "msg", "config", "-w", alacritty_id, "--reset" }):wait(500)
+    end
+end
+
+vim.api.nvim_create_autocmd({ "UIEnter", "ColorScheme", "VimResume" }, {
+    group = augroup("term_fill"),
+    callback = term_fill,
+})
+vim.api.nvim_create_autocmd({ "UILeave", "VimSuspend" }, {
+    group = augroup("term_restore"),
+    callback = term_restore,
+})
