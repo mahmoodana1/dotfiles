@@ -42,6 +42,14 @@ Item {
     // otherwise fight over the one adapter
     readonly property bool wantScan: active && on && scanning
     onWantScanChanged: if (adapter) adapter.discovering = wantScan
+    // BlueZ rejects StartDiscovery while the adapter is still powering up, and
+    // another client can stop the scan, so keep nudging it back on while wanted
+    Timer {
+        interval: 1000
+        repeat: true
+        running: panel.wantScan && !panel.adapter.discovering
+        onTriggered: panel.adapter.discovering = true
+    }
 
     // ---- signal + traffic (floating only): btsignal.py, once a second ------
     property var signals: ({})           // address -> RSSI dBm or null

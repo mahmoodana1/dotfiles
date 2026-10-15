@@ -20,7 +20,7 @@ FocusScope {
     property var walls: []                 // [{ path, thumb, name }]
     property var effects: []
     property bool chipsFocused: false
-    property string current: ""            // what awww shows now
+    property string current: ""            // what Omarchy shows now
 
     readonly property var selected: walls[carousel.currentIndex] || null
 
@@ -62,11 +62,10 @@ FocusScope {
     }
     Process {
         id: currentQuery
-        command: ["awww", "query"]
+        command: [root.script, "current"]
         stdout: StdioCollector {
             onStreamFinished: {
-                const m = this.text.match(/image: (.+)/)
-                root.current = m ? m[1].trim() : ""
+                root.current = this.text.trim()
                 root.jumpToCurrent()
             }
         }

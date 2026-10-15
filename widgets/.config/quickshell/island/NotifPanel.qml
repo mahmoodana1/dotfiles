@@ -46,7 +46,7 @@ Item {
     }
     readonly property var entry: store && key !== "" ? (store.entries, store.find(key)) : null
     readonly property bool full: entry !== null
-    function open(k) { if (ctl) ctl.hubKey = k }
+    function open(k) { if (ctl) { if (store.jump(k)) ctl.closeHub(); else ctl.hubKey = k } }
     function back() { if (ctl) ctl.hubKey = "" }
 
     // ---- keyboard selection ---------------------------------------------------

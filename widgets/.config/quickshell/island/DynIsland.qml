@@ -44,6 +44,7 @@ PanelWindow {
         : !isFocused ? (emptyHere ? "full" : "hidden")
         // on an empty workspace the resting full view wins over the bare
         // workspace flash, so switching into one never squishes to numbers first
+        : ctl.mode === "notif" ? "notif"             // Claude Code popup: over fullscreen too
         : !fullscreenHere ? ((ctl.mode === "hidden" || ctl.mode === "ws") && emptyHere ? "full" : ctl.mode)
         : ctl.panel !== "" ? ctl.panel
         : ctl.infoOpen ? "info"                      // stays while hovered
@@ -211,14 +212,14 @@ PanelWindow {
             : m === "notif" ? Math.min(560, Math.max(340, notifRow.implicitWidth + 40))
             : m === "toast" ? toastRow.implicitWidth + 40
             : m === "full" ? fullW
-            : m === "info" ? Math.max(infoTop.implicitWidth, infoBottom.implicitWidth) + 44
+            : m === "info" ? Math.max(infoTop.implicitWidth, infoBottom.implicitWidth, extras.omarchy ? infoExtra.implicitWidth : 0) + 44
             : m === "wifi" ? wifiPanel.implicitWidth
             : m === "bt" ? btPanel.implicitWidth
             : m === "notifs" ? notifPanel.implicitWidth
             : 120
     }
     function modeH(m) {
-        return m === "notif" ? 64 : m === "info" ? 72
+        return m === "notif" ? 64 : m === "info" ? (extras.omarchy ? 101 : 72)
             : m === "wifi" ? wifiPanel.implicitHeight
             : m === "bt" ? btPanel.implicitHeight
             : m === "notifs" ? notifPanel.implicitHeight
@@ -322,7 +323,7 @@ PanelWindow {
                 Qt.callLater(() => {
                     if (!win.ctl || win.innerTap) return
                     if (m === "info" || m === "full") win.ctl.openHub("")
-                    else if (m === "notif" && win.ctl.notif.key) win.ctl.openHub(win.ctl.notif.key)
+                    else if (m === "notif" && win.ctl.notif.key) win.ctl.openNotif(win.ctl.notif.key)
                     else if (["notif", "level", "toast", "ws"].indexOf(m) >= 0) win.ctl.dismiss()
                 })
             }
@@ -565,7 +566,7 @@ PanelWindow {
                         Chip {
                             icon: Stats.muted ? "\u{f075f}" : "\u{f028}"
                             label: Stats.muted ? "muted" : Stats.volume + "%"
-                            action: "pavucontrol"
+                            action: "command -v omarchy >/dev/null && omarchy audio output volume mute-toggle || pavucontrol"
                         }
                     }
                     Row {
@@ -585,6 +586,81 @@ PanelWindow {
                             icon: "\u{f00e0}"
                             label: win.ctl && win.ctl.blLast >= 0 ? Math.round(100 * win.ctl.blLast / win.ctl.blMax) + "%" : ""
                             tone: infoCol.dim
+                        }
+                    }
+
+                    // Omarchy extras (state polled only while this panel is open)
+                    QtObject {
+                        id: extras
+                        property bool omarchy: false      // Omarchy commands present: show the extras row
+                        property string weather: ""
+                        property bool nightlight: false
+                        property bool awake: false
+                        property bool update: false
+                    }
+                    Process {
+                        id: extrasProc
+                        command: ["sh", "-c",
+                            "command -v omarchy >/dev/null 2>&1 && echo omarchy=1 || { echo omarchy=0; exit 0; }; " +
+                            "w=$HOME/.cache/island-weather; " +
+                            "[ -z \"$(find \"$w\" -mmin -10 2>/dev/null)\" ] && (omarchy-weather-status > \"$w.tmp\" 2>/dev/null && mv \"$w.tmp\" \"$w\") & " +
+                            "echo \"weather=$(head -n1 \"$w\" 2>/dev/null)\"; " +
+                            "omarchy toggle nightlight --status 2>/dev/null | grep -q '\"enabled\":true' && echo night=1 || echo night=0; " +
+                            "omarchy toggle idle status 2>/dev/null | grep -q '\"enabled\":true' && echo awake=1 || echo awake=0; " +
+                            "omarchy-update-available >/dev/null 2>&1 && echo update=1 || echo update=0"]
+                        stdout: StdioCollector {
+                            onStreamFinished: {
+                                for (const line of this.text.split("\n")) {
+                                    const eq = line.indexOf("=")
+                                    if (eq < 0) continue
+                                    const k = line.slice(0, eq), v = line.slice(eq + 1)
+                                    if (k === "omarchy") extras.omarchy = v === "1"
+                                    else if (k === "weather") extras.weather = v
+                                    else if (k === "night") extras.nightlight = v === "1"
+                                    else if (k === "awake") extras.awake = v === "1"
+                                    else if (k === "update") extras.update = v === "1"
+                                }
+                            }
+                        }
+                    }
+                    Timer {
+                        interval: 4000; repeat: true; triggeredOnStart: true
+                        running: win.viewMode === "info" && win.shown
+                        onTriggered: if (!extrasProc.running) extrasProc.running = true
+                    }
+                    Row {
+                        id: infoExtra
+                        visible: extras.omarchy
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        spacing: 18
+                        Chip {
+                            visible: extras.weather !== ""
+                            icon: "\u{f0599}"; label: extras.weather.replace(/\s+·\s+/g, " · ").split(" · ").slice(0, 2).join(" · ")
+                            tone: infoCol.dim
+                            action: "omarchy-notification-send \"$(omarchy-weather-status)\""
+                        }
+                        Chip {
+                            visible: extras.update
+                            icon: "\u{f06b0}"; label: "update"; tone: infoCol.warm
+                            action: "omarchy-launch-floating-terminal-with-presentation omarchy-update"
+                        }
+                        Chip {
+                            icon: "\u{f0594}"; label: "night"
+                            tone: extras.nightlight ? infoCol.warm : infoCol.dim
+                            action: "omarchy toggle nightlight"
+                        }
+                        Chip {
+                            icon: "\u{f0176}"; label: "awake"
+                            tone: extras.awake ? infoCol.warm : infoCol.dim
+                            action: "omarchy toggle idle stay-awake"
+                        }
+                        Chip {
+                            icon: "\u{f009b}"; label: "dnd"; tone: infoCol.dim
+                            action: "omarchy-toggle-notification-silencing"
+                        }
+                        Chip {
+                            icon: "\u{f035c}"; label: "menu"; tone: infoCol.dim
+                            action: "omarchy-menu"
                         }
                     }
                 }
@@ -744,7 +820,8 @@ PanelWindow {
     readonly property int notifCount: ctl ? ctl.notifs.count : 0
 
     // info-panel chip actions; the panel closes after launching
-    readonly property string floatTerm: "alacritty --class alacritty-float -e "
+    // Floating terminal: Omarchy's when installed, alacritty otherwise
+    readonly property string floatTerm: Qt.resolvedUrl("float-term.sh").toString().replace("file://", "") + " "
     // ⤢ in a panel: hand it to FloatPanel, which springs out of our rect
     function detachPanel(kind) {
         ctl.floatFrom = Qt.rect(winX + pill.x, pill.y, pill.width, pill.height)
