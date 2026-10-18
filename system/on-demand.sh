@@ -11,7 +11,7 @@
 #   pacman     pins egl-wayland at 1.1.22: 1.1.23 crashes Hyprland as soon as
 #              an NVIDIA-offloaded app opens (drop the pin past 1.1.23)
 #
-# The user half (OpenClaw gateway on demand, nm-applet only in waybar mode)
+# The user half (nm-applet only in waybar mode)
 # lives in desktop/.config/systemd/user and hypr/, deployed by stow.
 set -euo pipefail
 [ "$(id -u)" -eq 0 ] || { echo "run with sudo" >&2; exit 1; }

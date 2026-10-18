@@ -62,7 +62,6 @@ rules({ class = "^(alacritty-float)$" }, { float = true, center = true, size = "
 -- (SUPER+T taskvim.sh, SUPER+A claude-session.sh; dojo is in dojo.lua).
 rules({ class = "^(taskvim)$" }, { workspace = "8", fullscreen = true })
 rules({ class = "^(claude-session)$" }, { workspace = "5", fullscreen = true })
-rules({ class = "^(floating-openclaw)$" }, { float = true, center = true, opacity = "0.95 0.95" })
 
 -- File dialogs and prompts
 rules({ title = "^(Save As|Open Files|Add Folder to Workspace)$" }, { float = true, center = true, size = "monitor_w*0.7 monitor_h*0.6" })
