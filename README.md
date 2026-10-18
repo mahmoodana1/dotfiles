@@ -101,7 +101,7 @@ Every exclusion is deliberate. Grouped by why.
 | `~/.config/gh`, `~/.config/github-copilot` | OAuth tokens |
 | `~/.config/exercism` | API token |
 | `~/.config/zoomus.conf` | Stored account credentials |
-| `~/.config/secrets.env` | The OpenClaw token. Created from a template by `install.sh`, `chmod 600`, gitignored |
+| `~/.config/secrets.env` | Machine-local env vars. Created from a template by `install.sh`, `chmod 600`, gitignored |
 | `~/.ssh`, `~/.gnupg` | Private keys. Move these by hand, over a channel you trust |
 
 A second net behind `.gitignore`: `.githooks/secret-scan` runs on every commit
@@ -175,7 +175,7 @@ It then:
 ### Then, by hand
 
 ```sh
-$EDITOR ~/.config/secrets.env                  # real OPENCLAW_TOKEN
+$EDITOR ~/.config/secrets.env                  # machine-local env vars
 cp ~/dotfiles/templates/gitconfig.example ~/.gitconfig
 git config --global user.name  "…"
 git config --global user.email "…"
@@ -235,7 +235,7 @@ before you commit.
 
 Scripts in `hypr/scripts/`: `volume` `brightness` `media` `screenshot`
 `wallpaper` `zoom` `touchpad` `airplane` `bar` (top-bar mode) `glass` (open a
-glass panel) `taskvim` `openclaw-tui` `nwg-displays`. Each one prints its usage when run with no
+glass panel) `taskvim` `claude-session` `nwg-displays`. Each one prints its usage when run with no
 arguments.
 
 ---
@@ -338,10 +338,9 @@ symlink per file. Tools that write into that directory (palette-apply, nwg-displ
 work unchanged, and new files appear in the repo automatically instead of
 needing a re-stow.
 
-**Secrets in a file, not stripped out.** Deleting the token would have broken
-the `octui` alias and the `SUPER+A` launcher. Both now source
-`~/.config/secrets.env`, which stays local. The config in the repo is complete
-and functional; only the value is absent.
+**Secrets in a file, not stripped out.** Tokens live in `~/.config/secrets.env`,
+which `.zshrc` sources and which stays local. The config in the repo is complete
+and functional; only the values are absent.
 
 **Package manifests, not a lockfile.** Pinning versions across time on a rolling
 distro creates unsatisfiable dependency sets. An explicit-package list restores

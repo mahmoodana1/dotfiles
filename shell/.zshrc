@@ -58,7 +58,6 @@ function nvm node npm {
 
 # --- Other Tool Completions ---
 [ -s "$HOME/.bun/_bun" ] && source "$HOME/.bun/_bun"
-[ -f "$HOME/.openclaw/completions/openclaw.zsh" ] && source "$HOME/.openclaw/completions/openclaw.zsh"
 
 # --- Visuals (Fastfetch) ---
 # Only run if we are in an interactive shell to avoid errors in scripts.
@@ -125,11 +124,9 @@ fnv() {
 }
 
 # --- Machine-local secrets (not in the dotfiles repo) ---
-# Defines OPENCLAW_TOKEN. See ~/dotfiles/templates/secrets.env.example.
+# See ~/dotfiles/templates/secrets.env.example.
 [ -f "$HOME/.config/secrets.env" ] && source "$HOME/.config/secrets.env"
 
-# OpenClaw TUI alias
-alias octui='openclaw tui --token "$OPENCLAW_TOKEN"'
 alias get_idf='. ~/esp-idf/export.sh'
 
 # tailscaled is off until needed (system/on-demand.sh): `up` starts it,
@@ -144,8 +141,6 @@ tailscale() {
     return 0
 }
 
-# OpenClaw Completion
-[ -f "/home/mahmood/.openclaw/completions/openclaw.zsh" ] && source "/home/mahmood/.openclaw/completions/openclaw.zsh"
 
 
 # Added by Antigravity CLI installer
