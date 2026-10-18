@@ -287,7 +287,7 @@ worth knowing:
 | Bind | Action |
 |---|---|
 | `SUPER + T` | taskvim → workspace 8, fullscreen |
-| `SUPER + A` | OpenClaw TUI → workspace 5, fullscreen |
+| `SUPER + A` | Claude Code (Sonnet 5.5) → workspace 5, fullscreen |
 | `SUPER + L` | dojo practice TUI → workspace 7, fullscreen |
 | `SUPER + W` | Wallpaper picker |
 | `SUPER + SHIFT + B` | Top bar: waybar → Peek → Dynamic Island |

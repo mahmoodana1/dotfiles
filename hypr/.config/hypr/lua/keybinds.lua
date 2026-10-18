@@ -33,7 +33,7 @@ hl.bind(mod .. " + B", sh(d.browser), { description = "browser" })
 hl.bind(mod .. " + D", glass("launcher"), { description = "app launcher" })
 hl.bind(mod .. " + CTRL + S", glass("windows"), { description = "window switcher" })
 hl.bind(mod .. " + F", sh(term .. " -e bash -lc " .. d.home .. "/.local/bin/tmux-sessionizer"), { description = "tmux sessionizer (pick project)" })
-hl.bind(mod .. " + A", sh(s .. "/openclaw-tui.sh"), { description = "OpenClaw TUI (ws 5)" })
+hl.bind(mod .. " + A", sh(s .. "/claude-session.sh"), { description = "Claude Code, Sonnet 5.5 (ws 5)" })
 hl.bind(mod .. " + T", sh(s .. "/taskvim.sh"), { description = "taskvim (ws 8)" })
 hl.bind(mod .. " + H", glass("shortcuts"), { description = "shortcut viewer" })
 
