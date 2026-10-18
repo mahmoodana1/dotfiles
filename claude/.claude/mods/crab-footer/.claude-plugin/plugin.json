@@ -1,0 +1,1 @@
+{ "name": "crab-footer", "version": "0.1.0", "description": "Animated Claude crab under the prompt with 5h/weekly usage, context fill and the current directory", "types": "./types/index.d.ts" }

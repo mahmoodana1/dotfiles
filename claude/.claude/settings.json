@@ -1,4 +1,7 @@
 {
+  "env": {
+    "CLAUDE_CODE_PLUGIN_DIRS": "~/.claude/mods/crab-footer"
+  },
   "model": "sonnet",
   "hooks": {
     "SessionStart": [
@@ -60,11 +63,6 @@
         ]
       }
     ]
-  },
-  "statusLine": {
-    "type": "command",
-    "command": "~/.claude/statusline.py",
-    "refreshInterval": 1
   },
   "enabledPlugins": {
     "context-mode@context-mode": true,
