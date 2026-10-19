@@ -159,3 +159,11 @@ claude() {
   fi
 }
 unset TMUX_KEEP_REPLAY   # only the first shell of a restored tmux pane skips the greeting
+
+# Conda, lazy-loaded: `conda shell.zsh hook` costs ~1s per shell (auto_activate is off anyway)
+function conda {
+  unfunction conda
+  eval "$('/home/mahmood/anaconda3/bin/conda' 'shell.zsh' 'hook' 2> /dev/null)"
+  conda "$@"
+}
+
