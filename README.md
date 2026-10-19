@@ -1,11 +1,6 @@
 # dotfiles
 
-A complete Hyprland desktop, reproducible on a new machine with two commands.
-
-```sh
-git clone <this-repo> ~/dotfiles
-~/dotfiles/install.sh
-```
+A complete Hyprland desktop.
 
 Everything in `~/.config` that matters is here: the compositor, the bar, the
 launcher, the terminals, the editor, the theming stack, and the shell. Nothing
@@ -19,7 +14,6 @@ personal is: no names, no emails, no tokens, no browser profiles, no history.
 - [How it works](#how-it-works)
 - [What is in here](#what-is-in-here)
 - [What is NOT in here](#what-is-not-in-here)
-- [Installing on a new machine](#installing-on-a-new-machine)
 - [Daily use](#daily-use)
 - [The Hyprland config in detail](#the-hyprland-config-in-detail)
 - [Keybindings worth knowing](#keybindings-worth-knowing)
@@ -53,12 +47,12 @@ forget.
    ./update.sh -m "message"     (commits, refreshes package lists,
               │                  scans for leaked secrets)
               ▼
-   git push                     (other machines: git pull && ./install.sh)
+   git push                     (other machines: git pull)
 ```
 
 Why stow rather than a bare repo or chezmoi: it is one already-installed
-binary, the symlinks are inspectable with `ls -l`, and `uninstall.sh` puts
-everything back. No templating language, no daemon, no state directory.
+binary and the symlinks are inspectable with `ls -l`. No templating language,
+no daemon, no state directory.
 
 ---
 
@@ -76,15 +70,14 @@ everything back. No templating language, no daemon, no state directory.
 | `cli` | `~/.config/…` | btop, cava, fastfetch, glow, lazygit, mpv, swappy, qutebrowser, matplotlib, procps, yay, psd, argos-translate, `starship.toml` |
 | `theming` | `~/.config/…`, `~/.themes` | **The color palette** (`~/.config/palette`), GTK 2/3, Kvantum, qt5ct, qt6ct, GTK themes |
 | `desktop` | `~/.config/…` | Thunar, xfce4, xdg-desktop-portal, autostart, menus, wireplumber, systemd user units, mimeapps, user-dirs, dolphin/kwallet/pavucontrol rc files |
-| `gitcfg` | `~/.config/git` | Global gitignore (no identity — see `templates/gitconfig.example`) |
+| `gitcfg` | `~/.config/git` | Global gitignore (no identity) |
 | `claude` | *copied, not linked* | Claude Code `settings.json` |
 
 Plus:
 
 - `packages/` — every explicitly-installed pacman and AUR package ([details](packages/README.md))
-- `templates/` — the machine-specific and secret files, with placeholders
-- `docs/` — deeper notes ([hyprland-lua.md](docs/hyprland-lua.md), [adding-a-package.md](docs/adding-a-package.md))
-- `install.sh` / `update.sh` / `uninstall.sh`
+- `docs/` — deeper notes ([hyprland-lua.md](docs/hyprland-lua.md))
+- `update.sh`
 
 ---
 
@@ -97,15 +90,15 @@ Every exclusion is deliberate. Grouped by why.
 | Excluded | Reason |
 |---|---|
 | `~/.git-credentials` | Plaintext git passwords |
-| `~/.gitconfig` | Your name and email. Ship `templates/gitconfig.example` instead |
+| `~/.gitconfig` | Your name and email |
 | `~/.config/gh`, `~/.config/github-copilot` | OAuth tokens |
 | `~/.config/exercism` | API token |
 | `~/.config/zoomus.conf` | Stored account credentials |
-| `~/.config/secrets.env` | Machine-local env vars. Created from a template by `install.sh`, `chmod 600`, gitignored |
+| `~/.config/secrets.env` | Machine-local env vars, `chmod 600`, gitignored |
 | `~/.ssh`, `~/.gnupg` | Private keys. Move these by hand, over a channel you trust |
 
 A second net behind `.gitignore`: `.githooks/secret-scan` runs on every commit
-and push (wired by `install.sh` via `core.hooksPath`) and blocks token shapes,
+and push (wired via `core.hooksPath`) and blocks token shapes,
 hardcoded passwords and files like keys or `.env`. Audit the whole history
 with `.githooks/secret-scan all`.
 
@@ -121,13 +114,13 @@ and caches), `~/.config/obsidian`, `~/.config/discord`, `~/.config/BraveSoftware
 ### Reinstallable — bulk with no information in it
 
 `~/.oh-my-zsh` (23 MB upstream clone), `~/.icons` (664 MB, comes from packages),
-`~/.config/go` and `~/.config/nvm` (toolchain caches), `~/.tmux/plugins`
-(`install.sh` clones tpm instead), IDE and vendor toolchain dirs (JetBrains,
+`~/.config/go` and `~/.config/nvm` (toolchain caches), `~/.tmux/plugins`,
+IDE and vendor toolchain dirs (JetBrains,
 Arduino, Microchip, SEGGER, espressif).
 
 ### Machine-specific — correct here, wrong there
 
-These are gitignored and seeded from `templates/` by `install.sh`:
+These are gitignored:
 
 | File | Why it cannot be shared |
 |---|---|
@@ -151,45 +144,6 @@ history.
 
 ---
 
-## Installing on a new machine
-
-```sh
-sudo pacman -S --needed git stow      # the only hard requirements
-git clone <this-repo> ~/dotfiles
-~/dotfiles/install.sh                 # --dry-run first if you like
-```
-
-`install.sh` is idempotent and non-destructive. Any real file that would block a
-symlink is moved to `~/.dotfiles-backup-<timestamp>/` with its path preserved,
-never deleted. Re-running repairs drift.
-
-It then:
-
-1. seeds `monitors.lua` and `workspaces.lua` from `templates/`, because
-   `hyprland.lua` `require()`s them and a fresh clone has neither;
-2. creates `~/.config/secrets.env` from its template, `chmod 600`;
-3. stows every package;
-4. renders the palette (`palette-apply`), clones tpm, copies in Claude settings;
-5. runs `Hyprland --verify-config` and `zsh -n ~/.zshrc` and reports.
-
-### Then, by hand
-
-```sh
-$EDITOR ~/.config/secrets.env                  # machine-local env vars
-cp ~/dotfiles/templates/gitconfig.example ~/.gitconfig
-git config --global user.name  "…"
-git config --global user.email "…"
-~/.config/hypr/scripts/nwg-displays.sh         # lay out your monitors
-sudo pacman -S --needed - < ~/dotfiles/packages/pacman-explicit.txt
-yay      -S --needed - < ~/dotfiles/packages/aur.txt
-hyprctl reload
-```
-
-Copy `~/.ssh` and `~/.gnupg` across yourself. They are not, and should not be,
-in a git repo.
-
----
-
 ## Daily use
 
 ```sh
@@ -206,7 +160,6 @@ On another machine:
 
 ```sh
 git -C ~/dotfiles pull
-~/dotfiles/install.sh      # only needed if packages were added or removed
 ```
 
 `update.sh` also refreshes the package manifests, pulls back the copied Claude
@@ -304,12 +257,11 @@ spawning a second one.
 ## Troubleshooting
 
 **`stow: WARNING! stowing X would cause conflicts`** — a real file occupies the
-target path. `install.sh` moves those aside automatically; if you ran `stow`
-by hand, move the file yourself and retry.
+target path. Move the file aside and retry.
 
 **Hyprland will not start after a pull** — run `Hyprland --verify-config` from a
 TTY. The usual cause is a missing gitignored file: `colors.lua` (run
-`palette-apply`) or `monitors.lua` (`./install.sh` reseeds it).
+`palette-apply`) or `monitors.lua` (`scripts/nwg-displays.sh` writes it).
 
 **A keybinding does nothing** — check whether its script uses legacy
 `hyprctl dispatch` syntax. See [docs/hyprland-lua.md](docs/hyprland-lua.md).
@@ -321,9 +273,6 @@ invisible.
 **Edits do not show in `git status`** — the path is probably gitignored
 (generated or machine-specific). Confirm with
 `git -C ~/dotfiles check-ignore -v <path>`.
-
-**Undo everything** — `~/dotfiles/uninstall.sh --restore` removes the symlinks
-and copies real files back into `$HOME`.
 
 ---
 

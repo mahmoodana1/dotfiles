@@ -31,6 +31,5 @@ a record of one machine at one moment, not a guarantee about the future.
 - **Not a lockfile.** Versions are not pinned. You get whatever is current.
 - **AUR needs a helper.** `yay` is itself in `aur.txt`; bootstrap it manually
   first (`git clone https://aur.archlinux.org/yay.git && cd yay && makepkg -si`).
-- **Nothing here is required** for the dotfiles to deploy. `install.sh` only
-  needs `git` and `stow`; the manifests exist so a new machine can reach
-  feature parity, not so it can link configs.
+- **Nothing here is required** for the dotfiles to deploy; the manifests exist
+  so a new machine can reach feature parity.
