@@ -76,7 +76,7 @@ Legend: `SUPER` = mainMod (Windows key).
 | `SUPER + D` | App launcher (glass grid) — most-used first, type to fuzzy-search, Enter launches |
 | `SUPER + E` | File manager |
 | `SUPER + B` | Default browser |
-| `SUPER + A` | OpenClaw TUI |
+| `SUPER + A` | Claude Code (Sonnet 5.5) → ws 5, fullscreen |
 | `SUPER + CTRL + S` | Window switcher (glass) — live previews of every window, type to filter |
 
 ## Hyprland — Apps (Custom)
