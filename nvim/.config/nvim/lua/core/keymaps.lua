@@ -175,11 +175,11 @@ function M.setup()
     --  5. FILE EXPLORER   (snacks explorer)
     -- =======================================================================
     map("n", "<leader>e", function()
-        Snacks.explorer({ cwd = root() })
-    end, "Explorer (root)")
-    map("n", "<leader>E", function()
         Snacks.explorer({ cwd = vim.uv.cwd() })
     end, "Explorer (cwd)")
+    map("n", "<leader>E", function()
+        Snacks.explorer({ cwd = root() })
+    end, "Explorer (root)")
 
     -- =======================================================================
     --  6. LSP -- see M.on_lsp_attach below (buffer-local, set on LspAttach)
