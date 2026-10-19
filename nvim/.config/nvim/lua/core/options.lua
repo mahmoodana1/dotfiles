@@ -88,7 +88,9 @@ vim.lsp.log.set_level("OFF")
 -- --- Providers -------------------------------------------------------------
 -- Only the python provider is used; disabling the rest shaves off startup
 -- checks and keeps :checkhealth quiet.
-vim.g.python3_host_prog = vim.fn.expand("~/.virtualenvs/nvim/bin/python")
+-- python/host = the ~/.virtualenvs/nvim interpreter plus python/sitecustomize.py
+-- (opens molten plots in Loupe instead of the browser).
+vim.g.python3_host_prog = vim.fn.stdpath("config") .. "/python/host"
 vim.g.loaded_perl_provider = 0
 vim.g.loaded_ruby_provider = 0
 vim.g.loaded_node_provider = 0

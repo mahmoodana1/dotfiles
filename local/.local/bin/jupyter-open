@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# jupyter-open <file>: open a notebook in JupyterLab (nvim: SPACE j j).
+# Runs jupyter-lab from the nearest .venv above the file, in that .venv's folder, and
+# reuses that folder's server if it is already up. A jupytext-paired .py opens its .ipynb.
+f=$(realpath -e "$1") || exit 1
+[ "${f##*.}" = py ] && [ -e "${f%.py}.ipynb" ] && f="${f%.py}.ipynb"
+
+dir=$(dirname "$f")
+until [ -x "$dir/.venv/bin/jupyter-lab" ]; do
+    [ "$dir" = / ] && { echo "no .venv with jupyter-lab above $f" >&2; exit 1; }
+    dir=$(dirname "$dir")
+done
+bin="$dir/.venv/bin"
+rel=${f#"$dir"/}
+
+url=$("$bin/jupyter-server" list 2>/dev/null | awk -v d="$dir" -F ' :: ' '$2 == d { print $1; exit }')
+if [ -n "$url" ]; then
+    base=${url%%\?*}   # http://localhost:8888/
+    path=$(python3 -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1]))' "$rel")
+    exec xdg-open "${base}lab/tree/$path${url#"$base"}"
+fi
+
+mkdir -p "$HOME/.cache"
+cd "$dir" && setsid -f "$bin/jupyter-lab" "$rel" >"$HOME/.cache/jupyter-open.log" 2>&1

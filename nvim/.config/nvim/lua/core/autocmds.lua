@@ -135,6 +135,77 @@ vim.api.nvim_create_autocmd("VimResized", {
     end,
 })
 
+-- --- Notebooks: .ipynb opens as Markdown via jupytext, saves back ----------
+-- Piped through stdin/stdout: no temp files beside the notebook and no
+-- jupytext pairing checks. --update keeps outputs and metadata in the .ipynb.
+-- Cells are ```python blocks; keys in keymaps.lua section 17.
+local jupytext = vim.fn.expand("~/.virtualenvs/nvim/bin/jupytext")
+local nb_filters = { "--opt", "notebook_metadata_filter=-all", "--opt", "cell_metadata_filter=-all" }
+local notebook = augroup("notebook")
+
+vim.api.nvim_create_autocmd("BufReadCmd", {
+    group = notebook,
+    pattern = "*.ipynb",
+    callback = function(ev)
+        local lines = {}
+        if vim.fn.getfsize(ev.match) > 0 then
+            local cmd = vim.list_extend({ jupytext, "--to", "md", "-q", "-o", "-", ev.match }, nb_filters)
+            local res = vim.system(cmd, { text = true }):wait()
+            if res.code ~= 0 then
+                -- nofile: a half-read notebook must never be saved over the real one
+                vim.bo[ev.buf].buftype = "nofile"
+                vim.notify("jupytext could not read " .. ev.match .. ":\n" .. res.stderr, vim.log.levels.ERROR)
+                return
+            end
+            lines = vim.split(res.stdout, "\n")
+            if lines[#lines] == "" then
+                table.remove(lines)
+            end
+        end
+        -- no undo step for the load itself, so `u` can't blank the buffer
+        local ul = vim.bo[ev.buf].undolevels
+        vim.bo[ev.buf].undolevels = -1
+        vim.api.nvim_buf_set_lines(ev.buf, 0, -1, false, lines)
+        vim.bo[ev.buf].undolevels = ul
+        vim.bo[ev.buf].modified = false
+        vim.bo[ev.buf].filetype = "markdown"
+    end,
+})
+
+-- Save goes through jupytext's Python API, not the CLI: `--update` from stdin
+-- either trips the pairing check or drops metadata.kernelspec. This merges
+-- the edited text with the old notebook (outputs, ids, counts) and keeps the
+-- notebook metadata as-is, since the text view never shows it.
+local nb_save = [[
+import os, sys, jupytext
+from jupytext.combine import combine_inputs_with_outputs
+path = sys.argv[1]
+new = jupytext.reads(sys.stdin.read(), fmt="md")
+if os.path.exists(path) and os.path.getsize(path) > 0:
+    old = jupytext.read(path, fmt="ipynb")
+    new.metadata["jupytext"] = {"notebook_metadata_filter": "-all", "cell_metadata_filter": "-all"}
+    new = combine_inputs_with_outputs(new, old)
+    new.metadata = old.metadata
+else:
+    new.metadata = {"kernelspec": {"name": "python3", "display_name": "Python 3", "language": "python"}}
+jupytext.write(new, path, fmt="ipynb")
+]]
+
+vim.api.nvim_create_autocmd("BufWriteCmd", {
+    group = notebook,
+    pattern = "*.ipynb",
+    callback = function(ev)
+        local cmd = { vim.g.python3_host_prog, "-c", nb_save, ev.match }
+        local text = table.concat(vim.api.nvim_buf_get_lines(ev.buf, 0, -1, false), "\n") .. "\n"
+        local res = vim.system(cmd, { stdin = text, text = true }):wait()
+        if res.code ~= 0 then
+            vim.notify("jupytext could not save " .. ev.match .. ":\n" .. res.stderr, vim.log.levels.ERROR)
+            return -- buffer stays modified, nothing lost
+        end
+        vim.bo[ev.buf].modified = false
+    end,
+})
+
 -- --- Never leave a swapfile prompt in the way ------------------------------
 vim.api.nvim_create_autocmd("SwapExists", {
     group = augroup("swap"),
