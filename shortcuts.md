@@ -485,6 +485,27 @@ Compiles with `-Wall -Wextra -g`. Falls back to a split `:terminal` when not
 inside tmux. (This was `SPACE c a r` before — it moved because it made every
 `SPACE c a` code action wait 400ms.)
 
+### Neovim — Jupyter notebooks (`SPACE j`)
+
+`.ipynb` opens rendered like JupyterLab: text cells as formatted Markdown, code cells as grey ```` ```python ```` boxes, output under each box. Insert mode shows the raw text of the line you're on. `:w` saves back to the notebook.
+
+| Keys | Action |
+|---|---|
+| `SPACE j i` | Start kernel (pick `intro_ml` for the ML course) |
+| `SPACE j c` | Run current cell, jump to next |
+| `SPACE j n` | New code cell below |
+| `SPACE j m` | New text (markdown) cell below |
+| `SPACE j a` | Run all cells, top to bottom (skips text cells) |
+| `SPACE j l` | Run current line |
+| `SPACE j v` | Run selection (visual) |
+| `SPACE j o` | Enter output window |
+| `SPACE j h` | Hide output |
+| `SPACE j p` | Open plot (cursor in its cell) in a floating Loupe window |
+| `SPACE j j` | Open this notebook (or its paired `.py`'s notebook) in **JupyterLab**, from the nearest `.venv` above it; reuses the running server |
+| `SPACE j d` | Delete cell output |
+| `SPACE j R` | Restart kernel |
+| `] j` / `[ j` | Next / previous code cell |
+
 ### Neovim — Debug (DAP)
 
 | Keys | Action |

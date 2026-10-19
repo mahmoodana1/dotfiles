@@ -38,5 +38,11 @@
     "queryInterval": 333,
     "sizes": "64,6,34,0.62,1100",
     "styles": "dark"
-  }
+  },
+  "exclusionRules": [
+    {
+      "passKeys": "",
+      "pattern": "^https?://(localhost|127\\.0\\.0\\.1):88\\d\\d/"
+    }
+  ]
 }

@@ -20,6 +20,7 @@
 --     6. LSP (buffer-local)      14. AI / Claude
 --     7. Diagnostics & Trouble   15. Sessions & scratch
 --     8. Treesitter / motion     16. which-key group labels
+--                                17. Jupyter notebooks (molten)
 --
 --  Tip: <leader>sk opens a searchable picker of every active keymap.
 -- ===========================================================================
@@ -439,6 +440,135 @@ function M.setup()
     map("n", "<leader>gy", function()
         Snacks.gitbrowse()
     end, "Open in browser (git)")
+
+    -- =======================================================================
+    --  17. JUPYTER NOTEBOOKS  (molten -- .ipynb opens as Markdown, see autocmds)
+    -- =======================================================================
+    -- Code cell = a ```python ... ``` block. Returns { open, close } line pairs.
+    -- Other fences (``` diagrams inside text cells) are skipped, not run.
+    local function code_cells()
+        local cells, open, other = {}, nil, false
+        for i, l in ipairs(vim.api.nvim_buf_get_lines(0, 0, -1, false)) do
+            if open then
+                if l:match("^```%s*$") then
+                    cells[#cells + 1] = { open, i }
+                    open = nil
+                end
+            elseif other then
+                other = not l:match("^```")
+            elseif l:match("^```python") then
+                open = i
+            elseif l:match("^```") then
+                other = true
+            end
+        end
+        return cells
+    end
+    local function current_cell()
+        local cur = vim.fn.line(".")
+        for k, c in ipairs(code_cells()) do
+            if c[1] <= cur and cur <= c[2] then
+                return c, k
+            end
+        end
+    end
+    local function run(c)
+        if c[2] - c[1] > 1 then
+            vim.fn.MoltenEvaluateRange(c[1] + 1, c[2] - 1)
+        end
+    end
+    local function goto_cell(dir)
+        local cur = vim.fn.line(".")
+        local cells = code_cells()
+        for k = dir > 0 and 1 or #cells, dir > 0 and #cells or 1, dir do
+            local first = cells[k][1] + 1
+            if (dir > 0 and first > cur) or (dir < 0 and cells[k][2] < cur) then
+                return vim.api.nvim_win_set_cursor(0, { first, 0 })
+            end
+        end
+    end
+    map("n", "<leader>ji", "<cmd>MoltenInit<cr>", "Start kernel")
+    map("n", "<leader>jc", function()
+        local c = current_cell()
+        if c then
+            run(c)
+        end
+        goto_cell(1)
+    end, "Run cell, go to next")
+    -- Run every code cell top to bottom, each separately so output lands under its own cell.
+    map("n", "<leader>ja", function()
+        for _, c in ipairs(code_cells()) do
+            run(c)
+        end
+    end, "Run all cells")
+    -- New cell below the current code cell (or the cursor line, in text).
+    -- Insert mode inside it. Two blank lines start a new text cell in jupytext.
+    local function add_cell(lines, row)
+        local c = current_cell()
+        local at = c and c[2] or vim.fn.line(".")
+        vim.api.nvim_buf_set_lines(0, at, at, false, lines)
+        vim.api.nvim_win_set_cursor(0, { at + row, 0 })
+        vim.cmd("startinsert")
+    end
+    map("n", "<leader>jn", function()
+        add_cell({ "", "```python", "", "```" }, 3)
+    end, "New code cell below")
+    map("n", "<leader>jm", function()
+        add_cell({ "", "", "" }, 3)
+    end, "New text cell below")
+    map("n", "<leader>jl", "<cmd>MoltenEvaluateLine<cr>", "Run line")
+    map("x", "<leader>jv", ":<C-u>MoltenEvaluateVisual<cr>gv", "Run selection")
+    map("n", "<leader>jo", "<cmd>noautocmd MoltenEnterOutput<cr>", "Enter output window")
+    map("n", "<leader>jh", "<cmd>MoltenHideOutput<cr>", "Hide output")
+    -- MoltenImagePopup only looks at the cell under the cursor and fails silently,
+    -- and <leader>jc has already moved on. So try this cell, then each one above,
+    -- until molten reports it opened a plot.
+    map("n", "<leader>jp", function()
+        local cells, cur = code_cells(), vim.fn.line(".")
+        local view, notify, opened = vim.fn.winsaveview(), vim.notify, false
+        vim.notify = function(msg, ...)
+            if msg == "Opened image popup" then
+                opened = true
+            else
+                notify(msg, ...)
+            end
+        end
+        for k = #cells, 1, -1 do
+            local c = cells[k]
+            if c[1] <= cur and c[2] - c[1] > 1 then
+                vim.api.nvim_win_set_cursor(0, { c[1] + 1, 0 })
+                pcall(vim.cmd, "MoltenImagePopup")
+                if opened then
+                    break
+                end
+            end
+        end
+        vim.notify = notify
+        vim.fn.winrestview(view)
+        if not opened then
+            vim.notify("No plot output in this cell or above", vim.log.levels.WARN)
+        end
+    end, "Open plot in viewer")
+    -- Saves first so JupyterLab opens what's on screen. ~/.local/bin/jupyter-open
+    -- finds the .venv and reuses its server.
+    map("n", "<leader>jj", function()
+        vim.cmd("silent update")
+        vim.system({ vim.fn.expand("~/.local/bin/jupyter-open"), vim.api.nvim_buf_get_name(0) }, { text = true }, function(res)
+            if res.code ~= 0 then
+                vim.schedule(function()
+                    vim.notify("jupyter-open: " .. res.stderr, vim.log.levels.ERROR)
+                end)
+            end
+        end)
+    end, "Open in JupyterLab")
+    map("n", "<leader>jd", "<cmd>MoltenDelete<cr>", "Delete cell output")
+    map("n", "<leader>jR", "<cmd>MoltenRestart!<cr>", "Restart kernel")
+    map("n", "]j", function()
+        goto_cell(1)
+    end, "Next code cell")
+    map("n", "[j", function()
+        goto_cell(-1)
+    end, "Previous code cell")
 end
 
 -- ===========================================================================
@@ -587,6 +717,7 @@ M.groups = {
     { "<leader>d", group = "debug", icon = "" },
     { "<leader>f", group = "file / find", icon = "" },
     { "<leader>g", group = "git", icon = "" },
+    { "<leader>j", group = "jupyter", icon = "" },
     { "<leader>gh", group = "hunks", icon = "" },
     { "<leader>q", group = "quit / session", icon = "" },
     { "<leader>r", group = "run / build", icon = "" },
