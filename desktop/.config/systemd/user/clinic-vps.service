@@ -1,0 +1,11 @@
+[Unit]
+Description=Local stand-in for the clinic VPS (QEMU/KVM)
+
+[Service]
+ExecStart=/home/mahmood/clinic/scripts/local-vps.sh run
+ExecStop=/home/mahmood/clinic/scripts/local-vps.sh shutdown
+TimeoutStopSec=90
+Restart=on-failure
+
+[Install]
+WantedBy=default.target
