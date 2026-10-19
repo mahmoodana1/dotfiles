@@ -124,7 +124,6 @@ fnv() {
 }
 
 # --- Machine-local secrets (not in the dotfiles repo) ---
-# See ~/dotfiles/templates/secrets.env.example.
 [ -f "$HOME/.config/secrets.env" ] && source "$HOME/.config/secrets.env"
 
 alias get_idf='. ~/esp-idf/export.sh'
