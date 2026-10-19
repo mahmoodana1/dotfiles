@@ -24,7 +24,7 @@ hl.config({
         kb_layout  = "us,ara",
         kb_variant = "",
         kb_model   = "",
-        kb_options = "ctrl:nocaps, grp:alt_shift_toggle",
+        kb_options = "ctrl:nocaps, grp:alt_shift_toggle, altwin:swap_alt_win",
         kb_rules   = "",
 
         repeat_rate  = 50,
