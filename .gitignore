@@ -7,8 +7,7 @@
 # ---------------------------------------------------------------------
 # 1. SECRETS
 # ---------------------------------------------------------------------
-# The real file lives at ~/.config/secrets.env (chmod 600) and is created
-# from templates/secrets.env.example on each new machine.
+# The real file lives at ~/.config/secrets.env (chmod 600), machine-local.
 secrets.env
 *.token
 *credentials*
@@ -38,7 +37,7 @@ hypr/.config/hypr/Monitor_Profiles/
 hypr/.config/hypr/lua/colors.lua
 theming/.config/palette/build/
 
-# Populated by tpm on first run; install.sh clones tpm itself.
+# Populated by tpm on first run.
 shell/.tmux/plugins/
 
 # The nvim config began as a kickstart.nvim clone. Its upstream .git was
