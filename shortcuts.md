@@ -35,6 +35,7 @@ Legend: `SUPER` = mainMod (Windows key).
 | `SUPER + G` | Toggle group |
 | `SUPER + CTRL + Tab` | Cycle active in group |
 | `ALT + Tab` | Cycle next window (brings floats to top) |
+| `ALT + SHIFT + Tab` | Cycle previous window |
 | `SUPER + drag LMB` | Move window with mouse |
 | `SUPER + drag RMB` | Resize window with mouse |
 

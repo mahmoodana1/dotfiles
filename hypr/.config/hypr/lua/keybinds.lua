@@ -70,6 +70,8 @@ hl.bind(mod .. " + CTRL + F", hl.dsp.window.fullscreen(1), { description = "maxi
 hl.bind(mod .. " + CTRL + O", sh("hyprctl setprop active opaque toggle"), { description = "toggle window opacity" })
 hl.bind("ALT + tab", hl.dsp.window.cycle_next(), { description = "cycle windows" })
 hl.bind("ALT + tab", hl.dsp.window.bring_to_top(), { description = "bring active to top" })
+hl.bind("ALT + SHIFT + tab", hl.dsp.window.cycle_next({ next = false }), { description = "cycle windows backwards" })
+hl.bind("ALT + SHIFT + tab", hl.dsp.window.bring_to_top(), { description = "bring active to top" })
 
 -- Arrow keys: focus / move / swap / resize
 for _, dir in ipairs({ "left", "right", "up", "down" }) do

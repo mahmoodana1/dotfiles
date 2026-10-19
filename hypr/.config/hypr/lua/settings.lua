@@ -79,6 +79,10 @@ hl.config({
         enable_anr_dialog          = true, -- Application Not Responding dialog
         anr_missed_pings           = 15,   -- default of 1 is too low
         allow_session_lock_restore = true, -- prevents lockscreen crash on resume
+        -- Fullscreen stacking: a window opened/focused on a fullscreen workspace takes
+        -- over fullscreen (ALT+TAB flips between them), and closing it hands it back.
+        on_focus_under_fullscreen      = 1,
+        exit_window_retains_fullscreen = true,
     },
 
     -- opengl = { nvidia_anti_flicker = true },
@@ -87,6 +91,7 @@ hl.config({
         workspace_back_and_forth = true,
         allow_workspace_cycles   = true,
         pass_mouse_when_bound    = false,
+        movefocus_cycles_fullscreen = true, -- SUPER+arrows cycle instead of no-op under fullscreen
     },
 
     -- Helps when scaling, avoids pixelation
