@@ -10,6 +10,10 @@ until [ -x "$dir/.venv/bin/jupyter-lab" ]; do
     [ "$dir" = / ] && { echo "no .venv with jupyter-lab above $f" >&2; exit 1; }
     dir=$(dirname "$dir")
 done
+# Only run a .venv I made: mine, and not shipped inside a git checkout.
+[ -O "$dir/.venv" ] && [ -O "$dir/.venv/bin/jupyter-lab" ] &&
+    ! git -C "$dir" ls-files --error-unmatch .venv >/dev/null 2>&1 ||
+    { echo "refusing untrusted $dir/.venv" >&2; exit 1; }
 bin="$dir/.venv/bin"
 rel=${f#"$dir"/}
 
@@ -21,4 +25,4 @@ if [ -n "$url" ]; then
 fi
 
 mkdir -p "$HOME/.cache"
-cd "$dir" && setsid -f "$bin/jupyter-lab" "$rel" >"$HOME/.cache/jupyter-open.log" 2>&1
+cd "$dir" && setsid -f "$bin/jupyter-lab" "./$rel" >"$HOME/.cache/jupyter-open.log" 2>&1
