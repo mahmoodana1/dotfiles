@@ -20,11 +20,11 @@ hl.config({
     },
 
     input = {
-        -- Caps-Lock acts as CTRL, Alt+Shift toggles layout.
+        -- Caps-Lock acts as CTRL; Win+Space toggles layout (alt_space because Alt/Win are swapped).
         kb_layout  = "us,ara",
         kb_variant = "",
         kb_model   = "",
-        kb_options = "ctrl:nocaps, grp:alt_shift_toggle, altwin:swap_alt_win",
+        kb_options = "ctrl:nocaps, grp:alt_space_toggle, altwin:swap_alt_win",
         kb_rules   = "",
 
         repeat_rate  = 50,

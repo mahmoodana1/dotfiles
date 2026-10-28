@@ -179,4 +179,4 @@ hl.bind("XF86AudioStop", sh(s .. "/media.sh stop"), { description = "stop", lock
 hl.bind("XF86Sleep", sh("systemctl suspend"), { description = "sleep", locked = true })
 hl.bind("XF86Rfkill", sh(s .. "/airplane.sh"), { description = "airplane mode", locked = true })
 
--- Keyboard layout (us/ara) switches with ALT+SHIFT via kb_options in settings.lua.
+-- Keyboard layout (us/ara) switches with (physical) WIN+SPACE via kb_options in settings.lua.
