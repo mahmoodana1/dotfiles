@@ -202,7 +202,7 @@ desc = "Diff selected with hovered"
 
 [[mgr.prepend_keymap]]
 on   = ["M", "t"]
-run  = "shell --orphan -- foot"
+run  = "shell --orphan -- alacritty"
 desc = "Terminal here"
 
 [[mgr.prepend_keymap]]
