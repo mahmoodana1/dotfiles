@@ -178,6 +178,7 @@ return {
                 native_lsp = { enabled = true, underlines = { errors = { "undercurl" } } },
                 noice = true,
                 notify = true,
+                render_markdown = true,
                 snacks = true,
                 telescope = { enabled = true },
                 treesitter = true,
@@ -313,6 +314,39 @@ return {
                 { filter = { event = "msg_show", find = "written" }, opts = { skip = true } },
                 { filter = { event = "msg_show", find = "lines" }, opts = { skip = true } },
             },
+        },
+    },
+
+    -- --- Markdown rendering ------------------------------------------------
+    -- Draws headings, code blocks, tables, lists, checkboxes and callouts in
+    -- the buffer itself. The line under the cursor (and anything in insert
+    -- mode) drops back to raw markdown, so editing never fights the render.
+    -- Icons come from mini.icons above; it reads the treesitter parsers.
+    {
+        "MeanderingProgrammer/render-markdown.nvim",
+        ft = { "markdown" },
+        dependencies = { "nvim-treesitter/nvim-treesitter", "nvim-mini/mini.icons" },
+        opts = {
+            completions = { blink = { enabled = true } },
+            heading = {
+                -- Full-width bands read as section breaks; the sign column
+                -- icon is redundant next to the inline one.
+                width = "full",
+                sign = false,
+            },
+            code = {
+                -- Tight block around the code instead of a full-width slab,
+                -- language name + icon on the top border.
+                width = "block",
+                min_width = 60,
+                left_pad = 1,
+                right_pad = 1,
+                border = "thin",
+                sign = false,
+            },
+            bullet = { icons = { "●", "○", "◆", "◇" } },
+            checkbox = { checked = { scope_highlight = "@markup.strikethrough" } },
+            pipe_table = { preset = "round" },
         },
     },
 
