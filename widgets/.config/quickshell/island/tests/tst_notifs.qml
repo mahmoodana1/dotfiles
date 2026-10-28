@@ -34,6 +34,12 @@ TestCase {
         compare(g[0].appIcon, "x-icon")
     }
 
+    // ---- expiry ---------------------------------------------------------------
+    function test_expired_older_than_max_age() {
+        compare(N.expired([e("a", "X", 0), e("b", "X", 400), e("c", "X", 600)], 1000, 600).join(","), "a,b")
+    }
+    function test_expired_none() { compare(N.expired([e("a", "X", 900)], 1000, 600).length, 0) }
+
     // ---- add / remove ---------------------------------------------------------
     function test_add_puts_first() {
         compare(N.add([e("a", "X", 1)], e("b", "X", 2), 100).map(i => i.key).join(","), "b,a")
@@ -105,6 +111,17 @@ TestCase {
         const r = N.icons("", "image://icon//tmp/shot.png")
         compare(r.appIcon, "")
         compare(r.image, "file:///tmp/shot.png")
+    }
+    function test_icons_svg_path_becomes_app_icon() {
+        const r = N.icons("", "image://icon//home/u/.claude/hooks/claude.svg")
+        compare(r.appIcon, "/home/u/.claude/hooks/claude.svg")
+        compare(r.image, "")
+    }
+    function test_icons_svg_plain_or_file_url() {
+        compare(N.icons("", "/a/claude.svg").appIcon, "/a/claude.svg")
+        compare(N.icons("", "file:///a/claude.svg").appIcon, "/a/claude.svg")
+        compare(N.icons("/a/claude.svg", "").appIcon, "/a/claude.svg")
+        compare(N.icons("/a/claude.svg", "file:///a/claude.svg").image, "")
     }
     function test_icons_other_images_untouched() {
         compare(N.icons("a", "image://qsimage/1/2").image, "image://qsimage/1/2")

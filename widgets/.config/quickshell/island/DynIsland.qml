@@ -410,10 +410,15 @@ PanelWindow {
                         text: Qt.formatDateTime(clock.date, "HH:mm")
                         size: 13; weight: Font.Bold
                     }
-                    GlassText {
+                    Row {
                         visible: win.notifCount > 0
-                        text: "\u{f009a} " + win.notifCount
-                        color: Qt.rgba(1, 1, 1, 0.85)
+                        spacing: 5
+                        GlassText {
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: "\u{f009a} " + win.notifCount
+                            color: Qt.rgba(1, 1, 1, 0.85)
+                        }
+                        AppIcons { anchors.verticalCenter: parent.verticalCenter }
                     }
                     GlassText {
                         visible: Stats.hasBattery
@@ -508,6 +513,7 @@ PanelWindow {
                         signal clicked()                  // or handle it in QML
                         readonly property bool clickable: action !== "" || panelChip
                         property bool panelChip: false
+                        property bool appIcons: false     // the notifications' app icons after the label
                         implicitWidth: chipRow.implicitWidth + (clickable ? 14 : 0)
                         implicitHeight: 22
                         Rectangle {
@@ -523,6 +529,7 @@ PanelWindow {
                             GlassText { id: ic; size: 13; color: chip.tone; anchors.verticalCenter: parent.verticalCenter }
                             GlassText { id: lb; size: 11; color: chip.tone; anchors.verticalCenter: parent.verticalCenter
                                         width: Math.min(implicitWidth, 170); elide: Text.ElideRight }
+                            AppIcons { visible: chip.appIcons; size: 15; anchors.verticalCenter: parent.verticalCenter }
                         }
                         TapHandler {
                             id: tap
@@ -555,6 +562,7 @@ PanelWindow {
                             icon: "\u{f009a}"
                             label: win.notifCount
                             panelChip: true
+                            appIcons: true
                             onClicked: if (win.ctl) win.ctl.openHub("")
                         }
                         Chip {
@@ -818,6 +826,36 @@ PanelWindow {
     SystemClock { id: clock; precision: SystemClock.Minutes }
     property bool innerTap: false            // a chip took this click (see the pill's TapHandler)
     readonly property int notifCount: ctl ? ctl.notifs.count : 0
+
+    // the apps behind the hub's notifications, newest first, next to the bell
+    component AppIcons: Row {
+        id: appIcons
+        property int size: 14
+        spacing: 3
+        Repeater {
+            model: win.ctl ? win.ctl.notifs.groups.slice(0, 4) : []
+            Item {
+                required property var modelData
+                anchors.verticalCenter: parent.verticalCenter
+                width: appIcons.size; height: appIcons.size
+                Image {
+                    id: aImg
+                    anchors.fill: parent
+                    source: win.ctl ? win.ctl.notifs.iconFor(modelData.appIcon, modelData.app) : ""
+                    sourceSize: Qt.size(appIcons.size * 2, appIcons.size * 2)
+                    fillMode: Image.PreserveAspectFit
+                    visible: status === Image.Ready
+                }
+                GlassText {                       // no icon found: a bell, so every app shows
+                    anchors.centerIn: parent
+                    visible: !aImg.visible
+                    text: "\u{f0f3}"
+                    size: appIcons.size - 3
+                    color: Qt.rgba(1, 1, 1, 0.7)
+                }
+            }
+        }
+    }
 
     // info-panel chip actions; the panel closes after launching
     // Floating terminal: Omarchy's when installed, alacritty otherwise

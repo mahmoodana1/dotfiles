@@ -26,6 +26,8 @@ function groups(entries) {
 function add(entries, entry, cap) { return [entry].concat(entries).slice(0, cap) }
 function remove(entries, key) { return entries.filter(e => e.key !== key) }
 function removeApp(entries, app) { return entries.filter(e => appOf(e) !== app) }
+// keys of entries older than maxAge ms (time = arrival or last update)
+function expired(entries, now, maxAge) { return entries.filter(e => now - e.time >= maxAge).map(e => e.key) }
 
 // the image is a live image:// URL that dies with the notification
 function serialize(entries) {
@@ -59,11 +61,18 @@ function ago(time, now) {
 
 // notify-send -i arrives as image "image://icon/<name>" or
 // "image://icon//<path>": a name is really the app's icon (and survives a
-// restart), a path is a picture (screenshot)
+// restart), a path is a picture (screenshot), unless it's an .svg: that's an
+// icon too (Claude Code's hook sends its logo that way)
 function icons(appIcon, image) {
     const pre = "image://icon/"
+    const svg = p => /^(file:\/\/)?\/.*\.svg$/i.test(p || "")
+    if (svg(appIcon) || svg(image)) {           // a path or file:// URL to an .svg
+        const p = (svg(appIcon) ? appIcon : image).replace(/^file:\/\//, "")
+        return { appIcon: svg(appIcon) || !appIcon ? p : appIcon, image: "" }
+    }
     if (!image || !image.startsWith(pre)) return { appIcon: appIcon || "", image: image || "" }
     const rest = image.slice(pre.length)
+    if (rest.startsWith("/") && svg(rest)) return { appIcon: appIcon || rest, image: "" }
     if (rest.startsWith("/")) return { appIcon: appIcon || "", image: "file://" + rest }
     return { appIcon: appIcon || rest, image: "" }
 }
