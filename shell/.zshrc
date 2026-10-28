@@ -91,6 +91,9 @@ source /usr/share/fzf/completion.zsh
 bindkey -r '\ec'
 bindkey '^F' fzf-cd-widget
 
+# Ctrl+Delete deletes the next word (terminals send ^[[3;5~, which zsh leaves unbound)
+bindkey '^[[3;5~' kill-word
+
 # fzf: options live in a separate file so complex bindings stay readable
 export FZF_DEFAULT_OPTS_FILE="$HOME/dotfiles/shell/fzf-options"
 
@@ -118,6 +121,16 @@ fnv() {
   file=$(echo "$pick" | awk -F: '{print $1}')
   line=$(echo "$pick" | awk -F: '{print $2}')
   nvim "+$line" "$file"
+}
+
+# y: open yazi; on quit (q) the shell cds to wherever you ended up.
+# Q quits without changing directory.
+y() {
+  local tmp="$(mktemp -t yazi-cwd.XXXXXX)" cwd
+  yazi "$@" --cwd-file="$tmp"
+  IFS= read -r -d '' cwd < "$tmp"
+  [ -n "$cwd" ] && [ "$cwd" != "$PWD" ] && builtin cd -- "$cwd"
+  rm -f -- "$tmp"
 }
 
 # --- Machine-local secrets (not in the dotfiles repo) ---
@@ -161,3 +174,11 @@ claude() {
   fi
 }
 unset TMUX_KEEP_REPLAY   # only the first shell of a restored tmux pane skips the greeting
+
+# Conda, lazy-loaded: `conda shell.zsh hook` costs ~1s per shell (auto_activate is off anyway)
+function conda {
+  unfunction conda
+  eval "$('/home/mahmood/anaconda3/bin/conda' 'shell.zsh' 'hook' 2> /dev/null)"
+  conda "$@"
+}
+
