@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Extract each archive into the current dir. Prefers ouch, falls back to unrar/7z/bsdtar.
+for f in "$@"; do
+  if command -v ouch >/dev/null; then ouch decompress -y -- "$f" && continue; fi
+  case "${f,,}" in
+    *.rar) unrar x -o+ -- "$f" ;;
+    *.tar|*.tar.*|*.tgz|*.tbz2|*.txz) bsdtar -xf "$f" ;;
+    *) 7z x -y -- "$f" ;;
+  esac || { echo "Failed: $f"; read -rp "Press Enter"; }
+done
