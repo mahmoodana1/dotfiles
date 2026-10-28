@@ -122,7 +122,7 @@ desc = "Extract here"
 
 [[mgr.prepend_keymap]]
 on   = ["M", "c"]
-run  = "shell -- python3 -c 'import sys, pathlib; print(*(pathlib.Path(a).as_uri() for a in sys.argv[1:]), sep=chr(10))' %s | wl-copy -t text/uri-list"
+run  = "shell -- python3 -I -c 'import sys, pathlib; print(*(pathlib.Path(a).as_uri() for a in sys.argv[1:]), sep=chr(10))' %s | wl-copy -t text/uri-list"
 desc = "Copy file(s) to clipboard (paste in browser/chat)"
 
 [[mgr.prepend_keymap]]
@@ -187,7 +187,7 @@ desc = "Image(s) → PDF (one each)"
 
 [[mgr.prepend_keymap]]
 on   = ["M", "F"]
-run  = 'shell -- magick -density 150 %s "$(basename "$PWD").pdf"'
+run  = 'shell -- magick -density 150 %s "./$(basename "$PWD").pdf"'
 desc = "Selected images → one PDF"
 
 [[mgr.prepend_keymap]]
