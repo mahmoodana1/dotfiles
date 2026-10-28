@@ -1,0 +1,109 @@
+# yazi — main config. Keys in keymap.toml, colors in theme.toml (generated
+# by gen-theme.py on every Omarchy theme change).
+#
+# Opening files: Enter/l uses the first opener below, O lists all of them
+# ("open with"). Extra actions (compress, convert, clipboard...) live under M.
+
+[mgr]
+ratio          = [1, 3, 4]      # parent | current | wide preview
+sort_by        = "natural"
+sort_dir_first = true
+sort_sensitive = false
+linemode       = "size"
+show_hidden    = false
+show_symlink   = true
+scrolloff      = 6
+
+[preview]
+wrap        = "no"
+tab_size    = 4
+max_width   = 1200
+max_height  = 1800
+image_quality = 85
+
+# ---------------------------------------------------------------------------
+# Openers: what O offers, first one is the default for Enter.
+# %s = all selected (quoted), %s1 = the hovered/first one.
+# ---------------------------------------------------------------------------
+[opener]
+edit = [
+	{ run = "nvim %s", block = true, desc = "nvim" },
+]
+open = [
+	{ run = "xdg-open %s1", orphan = true, desc = "Default app" },
+]
+image = [
+	{ run = "imv %s", orphan = true, desc = "imv" },
+	{ run = 'imv -n %s1 "$(dirname %s1)"', orphan = true, desc = "imv (whole folder, from here)" },
+	{ run = "swappy -f %s1", orphan = true, desc = "Annotate (swappy)" },
+]
+media = [
+	{ run = "mpv --force-window %s", orphan = true, desc = "mpv" },
+	{ run = "mpv --no-video %s", block = true, desc = "mpv (audio only, in terminal)" },
+]
+doc = [
+	{ run = "zathura %s1", orphan = true, desc = "zathura" },
+	{ run = "evince %s1", orphan = true, desc = "evince" },
+]
+office = [
+	{ run = "onlyoffice-desktopeditors %s", orphan = true, desc = "OnlyOffice" },
+]
+web = [
+	{ run = "firefox %s", orphan = true, desc = "Firefox" },
+]
+extract = [
+	{ run = "~/.config/yazi/bin/extract %s", block = true, desc = "Extract here" },
+	{ run = "ya pub extract --list %s", desc = "Extract (yazi built-in)" },
+]
+reveal = [
+	{ run = "nautilus --select %s1", orphan = true, desc = "Show in Nautilus" },
+]
+
+[open]
+prepend_rules = [
+	{ mime = "folder/*", use = ["edit", "open", "reveal"] },
+	{ url = "*.{html,htm,svg}", use = ["web", "edit", "reveal"] },
+	{ url = "*.{md,markdown}", use = ["edit", "web", "reveal"] },
+	{ url = "*.{docx,doc,odt,rtf,xlsx,xls,ods,csv,pptx,ppt,odp}", use = ["office", "edit", "reveal"] },
+	{ url = "*.{epub,djvu,cbz,cbr,pdf}", use = ["doc", "open", "reveal"] },
+	{ mime = "text/*", use = ["edit", "reveal"] },
+	{ mime = "application/{json,ndjson,javascript,toml,yaml,xml,x-shellscript}", use = ["edit", "reveal"] },
+	{ mime = "inode/empty", use = ["edit", "reveal"] },
+	{ mime = "image/*", use = ["image", "open", "reveal"] },
+	{ mime = "{video,audio}/*", use = ["media", "open", "reveal"] },
+	{ mime = "application/{zip,rar,7z*,tar,gzip,xz,zstd,bzip*,lzma,compress,archive,java-archive}", use = ["extract", "reveal"] },
+]
+
+# ---------------------------------------------------------------------------
+# Previews. "doc <kind>" runs ~/.config/yazi/bin/peek-doc <kind>; add new
+# formats there. J/K scroll a preview.
+# ---------------------------------------------------------------------------
+[plugin]
+prepend_preloaders = [
+	{ mime = "{audio,video}/*", run = "mediainfo" },
+]
+prepend_previewers = [
+	{ url = "*.{md,markdown}", run = "doc md" },
+	{ url = "*.docx", run = "doc docx" },
+	{ url = "*.pptx", run = "doc pptx" },
+	{ url = "*.xlsx", run = "doc xlsx" },
+	{ url = "*.{odt,ods,odp}", run = "doc odf" },
+	{ url = "*.epub", run = "doc epub" },
+	{ url = "*.{csv,tsv}", run = "doc csv" },
+	{ url = "*.{db,sqlite,sqlite3}", run = "doc sqlite" },
+	{ mime = "application/vnd.sqlite3", run = "doc sqlite" },
+	{ mime = "{audio,video}/*", run = "mediainfo" },
+	{ mime = "application/{*zip,tar,bzip2,7z*,rar,xz,zstd,java-archive}", run = "ouch" },
+	# Unknown binary blobs: show the bytes.
+	{ mime = "application/octet-stream", run = "doc hex" },
+]
+
+[[plugin.prepend_fetchers]]
+url   = "*"
+run   = "git"
+group = "git"
+
+[[plugin.prepend_fetchers]]
+url   = "*/"
+run   = "git"
+group = "git"

@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+# Turn a document into text for yazi's preview pane (plugins/doc.yazi).
+#   peek-doc <kind> <width> <file>
+# Add a new kind here, then point a previewer at it in yazi.toml:
+#   { url = "*.foo", run = "doc foo" }
+kind=$1 width=$2 f=$3
+
+# Strip XML tags, keep paragraph breaks, decode the common entities.
+xml2txt() {
+    sed -e 's/<\/\(w:p\|a:p\|text:p\|text:h\|p\|h[1-6]\|li\|tr\|div\)>/\n/g' \
+        -e 's/<\(w:tab\|text:tab\)\/>/\t/g' \
+        -e 's/<[^>]*>//g' \
+        -e 's/&amp;/\&/g; s/&lt;/</g; s/&gt;/>/g; s/&quot;/"/g; s/&apos;/'"'"'/g; s/&#39;/'"'"'/g; s/&nbsp;/ /g' |
+        sed -e 's/^[[:space:]]*//' | cat -s | fold -s -w "$width"
+}
+
+case $kind in
+md)
+    if command -v glow >/dev/null; then
+        glow --style dark --width "$width" "$f"
+    else
+        bat --color=always --theme=ansi --style=plain --language=markdown --wrap=character --terminal-width "$width" "$f"
+    fi ;;
+docx) unzip -p "$f" word/document.xml | xml2txt ;;
+pptx)
+    # Slides in order, each with a header.
+    unzip -Z1 "$f" 'ppt/slides/slide*.xml' 2>/dev/null | sort -V | while read -r s; do
+        n=${s##*slide}; printf '\e[1;36m── slide %s ──\e[0m\n' "${n%.xml}"
+        unzip -p "$f" "$s" | xml2txt; echo
+    done ;;
+xlsx)
+    printf '\e[2m(cell text only; open for the real sheet)\e[0m\n'
+    unzip -p "$f" xl/sharedStrings.xml | sed 's/<\/si>/\n/g' | xml2txt | head -500 ;;
+odf) unzip -p "$f" content.xml | xml2txt ;;
+epub)
+    unzip -Z1 "$f" | grep -iE '\.x?html?$' | sort -V | head -5 | while read -r p; do
+        unzip -p "$f" "$p" | xml2txt
+    done ;;
+json) jq -C . "$f" 2>/dev/null || bat --color=always --theme=ansi --style=plain "$f" ;;
+csv)
+    d=,; [[ $f == *.tsv ]] && d=$'\t'
+    head -300 "$f" | column -t -s "$d" | cut -c1-"$width" ;;
+sqlite)
+    # Table names come from the file: -safe -readonly and "" escaping keep a crafted name from running SQL.
+    q() { sqlite3 -readonly -safe "$f" "$@"; }
+    q "select name from sqlite_master where type='table'" | while IFS= read -r t; do
+        printf '\e[1;36m%s\e[0m  (%s rows)\n' "$t" "$(q "select count(*) from \"${t//\"/\"\"}\"")"
+        q "select sql from sqlite_master where type='table' and name='${t//\'/\'\'}'" | sed 's/^/  /'; echo
+    done ;;
+hex)
+    if command -v hexyl >/dev/null; then
+        head -c 4096 "$f" | hexyl --border none --terminal-width "$width"
+    else
+        head -c 4096 "$f" | od -A x -t x1z -v
+    fi ;;
+*) echo "peek-doc: unknown kind '$kind'" ;;
+esac

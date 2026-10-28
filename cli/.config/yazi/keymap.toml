@@ -1,0 +1,216 @@
+# Additions on top of yazi's default (vim-style) keymap.
+# Defaults worth knowing: z = zoxide jump, Z = fzf, / = find, s = search (fd),
+# S = search (rg), space = select, y/x/p = copy/cut/paste, a = new, r = rename,
+# . = toggle hidden, t = new tab, 1-9 = switch tab, O = open with, ? = all keybinds.
+# M = more actions (compress, convert, clipboard...); press M and wait for the menu.
+
+[[mgr.prepend_keymap]]
+on   = "?"
+run  = "help"
+desc = "Show all keybinds (type to filter)"
+
+[[mgr.prepend_keymap]]
+on   = "l"
+run  = "plugin smart-enter"
+desc = "Enter directory or open file"
+
+[[mgr.prepend_keymap]]
+on   = "<Enter>"
+run  = "plugin smart-enter"
+desc = "Enter directory or open file"
+
+[[mgr.prepend_keymap]]
+on   = "T"
+run  = "plugin toggle-pane max-preview"
+desc = "Maximize / restore preview"
+
+[[mgr.prepend_keymap]]
+on   = "<A-p>"
+run  = "plugin toggle-pane min-preview"
+desc = "Hide / show preview"
+
+[[mgr.prepend_keymap]]
+on   = "f"
+run  = "plugin jump-to-char"
+desc = "Jump to file starting with char"
+
+[[mgr.prepend_keymap]]
+on   = ["c", "m"]
+run  = "plugin chmod"
+desc = "chmod selected"
+
+[[mgr.prepend_keymap]]
+on   = "!"
+run  = 'shell "$SHELL" --block'
+desc = "Shell here"
+
+[[mgr.prepend_keymap]]
+on   = "E"
+run  = 'shell --orphan -- nautilus .'
+desc = "Open this folder in Nautilus"
+
+
+# Bookmarks: g + key
+[[mgr.prepend_keymap]]
+on   = ["g", "h"]
+run  = "cd ~"
+desc = "Home"
+
+[[mgr.prepend_keymap]]
+on   = ["g", "d"]
+run  = "cd ~/Downloads"
+desc = "Downloads"
+
+[[mgr.prepend_keymap]]
+on   = ["g", "D"]
+run  = "cd ~/Documents"
+desc = "Documents"
+
+[[mgr.prepend_keymap]]
+on   = ["g", "p"]
+run  = "cd ~/projects"
+desc = "Projects"
+
+[[mgr.prepend_keymap]]
+on   = ["g", "f"]
+run  = "cd ~/dotfiles"
+desc = "Dotfiles"
+
+[[mgr.prepend_keymap]]
+on   = ["g", "c"]
+run  = "cd ~/.config"
+desc = "Config"
+
+[[mgr.prepend_keymap]]
+on   = ["g", "i"]
+run  = "cd ~/Pictures"
+desc = "Pictures"
+
+[[mgr.prepend_keymap]]
+on   = ["g", "s"]
+run  = "cd ~/Pictures/Screenshots"
+desc = "Screenshots"
+
+[[mgr.prepend_keymap]]
+on   = ["g", "t"]
+run  = "cd /tmp"
+desc = "/tmp"
+
+[[mgr.prepend_keymap]]
+on   = ["g", "w"]
+run  = "cd ~/Pictures/wallpapers"
+desc = "Wallpapers"
+
+# ---------------------------------------------------------------------------
+# M: more actions. Work on the selection, or the hovered file if none.
+# ---------------------------------------------------------------------------
+
+[[mgr.prepend_keymap]]
+on   = ["M", "z"]
+run  = "plugin ouch zip"
+desc = "Compress selected → .zip"
+
+[[mgr.prepend_keymap]]
+on   = ["M", "Z"]
+run  = "plugin ouch tar.zst"
+desc = "Compress selected → .tar.zst"
+
+[[mgr.prepend_keymap]]
+on   = ["M", "x"]
+run  = "shell --block -- ~/.config/yazi/bin/extract %s"
+desc = "Extract here"
+
+[[mgr.prepend_keymap]]
+on   = ["M", "c"]
+run  = "shell -- python3 -c 'import sys, pathlib; print(*(pathlib.Path(a).as_uri() for a in sys.argv[1:]), sep=chr(10))' %s | wl-copy -t text/uri-list"
+desc = "Copy file(s) to clipboard (paste in browser/chat)"
+
+[[mgr.prepend_keymap]]
+on   = ["M", "C"]
+run  = "shell -- wl-copy < %s1"
+desc = "Copy image/file contents to clipboard"
+
+[[mgr.prepend_keymap]]
+on   = ["M", "d"]
+run  = "shell --orphan -- ripdrag -x -a %s"
+desc = "Drag & drop out (ripdrag)"
+
+[[mgr.prepend_keymap]]
+on   = ["M", "i"]
+run  = 'shell --orphan -- imv -n %s1 "$(dirname %s1)"'
+desc = "View folder's images in imv (from here)"
+
+[[mgr.prepend_keymap]]
+on   = ["M", "a"]
+run  = "shell --orphan -- swappy -f %s1"
+desc = "Annotate image (swappy)"
+
+[[mgr.prepend_keymap]]
+on   = ["M", "r"]
+run  = "shell -- magick mogrify -rotate 90 %s"
+desc = "Rotate image(s) 90° clockwise"
+
+[[mgr.prepend_keymap]]
+on   = ["M", "p"]
+run  = 'shell -- for f in %s; do magick "$f" "${f%.*}.png"; done'
+desc = "Convert image(s) → PNG"
+
+[[mgr.prepend_keymap]]
+on   = ["M", "j"]
+run  = 'shell -- for f in %s; do magick "$f" -quality 90 "${f%.*}.jpg"; done'
+desc = "Convert image(s) → JPG"
+
+[[mgr.prepend_keymap]]
+on   = ["M", "w"]
+run  = 'shell -- for f in %s; do magick "$f" -quality 85 "${f%.*}.webp"; done'
+desc = "Convert image(s) → WebP"
+
+[[mgr.prepend_keymap]]
+on   = ["M", "h"]
+run  = 'shell -- for f in %s; do magick "$f" -resize 50% "${f%.*}-half.${f##*.}"; done'
+desc = "Half-size copy of image(s)"
+
+[[mgr.prepend_keymap]]
+on   = ["M", "s"]
+run  = "shell -- magick mogrify -strip %s"
+desc = "Strip metadata (EXIF/GPS) from image(s)"
+
+[[mgr.prepend_keymap]]
+on   = ["M", "b"]
+run  = "shell -- ~/.config/hypr/scripts/wallpaper.sh set %h"
+desc = "Set as wallpaper"
+
+[[mgr.prepend_keymap]]
+on   = ["M", "f"]
+run  = 'shell -- for f in %s; do magick -density 150 "$f" "${f%.*}.pdf"; done'
+desc = "Image(s) → PDF (one each)"
+
+[[mgr.prepend_keymap]]
+on   = ["M", "F"]
+run  = 'shell -- magick -density 150 %s "$(basename "$PWD").pdf"'
+desc = "Selected images → one PDF"
+
+[[mgr.prepend_keymap]]
+on   = ["M", "o"]
+run  = "shell --orphan -- onlyoffice-desktopeditors %s"
+desc = "Open in OnlyOffice"
+
+[[mgr.prepend_keymap]]
+on   = ["M", "D"]
+run  = "plugin diff"
+desc = "Diff selected with hovered"
+
+[[mgr.prepend_keymap]]
+on   = ["M", "t"]
+run  = "shell --orphan -- foot"
+desc = "Terminal here"
+
+[[mgr.prepend_keymap]]
+on   = ["M", "n"]
+run  = "shell --orphan -- nautilus --select %s1"
+desc = "Show in Nautilus"
+
+[[mgr.prepend_keymap]]
+on   = ["M", "y"]
+run  = "shell -- echo -n %s1 | wl-copy"
+desc = "Copy full path"
