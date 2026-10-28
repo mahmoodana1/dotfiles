@@ -90,6 +90,10 @@ PanelWindow {
         }
     }
     function requestClose() { if (ctl.current === kind) ctl.close() }
+    Connections {
+        target: win.ctl
+        function onStep(delta) { if (win.wanted && win.item && win.item.step) win.item.step(delta) }
+    }
 
     // panels bud off the island like a dividing cell (off the top edge while it's hidden)
     IslandSpot {
