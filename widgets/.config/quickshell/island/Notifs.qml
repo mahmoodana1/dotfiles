@@ -11,10 +11,12 @@ import "lib/notifs.js" as N
 // of the list and released (dismissed) by shell.qml once nobody shows them.
 // History is saved to $XDG_STATE_HOME/island/notifications.json; restored
 // entries have no live notification behind them, so no actions or image.
+// Anything older than `maxAge` (10 min) is deleted, live ones dismissed too.
 Scope {
     id: store
 
     readonly property int cap: 100
+    readonly property int maxAge: 10 * 60 * 1000
     property var entries: []
     readonly property var kept: entries.filter(e => !e.transient)
     readonly property var groups: N.groups(kept)
@@ -38,12 +40,19 @@ Scope {
     function hasDefault(key) { return actions(key).some(a => a.identifier === "default") }
     function image(key) { liveRev; const n = live[key]; return n ? N.icons("", n.image).image : "" }
 
-    // icon name / path / URL -> image source ("" when nothing fits)
+    // icon name / path / URL -> image source ("" when nothing fits). Tries the
+    // icon, then the app's desktop entry (by id or name), then name variants.
     function iconFor(icon, app) {
-        const i = icon || ""
+        const i = icon || "", a = (app || "").toLowerCase()
         if (i.startsWith("/")) return "file://" + i
         if (i.indexOf("://") > 0) return i
-        return Quickshell.iconPath(i || (app || "").toLowerCase(), true)
+        const entry = n => { const d = n ? DesktopEntries.byId(n) || DesktopEntries.heuristicLookup(n) : null; return d ? d.icon : "" }
+        const names = [i, entry(i), entry(app), a, a.replace(/\s+/g, "-"), a.replace(/\s+/g, "")]
+        for (let k = 0; k < names.length; k++) {
+            const p = names[k] ? Quickshell.iconPath(names[k], true) : ""
+            if (p) return p
+        }
+        return ""
     }
 
     function dismiss(key) {
@@ -152,5 +161,10 @@ Scope {
     }
     onKeptChanged: if (restored) saveTimer.restart()
     onRestoredChanged: if (restored) saveTimer.restart()
+    Timer {
+        interval: 30000; repeat: true; triggeredOnStart: true
+        running: store.restored && store.entries.length > 0
+        onTriggered: N.expired(store.entries, Date.now(), store.maxAge).forEach(k => store.dismiss(k))
+    }
     Timer { id: saveTimer; interval: 500; onTriggered: file.setText(N.serialize(store.kept)) }
 }
