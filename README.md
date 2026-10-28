@@ -67,7 +67,7 @@ no daemon, no state directory.
 | `widgets` | `~/.config/quickshell` | Dynamic Island, Peek bar, and the **glass panels** (launcher, shortcuts, wallpaper, windows, power, HUD) sharing one water-glass kit in `common/` |
 | `terminals` | `~/.config/{kitty,alacritty,ghostty,wezterm}` | All four terminals |
 | `shell` | `~/.zshrc`, `~/.tmux.conf`, `~/.tmux` | Zsh (custom prompt, lazy-loaded nvm, plugins) and tmux |
-| `cli` | `~/.config/…` | btop, cava, fastfetch, glow, lazygit, mpv, swappy, qutebrowser, matplotlib, procps, yay, psd, argos-translate, `starship.toml` |
+| `cli` | `~/.config/…` | btop, cava, fastfetch, foot, glow, lazygit, mpv, swappy, qutebrowser, matplotlib, procps, yay, psd, argos-translate, yazi, `starship.toml` |
 | `theming` | `~/.config/…`, `~/.themes` | **The color palette** (`~/.config/palette`), GTK 2/3, Kvantum, qt5ct, qt6ct, GTK themes |
 | `desktop` | `~/.config/…` | Thunar, xfce4, xdg-desktop-portal, autostart, menus, wireplumber, systemd user units, mimeapps, user-dirs, dolphin/kwallet/pavucontrol rc files |
 | `gitcfg` | `~/.config/git` | Global gitignore (no identity) |

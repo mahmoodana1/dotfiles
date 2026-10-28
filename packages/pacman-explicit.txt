@@ -1,3 +1,4 @@
+7zip
 adobe-source-code-pro-fonts
 alacritty
 alsa-utils
@@ -32,6 +33,7 @@ fd
 ffmpegthumbnailer
 firefox
 flatpak
+foot
 fuse2
 fzf
 gdb
@@ -60,6 +62,7 @@ hyprpaper
 hyprpolkitagent
 ifuse
 imagemagick
+imv
 inetutils
 inotify-tools
 intel-media-driver
@@ -122,6 +125,7 @@ obs-studio
 obsidian
 openssh
 otf-font-awesome
+ouch
 pacman-contrib
 pamixer
 pandoc-cli
@@ -190,6 +194,7 @@ ttf-jetbrains-mono
 ttf-jetbrains-mono-nerd
 tumbler
 typescript
+unrar
 unzip
 usbmuxd
 uwsm
@@ -222,10 +227,12 @@ xorg-server
 xorg-xclock
 xorg-xinit
 yad
+yazi
 ydotool
 yt-dlp
 zathura
 zip
+zoxide
 zram-generator
 zsh
 zsh-autosuggestions

@@ -28,7 +28,10 @@ end
 
 hl.bind(mod .. " + Return", sh(term), { description = "terminal" })
 hl.bind(mod .. " + SHIFT + Return", sh(term .. " --class alacritty-float"), { description = "floating terminal" })
-hl.bind(mod .. " + E", sh(d.fileManager), { description = "file manager" })
+-- yazi in foot (image previews need its graphics support; alacritty has none),
+-- with nvim's colours from ~/.config/yazi/foot.ini (made by gen-theme.py).
+hl.bind(mod .. " + E", sh("foot --app-id yazi -c " .. d.home .. "/.config/yazi/foot.ini yazi"), { description = "file manager (yazi)" })
+hl.bind(mod .. " + ALT + E", sh(d.fileManager), { description = "file manager (GUI)" })
 hl.bind(mod .. " + B", sh(d.browser), { description = "browser" })
 hl.bind(mod .. " + D", glass("launcher"), { description = "app launcher" })
 hl.bind(mod .. " + CTRL + S", glass("windows"), { description = "window switcher" })
