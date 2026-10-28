@@ -27,13 +27,28 @@ FocusScope {
         search.forceActiveFocus()
     }
 
+    // Tab / Shift+Tab / SUPER+(SHIFT+)Tab: next / previous tile, wrapping
+    function step(delta) {
+        const n = Math.max(1, wins.length)
+        grid.currentIndex = (grid.currentIndex + delta + n) % n
+    }
+
     function appOf(t) { return t.wayland ? t.wayland.appId : (t.lastIpcObject.class || "") }
     function wsOf(t) { return t.workspace ? t.workspace.id : 0 }
+    // apps with no themed icon (Wine installers, etc.) get the Omarchy mark
+    // instead of the missing-icon checkerboard
+    function iconOf(t) {
+        return Quickshell.iconPath(appOf(t), true) || "file:///usr/share/omarchy/icon.png"
+    }
 
     readonly property var wins: {
         const q = search.text.trim()
         const out = []
         for (const t of Hyprland.toplevels.values) {
+            // Wine/XWayland keeps unmapped helper windows ("Default IME",
+            // hidden exe-path windows) as toplevels with no workspace; skip them
+            const ipc = t.lastIpcObject || {}
+            if (!t.workspace || ipc.mapped === false || ipc.hidden === true) continue
             const ws = wsOf(t)
             const s = Match.best(q, [[appOf(t), 1], [t.title, 0.9, true], ["ws " + ws, 0.6, true]])
             if (s >= 0) out.push({ t: t, s: s, ws: ws })
@@ -98,7 +113,8 @@ FocusScope {
                 case Qt.Key_Left:  grid.moveCurrentIndexLeft(); break
                 case Qt.Key_Down:  grid.moveCurrentIndexDown(); break
                 case Qt.Key_Up:    grid.moveCurrentIndexUp(); break
-                case Qt.Key_Tab:   grid.currentIndex = (grid.currentIndex + 1) % Math.max(1, root.wins.length); break
+                case Qt.Key_Tab:     root.step(1); break
+                case Qt.Key_Backtab: root.step(-1); break
                 case Qt.Key_Return:
                 case Qt.Key_Enter: root.focusWindow(root.wins[grid.currentIndex]); break
                 default: return
@@ -160,7 +176,7 @@ FocusScope {
                     visible: !shot.hasContent
                     anchors.centerIn: parent
                     implicitSize: 56
-                    source: Quickshell.iconPath(root.appOf(tile.modelData), "application-x-executable")
+                    source: root.iconOf(tile.modelData)
                 }
             }
 
@@ -171,7 +187,7 @@ FocusScope {
                 IconImage {
                     implicitSize: 20
                     anchors.verticalCenter: parent.verticalCenter
-                    source: Quickshell.iconPath(root.appOf(tile.modelData), "application-x-executable")
+                    source: root.iconOf(tile.modelData)
                 }
                 GlassText {
                     anchors.verticalCenter: parent.verticalCenter

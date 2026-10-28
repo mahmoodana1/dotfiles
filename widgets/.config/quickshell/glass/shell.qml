@@ -18,6 +18,7 @@ ShellRoot {
     property string arg: ""          // e.g. "effects" for wallpaper:effects
     property string screenName: ""   // monitor it shows on
     property int serial: 0           // bumps on every open, so re-opening resets the panel
+    signal step(int delta)           // SUPER+(SHIFT+)Tab while the window picker is open
 
     function open(spec) {
         const parts = spec.split(":")
@@ -66,6 +67,9 @@ ShellRoot {
     Toggle { name: "wallpaper"; spec: "wallpaper" }
     Toggle { name: "effects";   spec: "wallpaper:effects" }
     Toggle { name: "windows";   spec: "windows" }
+    // SUPER+Tab / SUPER+SHIFT+Tab while the picker is open (hypr checks first)
+    GlobalShortcut { appid: "glass"; name: "windows-next"; onPressed: if (root.current === "windows") root.step(1) }
+    GlobalShortcut { appid: "glass"; name: "windows-prev"; onPressed: if (root.current === "windows") root.step(-1) }
     Toggle { name: "power";     spec: "power" }
     // HUD: shown while the key is held
     GlobalShortcut {
