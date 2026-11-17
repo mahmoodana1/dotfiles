@@ -23,6 +23,7 @@ Schema: docs.claude.com/en/docs/claude-code/statusline
 import json
 import os
 import re
+import subprocess
 import sys
 import time
 
@@ -33,6 +34,10 @@ BLUE = "\033[1;34m"
 RED = "\033[31m"
 YELLOW = "\033[33m"
 GREEN = "\033[32m"
+_TC = os.environ.get("COLORTERM", "") in ("truecolor", "24bit")
+PEACH = "\033[38;2;232;170;130m" if _TC else "\033[38;5;216m"   # branch; kin to the glyph
+GIT_RED = "\033[38;2;240;80;50m" if _TC else "\033[38;5;202m"   # git logo #F05032
+GIT_ICON = "\ue702"   # Nerd Font git logo (nf-dev-git)
 
 TRUECOLOR = os.environ.get("COLORTERM", "") in ("truecolor", "24bit")
 
@@ -137,6 +142,24 @@ def animate(t):
     ]
 
 
+def git(cwd, *args):
+    """Run a git command in `cwd`; stripped stdout, or '' on any failure."""
+    try:
+        r = subprocess.run(("git", "-C", cwd) + args, capture_output=True,
+                           text=True, timeout=0.5)
+    except Exception:
+        return ""
+    return r.stdout.strip() if r.returncode == 0 else ""
+
+
+def git_branch(cwd):
+    """Current branch of the repo at `cwd` (short hash if detached), else None."""
+    if not cwd or not os.path.isdir(cwd):
+        return None
+    return (git(cwd, "symbolic-ref", "--short", "-q", "HEAD")
+            or git(cwd, "rev-parse", "--short", "HEAD") or None)
+
+
 def countdown(secs):
     """Compact 'time remaining' string."""
     if secs <= 0:
@@ -193,6 +216,7 @@ def main():
     five, week = window("five_hour"), window("seven_day")
 
     d = dig("workspace", "current_dir", default="") or os.getcwd()
+    branch = git_branch(d)
     home = os.path.expanduser("~")
     if d == home:
         d = "~"
@@ -203,7 +227,12 @@ def main():
     bar = "█" * filled + "░" * (10 - filled)
 
     # --- rows: (plain, coloured) so widths can be measured before padding ---
-    r0 = (d, "%s%s%s" % (BLUE, d, RESET))
+    # Git segment rides on the path row: "<git logo> branch" in any git repo.
+    git_plain = git_col = ""
+    if branch:
+        git_plain = "  %s %s" % (GIT_ICON, branch)   # kitty draws the logo over this space
+        git_col = "  %s%s%s %s%s%s" % (GIT_RED, GIT_ICON, RESET, PEACH, branch, RESET)
+    r0 = (d + git_plain, "%s%s%s%s" % (BLUE, d, RESET, git_col))
 
     r1_plain = "%s  ctx [%s] %d%%" % (model, bar, pct)
     r1 = (r1_plain, "%s%s%s  %sctx%s %s[%s]%s %s%d%%%s"
@@ -244,8 +273,14 @@ def main():
     for i, (plain, colored) in enumerate(rows):
         if budget > 3 and len(plain) > budget:
             if i == 0:
-                plain = "…" + plain[-(budget - 1):]
-                colored = "%s%s%s" % (BLUE, plain, RESET)
+                # Shorten the path first; drop the branch only if even a
+                # minimal path can't fit beside it.
+                if budget - len(git_plain) < 8:
+                    git_plain = git_col = ""
+                room = budget - len(git_plain)
+                p = d if len(d) <= room else "…" + d[-(room - 1):]
+                plain = p + git_plain
+                colored = "%s%s%s%s" % (BLUE, p, RESET, git_col)
             else:
                 plain = plain[: budget - 1] + "…"
                 colored = "%s%s%s" % (DIM, plain, RESET)
