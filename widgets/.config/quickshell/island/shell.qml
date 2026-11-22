@@ -15,6 +15,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import Quickshell.Hyprland
+import Quickshell.Wayland
 import Quickshell.Services.Pipewire
 import Quickshell.Services.UPower
 import Quickshell.Networking
@@ -255,6 +256,29 @@ ShellRoot {
 
     Variants {
         model: Quickshell.screens
-        Island { ctl: root }
+        Scope {
+            id: scr
+            required property var modelData
+            Island { id: isl; modelData: scr.modelData; ctl: root }
+
+            // pointer at the top-middle edge peeks the island (not over fullscreen)
+            PanelWindow {
+                screen: scr.modelData
+                visible: !isl.fullscreen && !isl.shown
+                anchors.top: true
+                implicitWidth: 240
+                implicitHeight: 1               // 1px: barely steals clicks from windows under it
+                exclusionMode: ExclusionMode.Ignore
+                color: "transparent"
+                WlrLayershell.layer: WlrLayer.Overlay
+                WlrLayershell.namespace: "island-edge"
+                WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+                HoverHandler { id: edge; onHoveredChanged: if (hovered) dwell.restart(); else dwell.stop() }
+                Timer {                         // short dwell so flinging at top tabs doesn't pop it
+                    id: dwell; interval: 120
+                    onTriggered: { root.openPanel("compact"); root.panelScreen = isl.monName }
+                }
+            }
+        }
     }
 }
