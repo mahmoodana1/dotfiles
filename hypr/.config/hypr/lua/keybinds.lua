@@ -45,10 +45,10 @@ hl.bind(mod .. " + H", glass("shortcuts"), { description = "shortcut viewer" })
 ----------------------------------------------------------------------
 
 -- SUPER+Q closes an open glass panel or floating island panel first (they
--- hold the keyboard while open: interactivity ~= 0), otherwise the window.
+-- hold the keyboard while open: keyboard_interactivity ~= 0), otherwise the window.
 local function panel_open(ns)
     for _, l in ipairs(hl.get_layers({ namespace = ns })) do
-        if l.mapped and l.interactivity ~= 0 then return true end
+        if l.mapped and l.keyboard_interactivity ~= 0 then return true end
     end
     return false
 end
