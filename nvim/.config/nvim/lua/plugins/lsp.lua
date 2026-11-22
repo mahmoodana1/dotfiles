@@ -40,6 +40,24 @@ local servers = {
             },
         },
     },
+    -- jdtls needs Java 21+; system default is 11, so point it at the installed 27.
+    -- workspace_required=false lets it attach to loose course folders with no pom/.git.
+    jdtls = {
+        cmd = { "jdtls", "--java-executable", "/usr/lib/jvm/java-27-openjdk/bin/java" },
+        workspace_required = false,
+        handlers = {
+            -- Hide "declared package does not match expected package" (code 536871240):
+            -- course zips keep package names that differ from their folder names.
+            ["textDocument/publishDiagnostics"] = function(err, result, ctx)
+                if result then
+                    result.diagnostics = vim.tbl_filter(function(d)
+                        return tostring(d.code) ~= "536871240"
+                    end, result.diagnostics)
+                end
+                return vim.lsp.diagnostic.on_publish_diagnostics(err, result, ctx)
+            end,
+        },
+    },
     html = {},
     cssls = {},
     ts_ls = {},

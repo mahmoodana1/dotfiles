@@ -1,0 +1,10 @@
+[Unit]
+Description=taskvim-sync: stamp and merge taskvim's data.json across machines
+
+[Service]
+ExecStart=/usr/bin/python3 -I /home/mahmood/.local/bin/taskvim-sync
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

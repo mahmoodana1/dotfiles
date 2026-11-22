@@ -30,6 +30,7 @@ local ensure = {
     "gitcommit",
     "gitignore",
     "html",
+    "java",
     "javascript",
     "json",
     -- `main` has no `jsonc` parser (master did). json5 is a superset that

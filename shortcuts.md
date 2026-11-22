@@ -477,11 +477,11 @@ Buffer-local; these appear once a language server attaches.
 
 | Keys | Action |
 |---|---|
-| `SPACE r r` | Compile **and run** the current C/C++ file in a tmux window named `run` |
-| `SPACE r b` | Compile only |
+| `SPACE r r` | Compile **and run** the current Java or C/C++ file in a tmux window named `run` |
+| `SPACE r b` | Compile only (Java, C/C++) |
 | `SPACE r p` | Run the current Python file in the `run` tmux window |
 
-Compiles with `-Wall -Wextra -g`. Falls back to a split `:terminal` when not
+C/C++ compiles with `-Wall -Wextra -g`; Java compiles every `.java` under the file's folder into `./out` and runs the current class (package-aware). Falls back to a split `:terminal` when not
 inside tmux. (This was `SPACE c a r` before — it moved because it made every
 `SPACE c a` code action wait 400ms.)
 

@@ -384,10 +384,10 @@ function M.setup()
     -- action -- every code action would have waited 400ms for the 'r'.
     map("n", "<leader>rr", function()
         M.compile_and_run(true)
-    end, "Compile and run (C/C++) in tmux")
+    end, "Compile and run (Java, C/C++) in tmux")
     map("n", "<leader>rb", function()
         M.compile_and_run(false)
-    end, "Compile only (C/C++)")
+    end, "Compile only (Java, C/C++)")
     map("n", "<leader>rp", function()
         M.run_in_tmux("python3 " .. vim.fn.shellescape(vim.fn.expand("%:t")), vim.fn.expand("%:p:h"))
     end, "Run current Python file in tmux")
@@ -687,9 +687,25 @@ function M.run_in_tmux(cmd, dir)
     vim.notify("Running in tmux window 'run'", vim.log.levels.INFO)
 end
 
---- Compile the current C/C++ file, optionally running it afterwards.
+--- Compile the current Java file's folder into ./out, optionally running it.
+-- shortcut: compiles every .java under the file's own folder (no maven/gradle), upgrade when a project needs deps.
+local function java_compile_and_run(run)
+    vim.cmd("write")
+    local dir, name = vim.fn.expand("%:p:h"), vim.fn.expand("%:t:r")
+    local pkg = table.concat(vim.fn.getline(1, 15), "\n"):match("package%s+([%w_.]+)%s*;")
+    local cmd = "javac -d out $(find . -name '*.java')"
+    if run then
+        cmd = cmd .. (" && java -cp out %s"):format(pkg and (pkg .. "." .. name) or name)
+    end
+    M.run_in_tmux(cmd, dir)
+end
+
+--- Compile the current C/C++ or Java file, optionally running it afterwards.
 function M.compile_and_run(run)
     local ext = vim.fn.expand("%:e")
+    if ext == "java" then
+        return java_compile_and_run(run)
+    end
     local compiler = (ext == "c") and "gcc" or ((ext == "cpp" or ext == "cc" or ext == "cxx") and "g++" or nil)
     if not compiler then
         vim.notify("Not a C/C++ file", vim.log.levels.ERROR)
