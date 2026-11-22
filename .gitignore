@@ -76,3 +76,4 @@ __pycache__/
 
 # brainstorming companion mockups
 .superpowers/
+cli/.config/psd/.psd-session
