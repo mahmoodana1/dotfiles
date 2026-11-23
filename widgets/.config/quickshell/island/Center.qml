@@ -133,7 +133,13 @@ FocusScope {
             })
             return best
         }
-        const best = pick(true) || pick(false)
+        let best = pick(true) || pick(false)
+        // back out to the rail on the open tab, not whichever icon lines up
+        // (landing on another rail item would switch tabs under you)
+        if (best && best.isRail && !focusItem.isRail && focusItem !== powerBtn) {
+            const cur = items.find(it => it.isRail && it.on)
+            if (cur) best = cur
+        }
         if (best) setFocus(best)
     }
     function reveal(it) {                   // scroll the nearest Flickable so the ring is in view
