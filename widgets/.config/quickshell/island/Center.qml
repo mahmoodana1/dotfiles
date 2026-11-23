@@ -59,9 +59,22 @@ FocusScope {
         return out
     }
     function box(it) { const p = it.mapToItem(c, 0, 0); return { x: p.x, y: p.y, w: it.width, h: it.height, cx: p.x + it.width / 2, cy: p.y + it.height / 2 } }
-    function clearFocus() { grab(false); arm(null); if (focusItem) focusItem.focused = false; focusItem = null }
+    property bool ringOn: false             // a ring is meant to be showing (focusItem may have just died)
+    function clearFocus() { ringOn = false; grab(false); arm(null); if (focusItem) focusItem.focused = false; focusItem = null }
+    // A list rebuilt under us (Bluetooth/Wi-Fi scans reset their models) destroys
+    // the focused row: put the ring back on whatever now sits where it was,
+    // without clicking it, so the next j/k steps from there.
+    onFocusItemChanged: if (!focusItem && ringOn) regainT.restart()
+    Timer { id: regainT; interval: 40; onTriggered: c.regain() }   // let the rebuilt list lay out first
+    function regain() {
+        if (focusItem || !ringOn || !active) return
+        const it = nearest(collect(), lastPos)
+        if (!it) return
+        focusItem = it; it.focused = true
+    }
     function setFocus(it) {
         if (!it) return
+        ringOn = true
         grab(false); arm(null)
         if (focusItem) focusItem.focused = false
         focusItem = it
@@ -88,8 +101,9 @@ FocusScope {
     // the closest item whose centre lies in `dir`, preferring ones lined up with us
     function move(dir) {
         const items = collect()
+        if (!focusItem && ringOn) regain()                        // row was rebuilt: carry on from its stand-in
         if (!focusItem) { setFocus(first()); return }             // first key: just show where we are
-        if (items.indexOf(focusItem) < 0) { setFocus(nearest(items, lastPos)); return }
+        if (items.indexOf(focusItem) < 0) { focusItem.focused = false; focusItem = nearest(items, lastPos); if (!focusItem) return; focusItem.focused = true }
         // from the rail, l dives into the tab at its natural start
         if (dir === "l" && (focusItem.isRail || focusItem === powerBtn) && !power) { const f = first(); if (f) setFocus(f); return }
         const a = box(focusItem)
