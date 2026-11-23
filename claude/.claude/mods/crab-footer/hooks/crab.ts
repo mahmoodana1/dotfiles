@@ -19,8 +19,9 @@ export type Pose = { lines: Run[][] }
 export type Eye = 'center' | 'left' | 'right' | 'up' | 'shut' | 'wink'
 export type Stance = 'stand' | 'crouch' | 'hop'
 export type Feet = 'both' | 'left' | 'right'
-export type Poof = 'dot' | 'wave'
+export type Poof = 'dot' | 'wave' | 'z1' | 'z2' | 'z3' // z: a sleep bubble drifting up
 export type Shadow = 'normal' | 'narrow' | 'wide'
+export type Claw = 'left' | 'right'
 
 export const W = 18 // sprite width in pixels (9 columns)
 export const TRACK = 8 // pixels the crab wanders over (4 columns); walked in whole columns
@@ -48,6 +49,7 @@ export type Look = {
   feet?: Feet
   poof?: Poof
   shadow?: Shadow
+  claw?: Claw // raise just this claw
 }
 
 type Px = [x: number, y: number, color: string]
@@ -88,11 +90,12 @@ function front(l: Look, set: (x: number, y: number, c: string) => void) {
   }
   const eyes = eyesAt(eye, 5, 13)
   for (const x of eyes.xs) set(x, top + eyes.y, EYE)
-  const ay = l.armsUp ? top + 1 : top + 2
-  set(1, ay, HI)
-  set(2, ay, HI)
-  set(16, ay, SIDE)
-  set(17, ay, SIDE)
+  const ayL = l.armsUp || l.claw === 'left' ? top + 1 : top + 2
+  const ayR = l.armsUp || l.claw === 'right' ? top + 1 : top + 2
+  set(1, ayL, HI)
+  set(2, ayL, HI)
+  set(16, ayR, SIDE)
+  set(17, ayR, SIDE)
   if (stance !== 'hop') {
     const ly = stance === 'crouch' ? 5 : 4
     const legs = l.step % 2 === 0 ? [3, 5, 13, 15] : [4, 6, 12, 14]
@@ -131,10 +134,11 @@ function turned(l: Look, set: (x: number, y: number, c: string) => void): [numbe
     for (const x of eyes.xs) set(x, top + eyes.y, EYE)
   }
   const reach = Math.round(2 * Math.abs(cos))
-  const ay = l.armsUp ? top + 1 : top + 2
+  const ayL = l.armsUp || l.claw === 'left' ? top + 1 : top + 2
+  const ayR = l.armsUp || l.claw === 'right' ? top + 1 : top + 2
   for (let i = 1; i <= reach; i++) {
-    set(left - i, ay, HI)
-    set(right + i, ay, SIDE)
+    set(left - i, ayL, HI)
+    set(right + i, ayR, SIDE)
   }
   if (l.stance !== 'hop') {
     const legs = width >= 7 ? [left, left + 2, right - 2, right] : [left, right]
@@ -165,7 +169,12 @@ function pixels(l: Look): { body: Px[]; ground: Px[] } {
       for (const x of span(left + 1, right - 1)) setGround(x, 4, GROUND)
     }
   }
-  if (l.poof) {
+  const z = l.poof === 'z1' ? [3, 2] : l.poof === 'z2' ? [4, 1] : l.poof === 'z3' ? [5, 0] : null
+  if (z) {
+    const [dx, y] = z as [number, number]
+    // drift off the right, or the left when the track's end leaves no room
+    setGround(l.offset + right + dx < W + TRACK ? right + dx : left - dx, y, DUST)
+  } else if (l.poof) {
     const dust: [number, number][] =
       l.poof === 'dot'
         ? [[left - 2, 4], [right + 2, 4]]
@@ -248,12 +257,12 @@ export function draw(look: Look): Pose {
 // The crab is always doing one small activity: a list of keyframes, each held
 // for its time. When the list runs out it picks the next one from its mood:
 //
-//   idle     rests and breathes, glances around, scans, strolls, waves,
-//            stretches, and now and then plays a trick
-//   watching the person is typing: it holds still and pays attention
+//   idle     rests and breathes, glances, strolls and scuttles,
+//            waves, clacks a claw, yawns, shimmies, dances, nods off, tricks
+//   watching the person is typing: it pays attention and nods
 //   working  a turn is running: hop bursts, pacing, looking up to think, tapping
 //   asleep   nothing has happened for a while: slow blinks, then eyes shut and
-//            deep slow breaths; anything happening wakes it with a start
+//            deep slow breaths and z's; anything happening wakes it with a start
 //
 // The tricks are the ones Claude Code's own logo plays at launch (jump, look,
 // spin, peekaboo, drop, waddle, peek, wink, boop, tap, sneeze, turn, coin-hop,
@@ -274,6 +283,7 @@ type Frame = {
   poof?: Poof
   shadow?: Shadow
   shift?: number
+  claw?: Claw
 }
 type Mood = 'idle' | 'watching' | 'working' | 'asleep'
 
@@ -452,10 +462,41 @@ function hop(): Frame[] {
   ]
 }
 
+// one claw up and down, `n` times
+const snip = (claw: Claw, n: number, ms: number): Frame[] =>
+  Array.from({ length: n }, (): Frame[] => [{ claw, ms }, { ms }]).flat()
+
+const nodOff = (): Frame[] => [
+  { eye: 'shut', ms: rand(1200, 1800) },
+  { eye: 'shut', stance: 'crouch', ms: 900 },
+  { eye: 'center', stance: 'hop', ms: 200 }, // jolts awake
+  { stance: 'stand', ms: 300 },
+  { eye: 'left', ms: 350 }, { eye: 'right', ms: 350 }, { eye: 'center', ms: 300 },
+]
+
+const dance = (): Frame[] => [
+  ...Array.from({ length: 3 }, (): Frame[] => [
+    { feet: 'left', claw: 'left', ms: 260 }, { feet: 'right', claw: 'right', ms: 260 },
+  ]).flat(),
+  { stance: 'crouch', ms: 200 }, { stance: 'hop', armsUp: true, ms: 280 },
+  { stance: 'crouch', armsUp: false, ms: 160 }, { stance: 'stand', ms: 400 },
+]
+
 function idle(c: Crab): Frame[] {
   return weighted<() => Frame[]>([
-    [48, () => [{ ms: rand(5000, 12000) }]],
-    [18, () => [{ eye: (chance(0.03) ? 'up' : pick(['left', 'right'] as const)), ms: rand(1500, 3000) }, { eye: 'center', ms: rand(300, 600) }]],
+    [26, () => [{ ms: rand(3000, 7000) }]],
+    [16, () => [{ eye: pick(['left', 'right'] as const), ms: rand(1500, 3000) }, { eye: 'center', ms: rand(300, 600) }]],
+    [4, () => stroll(c, 170)], // a quick sideways scuttle
+    [3, () => [{ eye: 'left', ms: 300 }, ...snip('left', 3, 220), { ms: 500 }]], // waves hello
+    [3, () => [...snip('right', 2, 130), { ms: 250 }, ...snip('right', 2, 130), { ms: 400 }]], // clacks a claw
+    [3, () => [ // yawns
+      { eye: 'shut', stance: 'crouch', ms: 500 },
+      { eye: 'shut', armsUp: true, stance: 'stand', ms: 1300 },
+      { eye: 'shut', armsUp: false, ms: 500 }, { eye: 'center', ms: 400 },
+    ]],
+    [3, () => [...turn([14, 0, 346, 0, 14, 0, 346, 0]), { ms: 300 }]], // shimmies
+    [2, nodOff],
+    [2, dance],
     [5, () => [
       { eye: 'left', ms: rand(800, 1200) }, { eye: 'center', ms: 260 },
       { eye: 'right', ms: rand(800, 1200) }, { eye: 'center', ms: 500 },
@@ -471,7 +512,7 @@ function idle(c: Crab): Frame[] {
       { stance: 'stand', armsUp: true, eye: 'center', ms: 1100 },
       { armsUp: false, eye: 'center', ms: 600 },
     ]],
-    [3, () => [...TRICKS[pick(IDLE_TRICKS)](), { ms: rand(3000, 6000) }]],
+    [6, () => [...TRICKS[pick(IDLE_TRICKS)](), { ms: rand(2000, 4000) }]],
   ])()
 }
 
@@ -480,6 +521,7 @@ function working(c: Crab): Frame[] {
     [30, () => [{ ms: rand(2500, 6000) }]],
     [14, () => [...Array.from({ length: Math.floor(rand(1, 3)) }, hop).flat(), { ms: rand(1500, 3000) }]],
     [12, () => stroll(c, 300)],
+    [6, () => [...snip('right', 3, 140), ...snip('left', 3, 140), { ms: 400 }]], // busy claws
     [24, () => [
       { eye: pick(['left', 'right'] as const), ms: rand(1100, 1800) }, { eye: 'center', ms: rand(600, 900) },
       { eye: pick(['left', 'right'] as const), ms: rand(700, 1100) }, { eye: 'center', ms: 400 },
@@ -489,6 +531,23 @@ function working(c: Crab): Frame[] {
       { ms: 500 },
     ]],
   ])()
+}
+
+// the person is typing: it pays attention, nodding now and then
+function watching(): Frame[] {
+  return weighted<() => Frame[]>([
+    [60, () => [{ eye: 'center', ms: rand(1500, 3500) }]],
+    [15, () => [{ eye: 'center', ms: rand(1000, 2000) }]],
+    [15, () => [{ eye: 'center', stance: 'crouch', ms: 220 }, { eye: 'center', stance: 'stand', ms: 600 }]],
+    [10, () => [{ eye: pick(['left', 'right'] as const), ms: rand(600, 1000) }, { eye: 'center', ms: 300 }]],
+  ])()
+}
+
+function sleeping(): Frame[] {
+  return [
+    { eye: 'shut', stance: 'stand', ms: rand(2500, 4500) },
+    ...(['z1', 'z2', 'z3'] as const).map((poof): Frame => ({ eye: 'shut', poof, ms: 650 })),
+  ]
 }
 
 function dozeOff(): Frame[] {
@@ -541,8 +600,8 @@ export function tick(c: Crab, now: number, s: Signals): Look {
       c.queue =
         c.mood === 'working' ? working(c)
           : c.mood === 'idle' ? idle(c)
-            : c.mood === 'watching' ? [{ eye: chance(0.75) ? 'center' : pick(['left', 'right'] as const), ms: rand(1500, 3500) }]
-              : [{ eye: 'shut', stance: 'stand', ms: 10_000 }]
+            : c.mood === 'watching' ? watching()
+              : sleeping()
     }
     const fr = c.queue.shift() as Frame
     c.frame = fr
@@ -589,5 +648,6 @@ export function tick(c: Crab, now: number, s: Signals): Look {
     feet: fr.feet,
     poof: fr.poof,
     shadow: fr.shadow,
+    claw: fr.claw,
   }
 }
