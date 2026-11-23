@@ -275,7 +275,7 @@ ShellRoot {
                 WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
                 HoverHandler { id: edge; onHoveredChanged: if (hovered) dwell.restart(); else dwell.stop() }
                 Timer {                         // short dwell so flinging at top tabs doesn't pop it
-                    id: dwell; interval: 120
+                    id: dwell; interval: 60
                     onTriggered: { root.openPanel("compact"); root.panelScreen = isl.monName }
                 }
             }

@@ -68,7 +68,7 @@ PanelWindow {
     // hovering the bar or the workspace pill grows it into the compact peek
     readonly property bool peekable: face === "full" || face === "ws"
     Timer {
-        id: peekT; interval: 220
+        id: peekT; interval: 80
         onTriggered: if (hover.hovered && win.peekable && win.shown) win.ctl.openPanel("compact")
     }
     Timer {                                 // pointer left (the peek lets go sooner)
