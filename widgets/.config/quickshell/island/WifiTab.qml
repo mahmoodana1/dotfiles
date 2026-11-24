@@ -175,6 +175,7 @@ Item {
                 font.family: Look.font; font.pixelSize: 12
                 clip: true
                 Keys.onReturnPressed: join()
+                Keys.onPressed: ev => { if (ev.key === Qt.Key_J && ev.modifiers & Qt.ControlModifier) { join(); ev.accepted = true } }
                 Keys.onEscapePressed: { w.pwdFor = ""; event.accepted = true }
                 function join() { if (text.length) { r.n.connectWithPsk(text); w.pwdFor = "" } }
             }
