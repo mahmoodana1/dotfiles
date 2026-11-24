@@ -170,7 +170,8 @@ FocusScope {
     function goTab(d) { ctl.openPanel(tabs[(tabIndex + d + tabs.length) % tabs.length].id) }
     Keys.onPressed: ev => {
         const t = ev.text, k = ev.key
-        const dir = t === "h" || k === Qt.Key_Left ? "h" : t === "j" || k === Qt.Key_Down ? "j"
+        const ctrlJ = k === Qt.Key_J && ev.modifiers & Qt.ControlModifier   // Ctrl+J = Enter
+        const dir = ctrlJ ? "" : t === "h" || k === Qt.Key_Left ? "h" : t === "j" || k === Qt.Key_Down ? "j"
                   : t === "k" || k === Qt.Key_Up ? "k" : t === "l" || k === Qt.Key_Right ? "l" : ""
         ctl.pinned = true                   // keyboard-driven: stays until closed
         if (t !== "d") arm(null)
@@ -181,7 +182,7 @@ FocusScope {
         }
         else if (grabbing && (dir === "h" || dir === "l")) focusItem.nudge(dir === "h" ? -0.05 : 0.05)
         else if (dir) { grab(false); move(dir) }
-        else if (k === Qt.Key_Return || k === Qt.Key_Enter || k === Qt.Key_Space) act()
+        else if (ctrlJ || k === Qt.Key_Return || k === Qt.Key_Enter || k === Qt.Key_Space) act()
         else if ((t === "x" || k === Qt.Key_Delete || k === Qt.Key_Backspace) && focusItem && focusItem.remove && !focusItem.safeRemove) {
             focusItem.remove(); refocusLater.restart()
         }
